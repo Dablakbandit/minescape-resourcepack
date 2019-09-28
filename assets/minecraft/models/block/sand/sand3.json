@@ -1,0 +1,48 @@
+{
+	"__comment": "Designed by Cookiesnom with Cubik Studio - https://cubik.studio",
+	"textures": {
+		"particle": "block/sand",
+		"sand": "block/sand",
+		"stone": "block/stone"
+	},
+	"elements": [ 	 
+		{
+			"__comment": "sand",
+			"from": [ 0, 0, 0 ],
+			"to": [ 16, 16, 16 ],
+			"faces": {
+				"down": { "uv": [ 0, 0, 16, 16 ], "texture": "#sand", "cullface": "down" },
+				"up": { "uv": [ 0, 0, 16, 16 ], "texture": "#sand", "cullface": "up" },
+				"north": { "uv": [ 0, 0, 16, 16 ], "texture": "#sand", "cullface": "north" },
+				"south": { "uv": [ 0, 0, 16, 16 ], "texture": "#sand", "cullface": "south" },
+				"west": { "uv": [ 0, 0, 16, 16 ], "texture": "#sand", "cullface": "west" },
+				"east": { "uv": [ 0, 0, 16, 16 ], "texture": "#sand", "cullface": "east" }
+			}
+		},
+		{
+			"__comment": "stone2",
+			"from": [ 2.4375, 16, 6.9327 ],
+			"to": [ 4.4375, 16.375, 8.932699 ],
+			"rotation": { "origin": [ 3, 16, 7 ], "axis": "y", "angle": 22.5 },
+			"faces": {
+				"up": { "uv": [ 2.5, 6.5, 5, 11 ], "texture": "#stone", "cullface": "up", "rotation": 270 },
+				"north": { "uv": [ 5, 15, 9.5, 16 ], "texture": "#stone", "cullface": "up" },
+				"south": { "uv": [ 6.5, 15, 11, 16 ], "texture": "#stone", "cullface": "up" },
+				"west": { "uv": [ 11, 15, 13.5, 16 ], "texture": "#stone", "cullface": "up" },
+				"east": { "uv": [ 2.5, 15, 5, 16 ], "texture": "#stone", "cullface": "up" }
+			}
+		},
+		{
+			"__comment": "stone2",
+			"from": [ 12.0673, 16, 1.9375 ],
+			"to": [ 14.0673, 16.375, 3.9375 ],
+			"faces": {
+				"up": { "uv": [ 2.5, 6.5, 5, 11 ], "texture": "#stone", "cullface": "up" },
+				"north": { "uv": [ 11, 15, 13.5, 16 ], "texture": "#stone", "cullface": "up" },
+				"south": { "uv": [ 2.5, 15, 5, 16 ], "texture": "#stone", "cullface": "up" },
+				"west": { "uv": [ 6.5, 15, 11, 16 ], "texture": "#stone", "cullface": "up" },
+				"east": { "uv": [ 5, 15, 9.5, 16 ], "texture": "#stone", "cullface": "up" }
+			}
+		}
+	]
+}

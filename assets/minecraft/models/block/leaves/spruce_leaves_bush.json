@@ -1,0 +1,49 @@
+{
+	"__comment": "Designed by Gunshotproductions72 with BDcraft Cubik PRO 0.96 Beta - http://bdcraft.net",
+	"textures": {
+		"particle": "block/spruce_leaves",
+		"texture": "block/spruce_leaves",
+		"leaves_spruce_plane": "block/spruce_leaves_plane"
+	},
+	"elements": [ 	 
+		{
+			"from": [ 0, 0, 0 ],
+			"to": [ 16, 16, 16 ],
+			"faces": {
+				"down": { "uv": [ 16, 16, 0, 0 ], "texture": "#texture", "cullface": "down" },
+				"up": { "uv": [ 0, 0, 16, 16 ], "texture": "#texture", "cullface": "up" },
+				"north": { "uv": [ 0, 0, 16, 16 ], "texture": "#texture", "cullface": "north" },
+				"south": { "uv": [ 0, 0, 16, 16 ], "texture": "#texture", "cullface": "south" },
+				"west": { "uv": [ 0, 0, 16, 16 ], "texture": "#texture", "cullface": "west" },
+				"east": { "uv": [ 0, 0, 16, 16 ], "texture": "#texture", "cullface": "east" }
+			}
+		},
+		{
+			"from": [ -0.5183, 16.9375, -5.5 ],
+			"to": [ 24.48171, 17, 19.5 ],
+			"rotation": { "origin": [ -0.518306, 17, -5.5 ], "axis": "z", "angle": -45 },
+			"faces": {
+				"down": { "uv": [ 16, 16, 0, 0 ], "texture": "#leaves_spruce_plane" },
+				"up": { "uv": [ 0, 0, 16, 16 ], "texture": "#leaves_spruce_plane" }
+			}
+		},
+		{
+			"from": [ 8, 1.5, 8 ],
+			"to": [ 8.0625, 23.5, 30 ],
+			"rotation": { "origin": [ 8, 23.5, 8 ], "axis": "x", "angle": 45 },
+			"faces": {
+				"west": { "uv": [ 0, 0, 16, 16 ], "texture": "#leaves_spruce_plane", "cullface": "south" },
+				"east": { "uv": [ 0, 0, 16, 16 ], "texture": "#leaves_spruce_plane", "cullface": "south" }
+			}
+		},
+		{
+			"from": [ -2, -3, 2.5 ],
+			"to": [ 20, 19, 2.5625 ],
+			"rotation": { "origin": [ -2, -3, 2.5 ], "axis": "y", "angle": -22.5 },
+			"faces": {
+				"north": { "uv": [ 0, 0, 16, 16 ], "texture": "#leaves_spruce_plane" },
+				"south": { "uv": [ 0, 0, 16, 16 ], "texture": "#leaves_spruce_plane" }
+			}
+		}
+	]
+}

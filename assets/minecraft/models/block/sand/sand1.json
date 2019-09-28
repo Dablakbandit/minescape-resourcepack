@@ -1,0 +1,59 @@
+{
+	"__comment": "Designed by Cookiesnom with Cubik Studio - https://cubik.studio",
+	"textures": {
+		"particle": "block/sand",
+		"sand": "block/sand",
+		"stone": "block/stone"
+	},
+	"elements": [ 	 
+		{
+			"__comment": "sand",
+			"from": [ 0, 0, 0 ],
+			"to": [ 16, 16, 16 ],
+			"faces": {
+				"down": { "uv": [ 0, 0, 16, 16 ], "texture": "#sand", "cullface": "down" },
+				"up": { "uv": [ 0, 0, 16, 16 ], "texture": "#sand", "cullface": "up" },
+				"north": { "uv": [ 0, 0, 16, 16 ], "texture": "#sand", "cullface": "north" },
+				"south": { "uv": [ 0, 0, 16, 16 ], "texture": "#sand", "cullface": "south" },
+				"west": { "uv": [ 0, 0, 16, 16 ], "texture": "#sand", "cullface": "west" },
+				"east": { "uv": [ 0, 0, 16, 16 ], "texture": "#sand", "cullface": "east" }
+			}
+		},
+		{
+			"__comment": "stone1",
+			"from": [ 10.5, 16, 11.5 ],
+			"to": [ 13, 16.5, 13.5 ],
+			"rotation": { "origin": [ 13, 16, 11.5 ], "axis": "y", "angle": 22.5 },
+			"faces": {
+				"up": { "uv": [ 10.5, 11, 12.5, 13.5 ], "texture": "#stone", "cullface": "up", "rotation": 90 },
+				"north": { "uv": [ 11, 15.5, 13.5, 16 ], "texture": "#stone", "cullface": "up" },
+				"south": { "uv": [ 2.5, 15.5, 5, 16 ], "texture": "#stone", "cullface": "up" },
+				"west": { "uv": [ 10.5, 15.5, 12.5, 16 ], "texture": "#stone", "cullface": "up" },
+				"east": { "uv": [ 3.5, 15.5, 5.5, 16 ], "texture": "#stone", "cullface": "up" }
+			}
+		},
+		{
+			"__comment": "stone2",
+			"from": [ 3, 16, 3.5 ],
+			"to": [ 5, 16.5, 6 ],
+			"faces": {
+				"up": { "uv": [ 3, 3.5, 5, 6 ], "texture": "#stone", "cullface": "up" },
+				"north": { "uv": [ 11, 15.5, 13, 16 ], "texture": "#stone", "cullface": "up" },
+				"south": { "uv": [ 3, 15.5, 5, 16 ], "texture": "#stone", "cullface": "up" },
+				"west": { "uv": [ 3.5, 15.5, 6, 16 ], "texture": "#stone", "cullface": "up" },
+				"east": { "uv": [ 10, 15.5, 12.5, 16 ], "texture": "#stone", "cullface": "up" }
+			}
+		},
+		{
+			"__comment": "stone",
+			"from": [ 5, 16, 4 ],
+			"to": [ 5.5, 16.5, 5 ],
+			"faces": {
+				"up": { "uv": [ 5, 4, 5.5, 5 ], "texture": "#stone", "cullface": "up" },
+				"north": { "uv": [ 10.5, 15.5, 11, 16 ], "texture": "#stone", "cullface": "up" },
+				"south": { "uv": [ 5, 15.5, 5.5, 16 ], "texture": "#stone", "cullface": "up" },
+				"east": { "uv": [ 11, 15.5, 12, 16 ], "texture": "#stone", "cullface": "up" }
+			}
+		}
+	]
+}

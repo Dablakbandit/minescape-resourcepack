@@ -1,0 +1,40 @@
+{
+	"__comment": "Designed by Cookiesnom with BDcraft Cubik PRO 0.95 Beta - http://bdcraft.net",
+	"textures": {
+		"particle": "block/grass_block_top",
+		"texture": "block/grass_block_top",
+		"tallgrass": "custom/tallgrass"
+	},
+	"elements": [ 	 
+		{
+			"from": [ 0, 0, 0 ],
+			"to": [ 16, 16, 16 ],
+			"faces": {
+				"down": { "uv": [ 16, 16, 0, 0 ], "texture": "#texture", "cullface": "down", "tintindex": 0 },
+				"up": { "uv": [ 0, 0, 16, 16 ], "texture": "#texture", "cullface": "up", "tintindex": 0 },
+				"north": { "uv": [ 0, 0, 16, 16 ], "texture": "#texture", "cullface": "north", "tintindex": 0 },
+				"south": { "uv": [ 0, 0, 16, 16 ], "texture": "#texture", "cullface": "south", "tintindex": 0 },
+				"west": { "uv": [ 0, 0, 16, 16 ], "texture": "#texture", "cullface": "west", "tintindex": 0 },
+				"east": { "uv": [ 0, 0, 16, 16 ], "texture": "#texture", "cullface": "east", "tintindex": 0 }
+			}
+		},
+		{
+			"from": [ 1.5, 16, 2.5 ],
+			"to": [ 1.5625, 30, 17.5 ],
+			"rotation": { "origin": [ 1.5, 16, 2.5 ], "axis": "y", "angle": 45 },
+			"faces": {
+				"west": { "uv": [ 0, 0, 16, 16 ], "texture": "#tallgrass", "cullface": "up"},
+				"east": { "uv": [ 0, 0, 16, 16 ], "texture": "#tallgrass", "cullface": "up"}
+			}
+		},
+		{
+			"from": [ 12, 16, 2.5 ],
+			"to": [ 12.0625, 30, 17.5 ],
+			"rotation": { "origin": [ 12, 16, 2.5 ], "axis": "y", "angle": -45 },
+			"faces": {
+				"west": { "uv": [ 0, 0, 16, 16 ], "texture": "#tallgrass", "cullface": "up"},
+				"east": { "uv": [ 0, 0, 16, 16 ], "texture": "#tallgrass", "cullface": "up"}
+			}
+		}
+	]
+}

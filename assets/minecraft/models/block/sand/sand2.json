@@ -1,0 +1,60 @@
+{
+	"__comment": "Designed by Cookiesnom with Cubik Studio - https://cubik.studio",
+	"textures": {
+		"particle": "block/sand",
+		"sand": "block/sand",
+		"stone": "block/stone"
+	},
+	"elements": [ 	 
+		{
+			"__comment": "sand",
+			"from": [ 0, 0, 0 ],
+			"to": [ 16, 16, 16 ],
+			"faces": {
+				"down": { "uv": [ 0, 0, 16, 16 ], "texture": "#sand", "cullface": "down" },
+				"up": { "uv": [ 0, 0, 16, 16 ], "texture": "#sand", "cullface": "up" },
+				"north": { "uv": [ 0, 0, 16, 16 ], "texture": "#sand", "cullface": "north" },
+				"south": { "uv": [ 0, 0, 16, 16 ], "texture": "#sand", "cullface": "south" },
+				"west": { "uv": [ 0, 0, 16, 16 ], "texture": "#sand", "cullface": "west" },
+				"east": { "uv": [ 0, 0, 16, 16 ], "texture": "#sand", "cullface": "east" }
+			}
+		},
+		{
+			"__comment": "stone2",
+			"from": [ 3, 16, 6 ],
+			"to": [ 5.5, 17, 10.5 ],
+			"rotation": { "origin": [ 5.5, 16, 6.5 ], "axis": "y", "angle": 22.5 },
+			"faces": {
+				"up": { "uv": [ 2.5, 6.5, 5, 11 ], "texture": "#stone", "cullface": "up" },
+				"north": { "uv": [ 11, 15, 13.5, 16 ], "texture": "#stone", "cullface": "up" },
+				"south": { "uv": [ 2.5, 15, 5, 16 ], "texture": "#stone", "cullface": "up" },
+				"west": { "uv": [ 6.5, 15, 11, 16 ], "texture": "#stone", "cullface": "up" },
+				"east": { "uv": [ 5, 15, 9.5, 16 ], "texture": "#stone", "cullface": "up" }
+			}
+		},
+		{
+			"__comment": "stone",
+			"from": [ 3.75, 16, 8.5 ],
+			"to": [ 4.75, 16.75, 11 ],
+			"rotation": { "origin": [ 4.75, 16, 11 ], "axis": "y", "angle": 22.5 },
+			"faces": {
+				"up": { "uv": [ 5, 7, 6, 9.5 ], "texture": "#stone", "cullface": "up", "rotation": 180 },
+				"north": { "uv": [ 5, 15.5, 6, 16 ], "texture": "#stone", "cullface": "up" },
+				"south": { "uv": [ 10, 15.5, 11, 16 ], "texture": "#stone", "cullface": "up" },
+				"west": { "uv": [ 6.5, 15.5, 9, 16 ], "texture": "#stone", "cullface": "up" }
+			}
+		},
+		{
+			"__comment": "stone",
+			"from": [ 5.5, 16, 6.5 ],
+			"to": [ 6.5, 16.75, 9 ],
+			"rotation": { "origin": [ 5.5, 16, 6.5 ], "axis": "y", "angle": 22.5 },
+			"faces": {
+				"up": { "uv": [ 5, 7, 6, 9.5 ], "texture": "#stone", "cullface": "up" },
+				"north": { "uv": [ 10, 15.5, 11, 16 ], "texture": "#stone", "cullface": "up" },
+				"south": { "uv": [ 5, 15.5, 6, 16 ], "texture": "#stone", "cullface": "up" },
+				"east": { "uv": [ 6.5, 15.5, 9, 16 ], "texture": "#stone", "cullface": "up" }
+			}
+		}
+	]
+}

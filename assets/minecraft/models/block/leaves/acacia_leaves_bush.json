@@ -1,0 +1,52 @@
+{
+"__comment": "Designed by Gunshotproductions72 with BDcraft Cubik PRO 0.96 Beta - http://bdcraft.net",
+"textures": {
+    "particle": "block/acacia_leaves",
+    "texture": "block/acacia_leaves",
+    "leaves_oak_plane": "block/acacia_leaves_plane"
+},
+"elements": [ 
+{
+    "from": [ 0, 0, 0 ],
+    "to": [ 16, 16, 16 ],
+    "faces": {
+        "down":  { "uv": [ 16, 16, 0, 0 ], "texture": "#texture", "tintindex": 0, "cullface": "down" },
+        "up":    { "uv": [ 0, 0, 16, 16 ], "texture": "#texture", "tintindex": 0, "cullface": "up" },
+        "north": { "uv": [ 0, 0, 16, 16 ], "texture": "#texture", "tintindex": 0, "cullface": "north" },
+        "south": { "uv": [ 0, 0, 16, 16 ], "texture": "#texture", "tintindex": 0, "cullface": "south" },
+        "west":  { "uv": [ 0, 0, 16, 16 ], "texture": "#texture", "tintindex": 0, "cullface": "west" },
+        "east":  { "uv": [ 0, 0, 16, 16 ], "texture": "#texture", "tintindex": 0, "cullface": "east" }
+    }
+},
+{
+    "from": [ -0.518306, 16.9375, -5.5 ],
+    "to": [ 24.4817, 17, 19.5 ],
+    "shade": false,
+    "rotation": { "origin": [ -0.518306, 17, -5.5 ], "axis": "z", "angle": -45 },
+    "faces": {
+        "down":  { "uv": [ 16, 16, 0, 0 ], "texture": "#leaves_oak_plane", "tintindex": 0 },
+        "up":    { "uv": [ 0, 0, 16, 16 ], "texture": "#leaves_oak_plane", "tintindex": 0 }
+    }
+},
+{
+    "from": [ 8, 1.5, 8 ],
+    "to": [ 8.0625, 23.5, 30 ],
+    "shade": false,
+    "rotation": { "origin": [ 8, 23.5, 8 ], "axis": "x", "angle": 45 },
+    "faces": {
+        "west":  { "uv": [ 0, 0, 16, 16 ], "texture": "#leaves_oak_plane", "tintindex": 0, "cullface": "south" },
+        "east":  { "uv": [ 0, 0, 16, 16 ], "texture": "#leaves_oak_plane", "tintindex": 0, "cullface": "south" }
+    }
+},
+{
+    "from": [ -2, -3, 2.5 ],
+    "to": [ 20, 19, 2.5625 ],
+    "shade": false,
+    "rotation": { "origin": [ -2, -3, 2.5 ], "axis": "y", "angle": -22.5 },
+    "faces": {
+        "north": { "uv": [ 0, 0, 16, 16 ], "texture": "#leaves_oak_plane", "tintindex": 0 },
+        "south": { "uv": [ 0, 0, 16, 16 ], "texture": "#leaves_oak_plane", "tintindex": 0 }
+    }
+}
+]
+}
