@@ -21,7 +21,7 @@
 		{
 			"__comment": "froth1",
 			"from": [ 6.65, 5.975, 5.9 ],
-			"to": [ 9.45, 6.675, 10.1 ],
+			"to": [ 9.449999, 6.675, 10.1 ],
 			"faces": {
 				"down": { "uv": [ 4, 0, 8, 4 ], "texture": "#texture1", "rotation": 270 },
 				"up": { "uv": [ 4, 0, 8, 4 ], "texture": "#texture1", "rotation": 270 },
@@ -60,7 +60,7 @@
 		{
 			"__comment": "Box1",
 			"from": [ 6.65, 0.025, 6.6 ],
-			"to": [ 9.45, 0.725, 9.4 ],
+			"to": [ 9.449999, 0.725, 9.4 ],
 			"faces": {
 				"down": { "uv": [ 6, 15, 10, 16 ], "texture": "#texture" },
 				"up": { "uv": [ 6, 15, 10, 16 ], "texture": "#texture" },
@@ -99,7 +99,7 @@
 		{
 			"__comment": "Box1",
 			"from": [ 6.65, 0.725, 5.9 ],
-			"to": [ 9.45, 5.625, 6.599999 ],
+			"to": [ 9.449999, 5.625, 6.599998 ],
 			"faces": {
 				"down": { "uv": [ 6, 15, 10, 16 ], "texture": "#texture" },
 				"up": { "uv": [ 6, 15, 10, 16 ], "texture": "#texture" },
@@ -112,7 +112,7 @@
 		{
 			"__comment": "Box1",
 			"from": [ 6.65, 0.725, 9.4 ],
-			"to": [ 9.45, 5.625, 10.1 ],
+			"to": [ 9.449999, 5.625, 10.1 ],
 			"faces": {
 				"down": { "uv": [ 6, 15, 10, 16 ], "texture": "#texture" },
 				"up": { "uv": [ 6, 15, 10, 16 ], "texture": "#texture" },
@@ -152,7 +152,7 @@
 		{
 			"__comment": "Box1",
 			"from": [ 6.65, 0.725, 6.6 ],
-			"to": [ 9.45, 4.225, 9.4 ],
+			"to": [ 9.449999, 4.225, 9.4 ],
 			"faces": {
 				"down": { "uv": [ 6, 15, 10, 16 ], "texture": "#texture" },
 				"up": { "uv": [ 6, 15, 10, 16 ], "texture": "#texture" },
@@ -178,9 +178,26 @@
 		}
 	],
 	"display": {
+		"thirdperson_righthand": {
+			"rotation":  [ 39, 0, 0 ],
+			"translation":  [ 0, 5.5652, 2.0869 ]
+		},
+		"firstperson_righthand": {
+			"translation":  [ 0, 5.5651, 2.0869 ]
+		},
+		"gui": {
+			"rotation":  [ 31, 114, 0 ],
+			"translation":  [ 0, 6.2608, 0 ],
+			"scale":  [ 1.5, 1.5, 1.5 ]
+		},
 		"head": {
 			"translation":  [ 0, -37.1, 0 ],
 			"scale":  [ 1.2, 1.2, 1.2 ]
+		},
+		"fixed": {
+			"rotation":  [ -90, 0, 0 ],
+			"translation":  [ 0, 0, -14 ],
+			"scale":  [ 2, 2, 2 ]
 		}
 	}
 }
