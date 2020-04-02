@@ -1,9 +1,9 @@
 {
 	"__comment": "Designed by Ichristoffee with Cubik Studio - https://cubik.studio",
 	"textures": {
-		"1": "block\sand",
-		"7": "block\anvil_base",
-		"particle": "block\chiseled_stone_bricks"
+		"1": "block/sand",
+		"7": "block/anvil_base",
+		"particle": "block/chiseled_stone_bricks"
 	},
 	"elements": [ 	 
 		{
@@ -543,7 +543,7 @@
 		{
 			"__comment": "Element",
 			"from": [ 6.6616, 14.2819, 6.2273 ],
-			"to": [ 7.978199, 14.6383, 6.7619 ],
+			"to": [ 7.978199, 14.6383, 6.761899 ],
 			"faces": {
 				"down": { "uv": [ 3.25, 0.75, 0.25, 1.75 ], "texture": "#1" },
 				"up": { "uv": [ 3.25, 0.75, 0.25, 1.75 ], "texture": "#1" },
@@ -582,7 +582,7 @@
 		{
 			"__comment": "Element",
 			"from": [ 5.4616, 14.2819, 8.427299 ],
-			"to": [ 7.7782, 14.6383, 8.9619 ],
+			"to": [ 7.7782, 14.6383, 8.961901 ],
 			"rotation": { "origin": [ 7.961619, 16.42454, 9.02726 ], "axis": "y", "angle": -45 },
 			"faces": {
 				"down": { "uv": [ 3.25, 1.75, 0.25, 0.75 ], "texture": "#1" },
@@ -652,7 +652,7 @@
 		{
 			"__comment": "Element",
 			"from": [ 8.234799, 16.2819, 6.702 ],
-			"to": [ 10.5514, 16.6383, 7.2366 ],
+			"to": [ 10.5514, 16.6383, 7.236599 ],
 			"rotation": { "origin": [ 8.323949, 16.46197, 6.96743 ], "axis": "y", "angle": -22.5 },
 			"faces": {
 				"down": { "uv": [ 0.25, 0.75, 3.25, 1.75 ], "texture": "#1" },
@@ -772,7 +772,7 @@
 		{
 			"__comment": "eyes2",
 			"from": [ 7.925, 19.125, 9.349999 ],
-			"to": [ 8.325, 19.765, 9.749999 ],
+			"to": [ 8.324999, 19.765, 9.749999 ],
 			"faces": {
 				"down": { "uv": [ 0.25, 1.75, 3.25, 0.75 ], "texture": "#7" },
 				"up": { "uv": [ 3.25, 0.75, 0.25, 1.75 ], "texture": "#7" },
@@ -784,9 +784,14 @@
 		}
 	],
 	"display": {
+		"gui": {
+			"rotation":  [ 0, 36, 0 ],
+			"translation":  [ 0, -2.782, 0 ],
+			"scale":  [ 0.66, 0.66, 0.66 ]
+		},
 		"head": {
 			"rotation":  [ 0, 180, 0 ],
-			"translation":  [ 0, -28.6, 0 ],
+			"translation":  [ 0, -25.6, 0 ],
 			"scale":  [ 2.6, 2.6, 2.6 ]
 		}
 	}
