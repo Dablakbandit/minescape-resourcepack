@@ -1,6 +1,34 @@
 {
-	"parent": "item/prayers/protect_from_magic",
+	"__comment": "Designed by Dablakbandit with Cubik Studio - https://cubik.studio",
 	"textures": {
 		"1": "custom/stone_shovel/prayer/protect_from_missiles"
+	},
+	"elements": [ 	 
+		{
+			"__comment": "PlaneZ22",
+			"from": [ -1.635, 8.594999, 9.04 ],
+			"to": [ 6.365, 16.595, 9.041 ],
+			"rotation": { "origin": [ -1.635, 8.594999, 9.040001 ], "axis": "z", "angle": -45 },
+			"faces": {
+				"north": { "uv": [ 0, 0, 16, 16 ], "texture": "#1" },
+				"south": { "uv": [ 16, 0, 0, 16 ], "texture": "#1" }
+			}
+		},
+		{
+			"__comment": "PlaneZ22",
+			"from": [ 4.004, 8.599999, 3.435 ],
+			"to": [ 4.005, 16.5, 11.435 ],
+			"rotation": { "origin": [ 4.005, 8.6, 3.435 ], "axis": "x", "angle": 45 },
+			"faces": {
+				"west": { "uv": [ 16, 0, 0, 16 ], "texture": "#1" },
+				"east": { "uv": [ 0, 0, 16, 16 ], "texture": "#1" }
+			}
+		}
+	],
+	"display": {
+		"thirdperson_righthand": {
+			"rotation":  [ 75, 180, 3 ],
+			"translation":  [ -11.2, -3.6, 9.5 ]
+		}
 	}
 }
