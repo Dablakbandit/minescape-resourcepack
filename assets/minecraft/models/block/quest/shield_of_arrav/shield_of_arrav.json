@@ -332,7 +332,7 @@
 		{
 			"__comment": "innerblue4",
 			"from": [ 15.4359, -4.5837, 12.375 ],
-			"to": [ 18.4359, 0.4163003, 14.375 ],
+			"to": [ 18.4359, 0.4163008, 14.375 ],
 			"rotation": { "origin": [ 17, -2.75, 12.5 ], "axis": "z", "angle": -22.5 },
 			"faces": {
 				"up": { "uv": [ 0, 0, 1.5, 1.5 ], "texture": "#whiteouteredge" },
@@ -718,7 +718,7 @@
 		{
 			"__comment": "crest23",
 			"from": [ 3.4897, 3.1126, 10.5 ],
-			"to": [ 6.4897, 8.1126, 11.5 ],
+			"to": [ 6.489699, 8.1126, 11.5 ],
 			"rotation": { "origin": [ 4.375, 6.5, 10.5 ], "axis": "z", "angle": 22.5 },
 			"faces": {
 				"down": { "uv": [ 4.5, 6, 5.5, 12 ], "texture": "#crest", "rotation": 90 },
@@ -885,9 +885,18 @@
 		}
 	],
 	"display": {
+		"gui": {
+			"rotation":  [ -16, -149, -17 ],
+			"translation":  [ 1, 0, 0 ],
+			"scale":  [ 0.3, 0.3, 0.3 ]
+		},
 		"head": {
 			"rotation":  [ 27, 0, 0 ],
 			"translation":  [ 0, -27.82, -5.564 ]
+		},
+		"fixed": {
+			"rotation":  [ 38, 0, 0 ],
+			"translation":  [ -16, 33, 20 ]
 		}
 	}
 }
