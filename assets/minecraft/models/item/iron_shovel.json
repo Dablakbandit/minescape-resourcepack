@@ -1,5 +1,12 @@
-{"parent": "item/handheld","textures": {"layer0": "custom/empty"},"overrides": [ { "predicate": {"damage": 0.0000000000000000}, "model": "item/empty"},		{ "predicate": {"damage": 0.00398406374501992}, "model": "item/empty"},
-		{ "predicate": {"damage": 0.00796812749003984}, "model": "item/empty"},
+{
+	"parent": "item/handheld",
+	"textures": {
+		"layer0": "item/iron_shovel/trim/goldtrim_combined"
+	},
+	"overrides": [ 
+		{ "predicate": {"damage": 0.0000000000000000}, "model": "item/iron_shovel/trim/goldtrim_combined"},		
+		{ "predicate": {"damage": 0.00398406374501992}, "model": "item/iron_shovel/trim/goldtrim_legs"},
+		{ "predicate": {"damage": 0.00796812749003984}, "model": "item/iron_shovel/trim/goldtrim_chest"},
 		{ "predicate": {"damage": 0.01195219123505976}, "model": "item/empty"},
 		{ "predicate": {"damage": 0.01593625498007968}, "model": "item/empty"},
 		{ "predicate": {"damage": 0.0199203187250996}, "model": "item/empty"},
