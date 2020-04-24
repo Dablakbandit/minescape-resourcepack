@@ -1,0 +1,51 @@
+{
+	"__comment": "Designed by Dablakbandit with Cubik Studio - https://cubik.studio",
+	"textures": {
+		"1": "custom/stone_shovel/prayer/retribution",
+		"skull": "custom/stone_shovel/skull_status"
+	},
+	"elements": [ 	 
+		{
+			"__comment": "PlaneZ22",
+			"from": [ 0.25, 4.625, 9 ],
+			"to": [ 8.25, 12.375, 9.001 ],
+			"faces": {
+				"north": { "uv": [ 0, 0, 16, 16 ], "texture": "#1" },
+				"south": { "uv": [ 16, 0, 0, 16 ], "texture": "#1" }
+			}
+		},
+		{
+			"__comment": "PlaneZ22",
+			"from": [ 3.999, 4.625, 5.25 ],
+			"to": [ 4, 12.375, 13.25 ],
+			"faces": {
+				"west": { "uv": [ 16, 0, 0, 16 ], "texture": "#1" },
+				"east": { "uv": [ 0, 0, 16, 16 ], "texture": "#1" }
+			}
+		},
+		{
+			"__comment": "skull",
+			"from": [ 11.999, 4.625, 5 ],
+			"to": [ 12, 12.375, 13 ],
+			"faces": {
+				"west": { "uv": [ 16, 0, 0, 16 ], "texture": "#skull" },
+				"east": { "uv": [ 0, 0, 16, 16 ], "texture": "#skull" }
+			}
+		},
+		{
+			"__comment": "skull1",
+			"from": [ 8, 4.625, 9 ],
+			"to": [ 16, 12.375, 9.001 ],
+			"faces": {
+				"north": { "uv": [ 0, 0, 16, 16 ], "texture": "#skull" },
+				"south": { "uv": [ 16, 0, 0, 16 ], "texture": "#skull" }
+			}
+		}
+	],
+	"display": {
+		"thirdperson_righthand": {
+			"rotation":  [ 75, 180, 10 ],
+			"translation":  [ -5.9, -3.6, 9.5 ]
+		}
+	}
+}
