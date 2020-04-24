@@ -1,0 +1,53 @@
+{
+	"__comment": "Designed by Dablakbandit with Cubik Studio - https://cubik.studio",
+	"textures": {
+		"1": "custom/stone_shovel/prayer/protect_from_melee",
+		"skull": "custom/stone_shovel/skull_status"
+	},
+	"elements": [ 	 
+		{
+			"__comment": "PlaneZ22",
+			"from": [ -1.665, 8.594999, 9.04 ],
+			"to": [ 6.335, 16.595, 9.04098 ],
+			"rotation": { "origin": [ -1.665, 8.594999, 9.040001 ], "axis": "z", "angle": -45 },
+			"faces": {
+				"north": { "uv": [ 0, 0, 16, 16 ], "texture": "#1" },
+				"south": { "uv": [ 16, 0, 0, 16 ], "texture": "#1" }
+			}
+		},
+		{
+			"__comment": "PlaneZ22",
+			"from": [ 3.984, 8.599999, 3.375 ],
+			"to": [ 3.985, 16.64, 11.375 ],
+			"rotation": { "origin": [ 3.985, 8.6, 3.375 ], "axis": "x", "angle": 45 },
+			"faces": {
+				"west": { "uv": [ 16, 0, 0, 16 ], "texture": "#1" },
+				"east": { "uv": [ 0, 0, 16, 16 ], "texture": "#1" }
+			}
+		},
+		{
+			"__comment": "skull",
+			"from": [ 11.999, 4.625, 5 ],
+			"to": [ 12, 12.375, 13 ],
+			"faces": {
+				"west": { "uv": [ 16, 0, 0, 16 ], "texture": "#skull" },
+				"east": { "uv": [ 0, 0, 16, 16 ], "texture": "#skull" }
+			}
+		},
+		{
+			"__comment": "skull1",
+			"from": [ 8, 4.625, 9 ],
+			"to": [ 16, 12.375, 9.001 ],
+			"faces": {
+				"north": { "uv": [ 0, 0, 16, 16 ], "texture": "#skull" },
+				"south": { "uv": [ 16, 0, 0, 16 ], "texture": "#skull" }
+			}
+		}
+	],
+	"display": {
+		"thirdperson_righthand": {
+			"rotation":  [ 75, 180, 10 ],
+			"translation":  [ -5.9, -3.6, 9.5 ]
+		}
+	}
+}
