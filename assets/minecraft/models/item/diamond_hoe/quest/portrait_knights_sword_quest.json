@@ -1,6 +1,38 @@
 {
-	"parent": "item/handheld",
+	"__comment": "Designed by Ichristoffee with Cubik Studio - https://cubik.studio",
 	"textures": {
-		"layer0": "custom/diamond_hoe/quest/portrait_knights_sword_quest"
+		"texture": "custom/diamond_hoe/quest/portrait_knights_sword_quest"
+	},
+	"elements": [ 	 
+		{
+			"__comment": "PlaneY1",
+			"from": [ 0, 0, 0 ],
+			"to": [ 16, 0.001, 16 ],
+			"faces": {
+				"down": { "uv": [ 0.5, 0, 15, 16 ], "texture": "#texture" },
+				"up": { "uv": [ 0, 1.5, 16, 14 ], "texture": "#texture" }
+			}
+		}
+	],
+	"display": {
+		"thirdperson_righthand": {
+			"rotation":  [ 91, -10, 85 ],
+			"translation":  [ -3.478, 2.7826, 0 ],
+			"scale":  [ 0.5, 0.5, 0.5 ]
+		},
+		"firstperson_righthand": {
+			"rotation":  [ 95, 50, 0 ],
+			"translation":  [ 9.0434, 0, 0 ]
+		},
+		"gui": {
+			"rotation":  [ 99, 3, -3 ],
+			"translation":  [ 0.6956, -1, 13.217 ],
+			"scale":  [ 0.7, 0.7, 0.7 ]
+		},
+		"fixed": {
+			"rotation":  [ 30, -174, 8 ],
+			"translation":  [ 0, 2.0869, 16.694 ],
+			"scale":  [ 1.4, 1.4, 1.4 ]
+		}
 	}
 }
