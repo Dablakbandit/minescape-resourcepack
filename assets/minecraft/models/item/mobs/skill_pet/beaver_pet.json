@@ -1,12 +1,12 @@
 {
-	"credit": "Made by Endersven",
+	"credit": "Made with Blockbench",
 	"parent": "item/mobs/giant_mole/giant_mole",
 	"textures": {
 		"4": "custom/colors/brown_dark",
 		"5": "custom/colors/brown_light",
+		"particle": "custom/colors/brown_dark",
 		"black": "custom/colors/grey_dark",
-		"white": "custom/colors/white",
-		"particle": "custom/colors/brown_dark"
+		"white": "custom/colors/white"
 	},
 	"elements": [
 		{
@@ -1313,6 +1313,14 @@
 		}
 	],
 	"display": {
+		"thirdperson_righthand": {
+			"rotation": [79, 0, 1],
+			"translation": [-0.5, -5.25, 14],
+			"scale": [0.5, 0.5, 0.5]
+		},
+		"firstperson_righthand": {
+			"translation": [0, 0, 80]
+		},
 		"gui": {
 			"rotation": [25, -135, 0],
 			"translation": [-4.25, 4, 0],
@@ -1320,7 +1328,7 @@
 		},
 		"head": {
 			"translation": [-1.5, -35.5, 12.097],
-			"scale": [1.41602, 1.41602, 1.41602]
+			"scale": [1.9, 1.9, 1.9]
 		}
 	},
 	"groups": [

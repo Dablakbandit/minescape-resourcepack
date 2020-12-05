@@ -1,5 +1,5 @@
 {
-	"credit": "Made by Endersven",
+	"credit": "Made with Blockbench",
 	"textures": {
 		"2": "custom/colors/white",
 		"3": "custom/leaf_01_dead",
@@ -7,9 +7,9 @@
 		"5": "custom/colors/yellow_dark",
 		"6": "custom/colors/brown_light",
 		"7": "custom/bronzehat",
+		"particle": "custom/colors/white",
 		"grey": "custom/colors/grey",
-		"eyes": "custom/colors/black",
-		"particle": "custom/colors/white"
+		"eyes": "custom/colors/black"
 	},
 	"elements": [
 		{
@@ -2100,15 +2100,27 @@
 		}
 	],
 	"display": {
+		"thirdperson_righthand": {
+			"rotation": [72, -180, 0],
+			"translation": [0, -2.75, 9.25],
+			"scale": [0.4, 0.4, 0.4]
+		},
+		"thirdperson_lefthand": {
+			"rotation": [64, -177, 0],
+			"scale": [0.4, 0.4, 0.4]
+		},
+		"firstperson_righthand": {
+			"translation": [0, 0, 80]
+		},
 		"gui": {
 			"rotation": [18, 36, 8],
-			"translation": [-0.695, 2.0869, 0],
+			"translation": [-0.695, -2.4131, 0],
 			"scale": [0.4, 0.4, 0.4]
 		},
 		"head": {
 			"rotation": [0, -180, 0],
 			"translation": [0, -24.51, 0],
-			"scale": [1.76328, 1.76328, 1.76328]
+			"scale": [1.14, 1.14, 1.14]
 		}
 	}
 }
