@@ -10,10 +10,13 @@ jobs:
       with:
         filename: 'patreon.zip'
         exclusions: '*.git* README.md'
+    - name: Delete
+      uses: ame-yu/action-delete-latest-release@v2
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
     - name: Upload Release
       uses: ncipollo/release-action@v1
       with:
         artifacts: "patreon.zip"
         tag: "patreon"
-        commit: "master"
         token: ${{ secrets.GITHUB_TOKEN }}
