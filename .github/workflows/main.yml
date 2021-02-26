@@ -10,3 +10,8 @@ jobs:
       with:
         filename: 'patreon.zip'
         exclusions: '*.git* .gitignore README.md'
+    - name: Upload Release
+      uses: ncipollo/release-action@v1
+      with:
+        artifacts: "patreon.zip"
+        token: ${{ secrets.GITHUB_TOKEN }}
