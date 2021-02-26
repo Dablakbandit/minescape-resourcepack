@@ -14,5 +14,5 @@ jobs:
       uses: ncipollo/release-action@v1
       with:
         artifacts: "patreon.zip"
-        tag: "patreon"
+        commit: "master"
         token: ${{ secrets.GITHUB_TOKEN }}
