@@ -1,11 +1,11 @@
 {
-	"credit": "Made by EnderSven",
+	"credit": "Made with Blockbench",
 	"textures": {
-		"0": "custom/colors/cavecolors",
+		"0": "custom/colors/red_darker",
 		"1": "custom/colors/white",
 		"2": "custom/colors/red",
 		"3": "custom/colors/black_dark",
-		"particle": "custom/colors/cavecolors"
+		"particle": "custom/colors/red_darker"
 	},
 	"elements": [
 		{
@@ -194,6 +194,20 @@
 			"name": "Box2",
 			"from": [4.3962, 20.3066, 3.9021],
 			"to": [10.8114, 23.5142, 8.3173],
+			"rotation": {"angle": 0, "axis": "y", "origin": [8, 8, 17]},
+			"faces": {
+				"north": {"uv": [4, 8, 8, 12], "texture": "#0"},
+				"east": {"uv": [4, 8, 8, 12], "texture": "#0"},
+				"south": {"uv": [4, 8, 8, 12], "texture": "#0"},
+				"west": {"uv": [4, 8, 8, 12], "texture": "#0"},
+				"up": {"uv": [4, 8, 8, 12], "texture": "#0"},
+				"down": {"uv": [4, 8, 8, 12], "texture": "#0"}
+			}
+		},
+		{
+			"name": "Box3",
+			"from": [5.3962, 19.3066, 7.9021],
+			"to": [9.8114, 22.5142, 8.3173],
 			"rotation": {"angle": 0, "axis": "y", "origin": [8, 8, 17]},
 			"faces": {
 				"north": {"uv": [4, 8, 8, 12], "texture": "#0"},
@@ -570,12 +584,12 @@
 		{
 			"name": "group",
 			"origin": [8, 8, 8],
-			"children": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]
+			"children": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27]
 		},
 		{
 			"name": "group",
 			"origin": [8, 8, 8],
-			"children": [27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38]
+			"children": [28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39]
 		}
 	]
 }
