@@ -1,5 +1,5 @@
 {
-	"credit": "Made by EnderSven",
+	"credit": "Made with Blockbench",
 	"textures": {
 		"0": "custom/diamond_sword/farming/basket",
 		"particle": "custom/diamond_sword/farming/basket"
@@ -8,7 +8,6 @@
 		{
 			"from": [1.825, 0.225, 5.75],
 			"to": [11.475, 1.025, 10.675],
-			"rotation": {"angle": 0, "axis": "y", "origin": [0, 0, 0]},
 			"faces": {
 				"north": {"uv": [7.5, 7, 9, 8.25], "texture": "#0"},
 				"east": {"uv": [7.5, 7, 9, 8.25], "texture": "#0"},
@@ -138,7 +137,6 @@
 		{
 			"from": [1.35, 0, 5.275],
 			"to": [11.9, 0.55, 11.325],
-			"rotation": {"angle": 0, "axis": "y", "origin": [0, 0, 0]},
 			"faces": {
 				"north": {"uv": [7.5, 7, 9, 8.25], "texture": "#0"},
 				"east": {"uv": [7.5, 7, 9, 8.25], "texture": "#0"},
@@ -265,5 +263,12 @@
 				"down": {"uv": [7.5, 7, 9, 8.25], "rotation": 180, "texture": "#0"}
 			}
 		}
-	]
+	],
+	"display": {
+		"fixed": {
+			"rotation": [-90, 0, 0],
+			"translation": [1.5, 0, -15],
+			"scale": [2, 2, 2]
+		}
+	}
 }
