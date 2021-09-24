@@ -1,0 +1,280 @@
+{
+    "multipart": [
+        {   "when": {"age": 0, "north": false, "east": false, "south": false, "west": false, "up": false},
+            "apply": [
+                { "model": "block/fire_floor0" },
+                { "model": "block/fire_floor1" }
+            ]
+        },
+        {   "when": {"OR": [{"age": 0, "north": true}, {"age": 0, "north": false, "east": false, "south": false, "west": false, "up": false}]},
+            "apply": [
+                { "model": "block/fire_side0" },
+                { "model": "block/fire_side1" },
+                { "model": "block/fire_side_alt0" },
+                { "model": "block/fire_side_alt1" }
+            ]
+        },
+        {   "when": {"OR": [{"age": 0, "east": true}, {"age": 0, "north": false, "east": false, "south": false, "west": false, "up": false}]},
+            "apply": [
+                { "model": "block/fire_side0", "y": 90 },
+                { "model": "block/fire_side1", "y": 90 },
+                { "model": "block/fire_side_alt0", "y": 90 },
+                { "model": "block/fire_side_alt1", "y": 90 }
+            ]
+        },
+        {   "when": {"OR": [{"age": 0, "south": true}, {"age": 0, "north": false, "east": false, "south": false, "west": false, "up": false}]},
+            "apply": [
+                { "model": "block/fire_side0", "y": 180 },
+                { "model": "block/fire_side1", "y": 180 },
+                { "model": "block/fire_side_alt0", "y": 180 },
+                { "model": "block/fire_side_alt1", "y": 180 }
+            ]
+        },
+        {   "when": {"OR": [{"age": 0, "west": true}, {"age": 0, "north": false, "east": false, "south": false, "west": false, "up": false}]},
+            "apply": [
+                { "model": "block/fire_side0", "y": 270 },
+                { "model": "block/fire_side1", "y": 270 },
+                { "model": "block/fire_side_alt0", "y": 270 },
+                { "model": "block/fire_side_alt1", "y": 270 }
+            ]
+        },
+        {   "when": {"age": 0, "up": true},
+            "apply": [
+                { "model": "block/fire_up0" },
+                { "model": "block/fire_up1" },
+                { "model": "block/fire_up_alt0" },
+                { "model": "block/fire_up_alt1" }
+            ]
+        },
+		{   "when": {"age": 1, "north": false, "east": false, "south": false, "west": false, "up": false},
+            "apply": [
+                { "model": "block/fire_floor_red_0" },
+                { "model": "block/fire_floor_red_1" }
+            ]
+        },
+        {   "when": {"OR": [{"age": 1, "north": true}, {"age": 1, "north": false, "east": false, "south": false, "west": false, "up": false}]},
+            "apply": [
+                { "model": "block/fire_side_red_0" },
+                { "model": "block/fire_side_red_1" },
+                { "model": "block/fire_side_alt_red_0" },
+                { "model": "block/fire_side_alt_red_1" }
+            ]
+        },
+        {   "when": {"OR": [{"age": 1, "east": true}, {"age": 1, "north": false, "east": false, "south": false, "west": false, "up": false}]},
+            "apply": [
+                { "model": "block/fire_side_red_0", "y": 90 },
+                { "model": "block/fire_side_red_1", "y": 90 },
+                { "model": "block/fire_side_alt_red_0", "y": 90 },
+                { "model": "block/fire_side_alt_red_1", "y": 90 }
+            ]
+        },
+        {   "when": {"OR": [{"age": 1, "south": true}, {"age": 1, "north": false, "east": false, "south": false, "west": false, "up": false}]},
+            "apply": [
+                { "model": "block/fire_side_red_0", "y": 180 },
+                { "model": "block/fire_side_red_1", "y": 180 },
+                { "model": "block/fire_side_alt_red_0", "y": 180 },
+                { "model": "block/fire_side_alt_red_1", "y": 180 }
+            ]
+        },
+        {   "when": {"OR": [{"age": 1, "west": true}, {"age": 1, "north": false, "east": false, "south": false, "west": false, "up": false}]},
+            "apply": [
+                { "model": "block/fire_side_red_0", "y": 270 },
+                { "model": "block/fire_side_red_1", "y": 270 },
+                { "model": "block/fire_side_alt_red_0", "y": 270 },
+                { "model": "block/fire_side_alt_red_1", "y": 270 }
+            ]
+        },
+        {   "when": {"age": 1, "up": true},
+            "apply": [
+                { "model": "block/fire_up_red_0" },
+                { "model": "block/fire_up_red_1" },
+                { "model": "block/fire_up_alt_red_0" },
+                { "model": "block/fire_up_alt_red_1" }
+            ]
+        },
+		{   "when": {"age": 2, "north": false, "east": false, "south": false, "west": false, "up": false},
+            "apply": [
+                { "model": "block/fire_floor_green_0" },
+                { "model": "block/fire_floor_green_1" }
+            ]
+        },
+        {   "when": {"OR": [{"age": 2, "north": true}, {"age": 2, "north": false, "east": false, "south": false, "west": false, "up": false}]},
+            "apply": [
+                { "model": "block/fire_side_green_0" },
+                { "model": "block/fire_side_green_1" },
+                { "model": "block/fire_side_alt_green_0" },
+                { "model": "block/fire_side_alt_green_1" }
+            ]
+        },
+        {   "when": {"OR": [{"age": 2, "east": true}, {"age": 2, "north": false, "east": false, "south": false, "west": false, "up": false}]},
+            "apply": [
+                { "model": "block/fire_side_green_0", "y": 90 },
+                { "model": "block/fire_side_green_1", "y": 90 },
+                { "model": "block/fire_side_alt_green_0", "y": 90 },
+                { "model": "block/fire_side_alt_green_1", "y": 90 }
+            ]
+        },
+        {   "when": {"OR": [{"age": 2, "south": true}, {"age": 2, "north": false, "east": false, "south": false, "west": false, "up": false}]},
+            "apply": [
+                { "model": "block/fire_side_green_0", "y": 180 },
+                { "model": "block/fire_side_green_1", "y": 180 },
+                { "model": "block/fire_side_alt_green_0", "y": 180 },
+                { "model": "block/fire_side_alt_green_1", "y": 180 }
+            ]
+        },
+        {   "when": {"OR": [{"age": 2, "west": true}, {"age": 2, "north": false, "east": false, "south": false, "west": false, "up": false}]},
+            "apply": [
+                { "model": "block/fire_side_green_0", "y": 270 },
+                { "model": "block/fire_side_green_1", "y": 270 },
+                { "model": "block/fire_side_alt_green_0", "y": 270 },
+                { "model": "block/fire_side_alt_green_1", "y": 270 }
+            ]
+        },
+        {   "when": {"age": 2, "up": true},
+            "apply": [
+                { "model": "block/fire_up_green_0" },
+                { "model": "block/fire_up_green_1" },
+                { "model": "block/fire_up_alt_green_0" },
+                { "model": "block/fire_up_alt_green_1" }
+            ]
+        },
+		{   "when": {"age": 3, "north": false, "east": false, "south": false, "west": false, "up": false},
+            "apply": [
+                { "model": "block/fire_floor_blue_0" },
+                { "model": "block/fire_floor_blue_1" }
+            ]
+        },
+        {   "when": {"OR": [{"age": 3, "north": true}, {"age": 3, "north": false, "east": false, "south": false, "west": false, "up": false}]},
+            "apply": [
+                { "model": "block/fire_side_blue_0" },
+                { "model": "block/fire_side_blue_1" },
+                { "model": "block/fire_side_alt_blue_0" },
+                { "model": "block/fire_side_alt_blue_1" }
+            ]
+        },
+        {   "when": {"OR": [{"age": 3, "east": true}, {"age": 3, "north": false, "east": false, "south": false, "west": false, "up": false}]},
+            "apply": [
+                { "model": "block/fire_side_blue_0", "y": 90 },
+                { "model": "block/fire_side_blue_1", "y": 90 },
+                { "model": "block/fire_side_alt_blue_0", "y": 90 },
+                { "model": "block/fire_side_alt_blue_1", "y": 90 }
+            ]
+        },
+        {   "when": {"OR": [{"age": 3, "south": true}, {"age": 3, "north": false, "east": false, "south": false, "west": false, "up": false}]},
+            "apply": [
+                { "model": "block/fire_side_blue_0", "y": 180 },
+                { "model": "block/fire_side_blue_1", "y": 180 },
+                { "model": "block/fire_side_alt_blue_0", "y": 180 },
+                { "model": "block/fire_side_alt_blue_1", "y": 180 }
+            ]
+        },
+        {   "when": {"OR": [{"age": 3, "west": true}, {"age": 3, "north": false, "east": false, "south": false, "west": false, "up": false}]},
+            "apply": [
+                { "model": "block/fire_side_blue_0", "y": 270 },
+                { "model": "block/fire_side_blue_1", "y": 270 },
+                { "model": "block/fire_side_alt_blue_0", "y": 270 },
+                { "model": "block/fire_side_alt_blue_1", "y": 270 }
+            ]
+        },
+        {   "when": {"age": 3, "up": true},
+            "apply": [
+                { "model": "block/fire_up_blue_0" },
+                { "model": "block/fire_up_blue_1" },
+                { "model": "block/fire_up_alt_blue_0" },
+                { "model": "block/fire_up_alt_blue_1" }
+            ]
+        },
+		{   "when": {"age": 4, "north": false, "east": false, "south": false, "west": false, "up": false},
+            "apply": [
+                { "model": "block/fire_floor_purple_0" },
+                { "model": "block/fire_floor_purple_1" }
+            ]
+        },
+        {   "when": {"OR": [{"age": 4, "north": true}, {"age": 4, "north": false, "east": false, "south": false, "west": false, "up": false}]},
+            "apply": [
+                { "model": "block/fire_side_purple_0" },
+                { "model": "block/fire_side_purple_1" },
+                { "model": "block/fire_side_alt_purple_0" },
+                { "model": "block/fire_side_alt_purple_1" }
+            ]
+        },
+        {   "when": {"OR": [{"age": 4, "east": true}, {"age": 4, "north": false, "east": false, "south": false, "west": false, "up": false}]},
+            "apply": [
+                { "model": "block/fire_side_purple_0", "y": 90 },
+                { "model": "block/fire_side_purple_1", "y": 90 },
+                { "model": "block/fire_side_alt_purple_0", "y": 90 },
+                { "model": "block/fire_side_alt_purple_1", "y": 90 }
+            ]
+        },
+        {   "when": {"OR": [{"age": 4, "south": true}, {"age": 4, "north": false, "east": false, "south": false, "west": false, "up": false}]},
+            "apply": [
+                { "model": "block/fire_side_purple_0", "y": 180 },
+                { "model": "block/fire_side_purple_1", "y": 180 },
+                { "model": "block/fire_side_alt_purple_0", "y": 180 },
+                { "model": "block/fire_side_alt_purple_1", "y": 180 }
+            ]
+        },
+        {   "when": {"OR": [{"age": 4, "west": true}, {"age": 4, "north": false, "east": false, "south": false, "west": false, "up": false}]},
+            "apply": [
+                { "model": "block/fire_side_purple_0", "y": 270 },
+                { "model": "block/fire_side_purple_1", "y": 270 },
+                { "model": "block/fire_side_alt_purple_0", "y": 270 },
+                { "model": "block/fire_side_alt_purple_1", "y": 270 }
+            ]
+        },
+        {   "when": {"age": 4, "up": true},
+            "apply": [
+                { "model": "block/fire_up_purple_0" },
+                { "model": "block/fire_up_purple_1" },
+                { "model": "block/fire_up_alt_purple_0" },
+                { "model": "block/fire_up_alt_purple_1" }
+            ]
+        },
+		    {   "when": {"age": 5, "north": false, "east": false, "south": false, "west": false, "up": false},
+            "apply": [
+                { "model": "block/fire_floor_white_0" },
+                { "model": "block/fire_floor_white_1" }
+            ]
+        },
+        {   "when": {"OR": [{"age": 5, "north": true}, {"age": 5, "north": false, "east": false, "south": false, "west": false, "up": false}]},
+            "apply": [
+                { "model": "block/fire_side_white_0" },
+                { "model": "block/fire_side_white_1" },
+                { "model": "block/fire_side_alt_white_0" },
+                { "model": "block/fire_side_alt_white_1" }
+            ]
+        },
+        {   "when": {"OR": [{"age": 5, "east": true}, {"age": 5, "north": false, "east": false, "south": false, "west": false, "up": false}]},
+            "apply": [
+                { "model": "block/fire_side_white_0", "y": 90 },
+                { "model": "block/fire_side_white_1", "y": 90 },
+                { "model": "block/fire_side_alt_white_0", "y": 90 },
+                { "model": "block/fire_side_alt_white_1", "y": 90 }
+            ]
+        },
+        {   "when": {"OR": [{"age": 5, "south": true}, {"age": 5, "north": false, "east": false, "south": false, "west": false, "up": false}]},
+            "apply": [
+                { "model": "block/fire_side_white_0", "y": 180 },
+                { "model": "block/fire_side_white_1", "y": 180 },
+                { "model": "block/fire_side_alt_white_0", "y": 180 },
+                { "model": "block/fire_side_alt_white_1", "y": 180 }
+            ]
+        },
+        {   "when": {"OR": [{"age": 5, "west": true}, {"age": 5, "north": false, "east": false, "south": false, "west": false, "up": false}]},
+            "apply": [
+                { "model": "block/fire_side_white_0", "y": 270 },
+                { "model": "block/fire_side_white_1", "y": 270 },
+                { "model": "block/fire_side_alt_white_0", "y": 270 },
+                { "model": "block/fire_side_alt_white_1", "y": 270 }
+            ]
+        },
+        {   "when": {"age": 5, "up": true},
+            "apply": [
+                { "model": "block/fire_up_white_0" },
+                { "model": "block/fire_up_white_1" },
+                { "model": "block/fire_up_alt_white_0" },
+                { "model": "block/fire_up_alt_white_1" }
+            ]
+        }
+    ]
+}

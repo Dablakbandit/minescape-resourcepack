@@ -1,0 +1,37 @@
+{
+	"credit": "Made with Blockbench",
+	"texture_size": [6, 4],
+	"textures": {
+		"particle": "custom/mobs/tower_of_life/frogeel"
+	},
+	"elements": [
+		{
+			"from": [7.5, 0, 7.5],
+			"to": [8.5, 1, 8.5],
+			"rotation": {"angle": 0, "axis": "y", "origin": [7.5, 0, 7.5]},
+			"faces": {
+				"north": {"uv": [1.33333, 2, 4, 6], "texture": "#particle"},
+				"east": {"uv": [0, 0, 5.33333, 0.5], "texture": "#missing"},
+				"south": {"uv": [0, 0, 5.33333, 0.5], "texture": "#missing"},
+				"west": {"uv": [0, 0, 5.33333, 0.5], "texture": "#missing"},
+				"up": {"uv": [0, 0, 5.33333, 0.5], "texture": "#missing"},
+				"down": {"uv": [0, 0, 5.33333, 0.5], "texture": "#missing"}
+			}
+		}
+	],
+	"groups": [
+		{
+			"name": "frogeel",
+			"origin": [0, 0, 0],
+			"color": 0,
+			"children": [
+				{
+					"name": "body",
+					"origin": [0, 0, 0],
+					"color": 0,
+					"children": [0]
+				}
+			]
+		}
+	]
+}
