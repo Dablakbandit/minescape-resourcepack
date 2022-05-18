@@ -1,5 +1,5 @@
 {
-	"credit": "Made with Blockbench",
+	"credit": "Made by Regorty",
 	"textures": {
 		"1": "custom/colors/barrows_colors"
 	},
@@ -783,11 +783,21 @@
 	],
 	"display": {
 		"thirdperson_righthand": {
+			"rotation": [0, 90, 0],
+			"translation": [0, 4.5, 0],
+			"scale": [3, 3, 3]
+		},
+		"thirdperson_lefthand": {
+			"rotation": [0, -90, 0],
 			"translation": [0, 4.5, 0],
 			"scale": [3, 3, 3]
 		},
 		"firstperson_righthand": {
-			"rotation": [-58, 0, 0],
+			"rotation": [-58, 90, 0],
+			"translation": [0.25, 2.75, 5]
+		},
+		"firstperson_lefthand": {
+			"rotation": [-58, -90, 0],
 			"translation": [0.25, 2.75, 5]
 		},
 		"gui": {
@@ -799,6 +809,11 @@
 			"rotation": [90, 0, 90],
 			"translation": [-0.25, -40, 0],
 			"scale": [3, 3, 3]
+		},
+		"fixed": {
+			"rotation": [0, 0, 45],
+			"translation": [0, 0, -0.25],
+			"scale": [4, 4, 4]
 		}
 	},
 	"groups": [
