@@ -12,7 +12,7 @@ jobs:
       uses: jacobtomlinson/gha-find-replace@v2
       with:
         find: "(\r\n|\r|\n)"
-        replace: ""
+        replace: " "
         include: "**.json"
         regex: true
     - name: Archive Release
