@@ -14,7 +14,7 @@ jobs:
         filename: 'dev.zip'
         exclusions: '*.git* README.md *.schema* *.zip'
     - name: Delete dev files 
-      run: rm assets/minecraft/textures/particle/dev/effect_*
+      run: rm assets/minecraft/textures/particle/effect_*
     - name: Archive Release
       uses: thedoctor0/zip-release@master
       with:
