@@ -14,7 +14,7 @@ jobs:
         filename: 'patreon.zip'
         exclusions: '*.git* README.md *.schema*'
     - name: Rename file 
-      run: mv -f assets\minecraft\textures\particle\particles_dev.png assets\minecraft\textures\particle\particles.png
+      run: mv -f assets/minecraft/textures/particle/particles_dev.png assets/minecraft/textures/particle/particles.png
     - name: Archive Release
       uses: thedoctor0/zip-release@master
       with:
