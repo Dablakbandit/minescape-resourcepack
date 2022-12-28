@@ -13,6 +13,13 @@ jobs:
       with:
         filename: 'patreon.zip'
         exclusions: '*.git* README.md *.schema*'
+    - name: Rename file 
+      run: mv -f assets\minecraft\textures\particle\particles_dev.png assets\minecraft\textures\particle\particles.png
+    - name: Archive Release
+      uses: thedoctor0/zip-release@master
+      with:
+        filename: 'dev.zip'
+        exclusions: '*.git* README.md *.schema*'
     - name: Delete
       uses: ame-yu/action-delete-latest-release@v2
       with:
@@ -20,6 +27,6 @@ jobs:
     - name: Upload Release
       uses: ncipollo/release-action@v1
       with:
-        artifacts: "patreon.zip"
+        artifacts: "patreon.zip,dev.zip"
         tag: "patreon"
         token: ${{ secrets.GITHUB_TOKEN }}
