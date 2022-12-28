@@ -12,14 +12,14 @@ jobs:
       uses: thedoctor0/zip-release@master
       with:
         filename: 'patreon.zip'
-        exclusions: '*.git* README.md *.schema*'
+        exclusions: '*.git* README.md *.schema* *.zip'
     - name: Rename file 
       run: mv -f assets/minecraft/textures/particle/particles_dev.png assets/minecraft/textures/particle/particles.png
     - name: Archive Release
       uses: thedoctor0/zip-release@master
       with:
         filename: 'dev.zip'
-        exclusions: '*.git* README.md *.schema*'
+        exclusions: '*.git* README.md *.schema* *.zip'
     - name: Delete
       uses: ame-yu/action-delete-latest-release@v2
       with:
