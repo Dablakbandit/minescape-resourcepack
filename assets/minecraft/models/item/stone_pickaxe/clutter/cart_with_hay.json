@@ -3,6 +3,7 @@
 	"textures": {
 		"0": "item/custom/diamond_hoe/construction/plank",
 		"2": "item/custom/diamond_pickaxe/steel_bar",
+		"3": "block/hay_block_top",
 		"particle": "item/custom/diamond_hoe/construction/plank"
 	},
 	"elements": [
@@ -726,6 +727,39 @@
 			}
 		},
 		{
+			"from": [5.97846, 15.28749, 10.21479],
+			"to": [11.97846, 18.28749, 29.46479],
+			"rotation": {"angle": -22.5, "axis": "z", "origin": [7.96479, 6.87343, 14]},
+			"faces": {
+				"north": {"uv": [6, 13.5, 6.5, 14], "texture": "#3"},
+				"east": {"uv": [0, 0, 0, 0], "texture": "#3"},
+				"south": {"uv": [5, 13.5, 5.5, 14], "texture": "#3"},
+				"up": {"uv": [0, 0, 16, 6], "rotation": 270, "texture": "#3"},
+				"down": {"uv": [0, 0, 0, 0], "texture": "#3"}
+			}
+		},
+		{
+			"from": [5.43195, 15.17878, 10.21479],
+			"to": [10.49763, 18.17878, 29.46479],
+			"rotation": {"angle": 0, "axis": "y", "origin": [7.96479, 6.87343, 14]},
+			"faces": {
+				"up": {"uv": [0, 0, 16, 5.06568], "rotation": 270, "texture": "#3"},
+				"down": {"uv": [0, 0, 0, 0], "texture": "#3"}
+			}
+		},
+		{
+			"from": [3.95112, 15.28749, 10.21479],
+			"to": [9.95112, 18.28749, 29.46479],
+			"rotation": {"angle": 22.5, "axis": "z", "origin": [7.96479, 6.87343, 14]},
+			"faces": {
+				"north": {"uv": [6, 13.5, 6.5, 14], "texture": "#3"},
+				"south": {"uv": [5, 13.5, 5.5, 14], "texture": "#3"},
+				"west": {"uv": [0, 0, 0, 0], "texture": "#3"},
+				"up": {"uv": [0, 0, 16, 6], "rotation": 270, "texture": "#3"},
+				"down": {"uv": [0, 0, 0, 0], "texture": "#3"}
+			}
+		},
+		{
 			"from": [5.97846, 16.78749, 29.21479],
 			"to": [12.97846, 19.78749, 30.21479],
 			"rotation": {"angle": -22.5, "axis": "z", "origin": [7.96479, 8.37343, 13]},
@@ -1088,11 +1122,14 @@
 		65,
 		66,
 		67,
+		68,
+		69,
+		70,
 		{
 			"name": "group",
 			"origin": [-4.25998, 6.02868, 0.5],
 			"color": 0,
-			"children": [68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86]
+			"children": [71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89]
 		}
 	]
 }
