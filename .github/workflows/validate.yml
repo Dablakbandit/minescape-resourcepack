@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Validate json
-        uses: bramstroker/json-schema-validator@v1.0.0
+        uses: FalsePattern/json-schema-validator@v1.0.0
         with:
           token: ${{ secrets.RESOURCEPACK_SECRET }}
           json_schema: ./.schemas/validate.schema
