@@ -10,10 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Validate json
-        uses: FalsePattern/json-schema-validator@v1.0.0
+      - name: json-syntax-check
+        uses: limitusus/json-syntax-check@v1
         with:
-          token: ${{ secrets.RESOURCEPACK_SECRET }}
-          json_schema: ./.schemas/validate.schema
-          json_path_pattern: .*.json$
-          send_comment: true
-          clear_comments: true
+          pattern: "\\.json$"
