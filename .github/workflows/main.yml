@@ -19,7 +19,7 @@ jobs:
       uses: thedoctor0/zip-release@master
       with:
         filename: 'patreon.zip'
-        exclusions: '*.git* README.md *.schema* *.zip'
+        exclusions: '*.git* README.md *.schema* *.zip *.py'
     - name: Delete
       uses: ame-yu/action-delete-latest-release@v2
       with:

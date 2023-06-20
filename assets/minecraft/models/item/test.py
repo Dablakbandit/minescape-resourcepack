@@ -12,9 +12,13 @@ def list_files(folder):
             list_files(file_path)
         else:
             filep = "models/blocks/gc/minecraft/item" + file_path.replace(os.getcwd(), "").replace("\\", "/")
+            filea = "attachables/minecraft/item" + file_path.replace(os.getcwd(), "").replace("\\", "/")
 
-            if len(filep) > 80:
+            if len(filep) >= 80:
                 print(filep + ": " + str(len(filep)))
+                
+            if len(filea) >= 80:
+                print("A " + filea + ": " + str(len(filea)))
 
 folder = os.getcwd()
 print(folder)
