@@ -20,13 +20,29 @@ jobs:
       with:
         filename: 'patreon.zip'
         exclusions: '*.git* README.md *.schema* *.zip *.py'
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+
+    - name: Run script
+      run: python .github/scripts/process_input.py
+
+    - name: Archive Release
+      uses: thedoctor0/zip-release@master
+      with:
+        filename: '20.zip'
+        exclusions: '*.git* README.md *.schema* *.zip *.py'
+
     - name: Delete
       uses: ame-yu/action-delete-latest-release@v2
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
+        
     - name: Upload Release
       uses: ncipollo/release-action@v1
       with:
-        artifacts: "patreon.zip,dev.zip"
+        artifacts: "patreon.zip,dev.zip,20.zip"
         tag: "patreon"
         token: ${{ secrets.GITHUB_TOKEN }}
