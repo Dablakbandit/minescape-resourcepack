@@ -65,24 +65,26 @@ def list_files(input):
 
 def process_input():
     neck = list_files('run/neck.txt')
+    clone = neck.copy()
     for model in neck:
         print(f'Neck: {model}')
         # Example usage:
         model_file = f"assets/ms/models/{model.replace('ms:', '')}.json"
         parent = modify_neck(model_file)
         neck = list_files('run/neck.txt')
-        if parent is not None and parent not in neck and parent != 'item/handheld':
-            neck.add(parent)
+        if parent is not None and parent not in clone and parent != 'item/handheld':
+            clone.add(parent)
             model_file = f"assets/ms/models/{parent.replace('ms:', '')}.json"
             parent = modify_neck(model_file)
     cape = list_files('run/cape.txt')
+    clone = cape.copy()
     for model in cape:
         print(f'Cape: {model}')
         # Example usage:
         model_file = f"assets/ms/models/{model.replace('ms:', '')}.json"
         parent = modify_cape(model_file)
-        if parent is not None and parent not in cape and parent != 'item/handheld':
-            cape.add(parent)
+        if parent is not None and parent not in clone and parent != 'item/handheld':
+            clone.add(parent)
             model_file = f"assets/ms/models/{parent.replace('ms:', '')}.json"
             modify_cape(model_file)
 
