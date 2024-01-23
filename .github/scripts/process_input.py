@@ -40,6 +40,7 @@ def modify_cape(model_file):
 
     with open(model_file, 'w') as file:
         json.dump(data, file, indent=4)
+    return None
 
 def list_files(input):
     with open(input, 'r') as file:
@@ -71,7 +72,7 @@ def process_input():
         model_file = f"assets/ms/models/{model.replace('ms:', '')}.json"
         parent = modify_neck(model_file)
         neck = list_files('run/neck.txt')
-        if parent is not None and parent not in neck:
+        if parent is not None and parent not in neck and parent is not 'item/handheld':
             neck.add(parent)
             model_file = f"assets/ms/models/{parent.replace('ms:', '')}.json"
             parent = modify_neck(model_file)
@@ -81,7 +82,7 @@ def process_input():
         # Example usage:
         model_file = f"assets/ms/models/{model.replace('ms:', '')}.json"
         parent = modify_cape(model_file)
-        if parent is not None and parent not in cape:
+        if parent is not None and parent not in cape and parent is not 'item/handheld':
             cape.add(parent)
             model_file = f"assets/ms/models/{parent.replace('ms:', '')}.json"
             modify_cape(model_file)
