@@ -29,7 +29,7 @@ def modify_cape(model_file):
     with open(model_file, 'r') as file:
         data = json.load(file)
         
-        if 'display' in data and 'thirdperson_lefthand' in data['head']:
+        if 'display' in data and 'head' in data['display']:
             translation = data['display']['head']['translation']
             translation[1] -= 13
 
