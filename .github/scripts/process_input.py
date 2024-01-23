@@ -21,9 +21,12 @@ def modify_neck(model_file):
             translation[0] -= 1.25
             translation[1] -= 1.75
             translation[2] -= 6.95
+        elif 'parent' in data:
+            return data['parent']
 
     with open(model_file, 'w') as file:
         json.dump(data, file, indent=4)
+    return None
 
 def modify_cape(model_file):
     with open(model_file, 'r') as file:
@@ -32,6 +35,8 @@ def modify_cape(model_file):
         if 'display' in data and 'head' in data['display']:
             translation = data['display']['head']['translation']
             translation[1] -= 13
+        elif 'parent' in data:
+            return data['parent']
 
     with open(model_file, 'w') as file:
         json.dump(data, file, indent=4)
@@ -64,13 +69,22 @@ def process_input():
         print(f'Neck: {model}')
         # Example usage:
         model_file = f"assets/ms/models/{model.replace('ms:', '')}.json"
-        modify_neck(model_file)
+        parent = modify_neck(model_file)
         neck = list_files('run/neck.txt')
+        if parent is not None and parent not in neck:
+            neck.add(parent)
+            model_file = f"assets/ms/models/{parent.replace('ms:', '')}.json"
+            parent = modify_neck(model_file)
     cape = list_files('run/cape.txt')
     for model in cape:
         print(f'Cape: {model}')
         # Example usage:
         model_file = f"assets/ms/models/{model.replace('ms:', '')}.json"
-        modify_cape(model_file)
+        parent = modify_cape(model_file)
+        if parent is not None and parent not in cape:
+            cape.add(parent)
+            model_file = f"assets/ms/models/{parent.replace('ms:', '')}.json"
+            modify_cape(model_file)
+
 
 process_input()
