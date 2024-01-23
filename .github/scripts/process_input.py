@@ -70,6 +70,6 @@ def process_input():
         print(f'Cape: {model}')
         # Example usage:
         model_file = f"assets/ms/models/{model.replace('ms:', '')}.json"
-        #modify_cape(model_file)
+        modify_cape(model_file)
 
 process_input()
