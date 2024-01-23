@@ -55,7 +55,6 @@ def list_files(input):
                 with open(json_file, 'r') as jfile:
                     data = json.load(jfile)
                     model = find_nearest_model(data, durability, damage)
-                    print(f'Model: {name} {model}')
                     if model is None:
                         print(f'Missing Item: {name} {item} {damage}')
                     elif model not in seen_models:  # Check if the model is not None and has not been encountered
