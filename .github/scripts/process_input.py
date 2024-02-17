@@ -75,7 +75,7 @@ def process_input():
         if parent is not None and parent not in clone and parent != 'item/handheld':
             clone.add(parent)
             model_file = f"assets/ms/models/{parent.replace('ms:', '')}.json"
-            parent = modify_neck(model_file)
+            modify_neck(model_file)
     cape = list_files('run/cape.txt')
     clone = cape.copy()
     for model in cape:
