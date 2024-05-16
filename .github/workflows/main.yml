@@ -69,6 +69,6 @@ jobs:
     - name: Upload Release
       uses: ncipollo/release-action@v1
       with:
-        artifacts: "patreon.zip,dev.zip,20.zip"
+        artifacts: "patreon.zip,patreon_low.zip,dev.zip,20.zip,20_low.zip"
         tag: "patreon"
         token: ${{ secrets.GITHUB_TOKEN }}
