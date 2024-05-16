@@ -8,23 +8,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
+    
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+
     - name: Archive Release
       uses: thedoctor0/zip-release@master
       with:
         filename: 'dev.zip'
         exclusions: '*.git* README.md *.schema* *.zip'
+
     - name: Delete dev files 
       run: rm assets/minecraft/textures/particle/effect_*
+
     - name: Archive Release
       uses: thedoctor0/zip-release@master
       with:
         filename: 'patreon.zip'
         exclusions: '*.git* README.md *.schema* *.zip *.py'
-
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.8
 
     - name: Run script
       run: python .github/scripts/process_input.py
@@ -33,6 +36,29 @@ jobs:
       uses: thedoctor0/zip-release@master
       with:
         filename: '20.zip'
+        exclusions: '*.git* README.md *.schema* *.zip *.py'
+
+    - name: Reset specific files or directories
+      run: |
+        git checkout -- assets/
+        rm assets/minecraft/textures/particle/effect_*
+        rm -R assets/minecraft/textures/item/custom/noted
+        rm -R assets/ms/models/noted
+        sed -i 's/ms:noted\/[a-zA-Z_0-9]*\b/ms:wooden_shovel\/note/g' assets/minecraft/models/item/carrot.json
+
+    - name: Archive Release
+      uses: thedoctor0/zip-release@master
+      with:
+        filename: 'patreon_low.zip'
+        exclusions: '*.git* README.md *.schema* *.zip *.py'
+
+    - name: Run script
+      run: python .github/scripts/process_input.py
+
+    - name: Archive Release
+      uses: thedoctor0/zip-release@master
+      with:
+        filename: '20_low.zip'
         exclusions: '*.git* README.md *.schema* *.zip *.py'
 
     - name: Delete
