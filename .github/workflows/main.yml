@@ -18,7 +18,7 @@ jobs:
       uses: thedoctor0/zip-release@master
       with:
         filename: 'dev.zip'
-        exclusions: '*.git* README.md *.schema* *.zip'
+        exclusions: '*.git* README.md *.schema* *.zip *.py run'
 
     - name: Delete dev files 
       run: rm assets/minecraft/textures/particle/effect_*
@@ -27,7 +27,7 @@ jobs:
       uses: thedoctor0/zip-release@master
       with:
         filename: 'patreon.zip'
-        exclusions: '*.git* README.md *.schema* *.zip *.py'
+        exclusions: '*.git* README.md *.schema* *.zip *.py run'
 
     - name: Run script
       run: python .github/scripts/process_input.py
@@ -36,7 +36,7 @@ jobs:
       uses: thedoctor0/zip-release@master
       with:
         filename: '20.zip'
-        exclusions: '*.git* README.md *.schema* *.zip *.py'
+        exclusions: '*.git* README.md *.schema* *.zip *.py run'
 
     - name: Reset specific files or directories
       run: |
@@ -50,7 +50,7 @@ jobs:
       uses: thedoctor0/zip-release@master
       with:
         filename: 'patreon_low.zip'
-        exclusions: '*.git* README.md *.schema* *.zip *.py'
+        exclusions: '*.git* README.md *.schema* *.zip *.py run'
 
     - name: Run script
       run: python .github/scripts/process_input.py
@@ -59,7 +59,7 @@ jobs:
       uses: thedoctor0/zip-release@master
       with:
         filename: '20_low.zip'
-        exclusions: '*.git* README.md *.schema* *.zip *.py'
+        exclusions: '*.git* README.md *.schema* *.zip *.py run'
 
     - name: Delete
       uses: ame-yu/action-delete-latest-release@v2
