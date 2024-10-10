@@ -72,3 +72,7 @@ jobs:
         artifacts: "patreon.zip,patreon_low.zip,dev.zip,20.zip,20_low.zip,run/noted.txt"
         tag: "patreon"
         token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Update pack on server
+      run: curl -X GET "${{ secrets.UPDATE_URL }}"
+
