@@ -66,6 +66,13 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Upload Patreon Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: 'patreon.zip,patreon_low.zip,dev.zip,20.zip,20_low.zip,run/noted.txt'
+          tag: 'patreon'
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Calculate SHA1 Hashes
         run: |
           for file in patreon.zip patreon_low.zip 20.zip 20_low.zip; do
@@ -77,13 +84,6 @@ jobs:
         with:
           artifacts: 'patreon.zip,patreon_low.zip,20.zip,20_low.zip,patreon.zip.sha1,patreon_low.zip.sha1,20.zip.sha1,20_low.zip.sha1'
           tag: 'resourcepack-${{ github.sha }}'
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Patreon Release
-        uses: ncipollo/release-action@v1
-        with:
-          artifacts: 'patreon.zip,patreon_low.zip,dev.zip,20.zip,20_low.zip,run/noted.txt'
-          tag: 'patreon'
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update pack on server
