@@ -109,7 +109,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.public_release == 'true'
         run: |
           for file in resourcepack.zip resourcepack_low.zip resourcepack_20.zip resourcepack_20_low.zip; do
-            sha1sum $file > $file.sha1
+            sha1sum $file | cut -d ' ' -f 1 > $file.sha1
           done
 
       - uses: actions/github-script@v4
