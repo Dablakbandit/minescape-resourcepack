@@ -98,6 +98,7 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           artifacts: 'patreon.zip,patreon_low.zip,20.zip,20_low.zip,patreon.zip.sha1,patreon_low.zip.sha1,20.zip.sha1,20_low.zip.sha1'
+          name: 'Resourcepack'
           tag: 'resourcepack-${{ github.sha }}'
           token: ${{ secrets.GITHUB_TOKEN }}
 
