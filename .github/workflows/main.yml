@@ -68,14 +68,14 @@ jobs:
 
       - name: Calculate SHA1 Hashes
         run: |
-          for file in resourcepack.zip resourcepack_low.zip resourcepack_20.zip resourcepack_20_low.zip; do
+          for file in patreon.zip patreon_low.zip 20.zip 20_low.zip; do
             sha1sum $file > $file.sha1
           done
 
       - name: Upload Resourcepack Release with SHA1
         uses: ncipollo/release-action@v1
         with:
-          artifacts: 'resourcepack.zip,resourcepack_low.zip,resourcepack_20.zip,resourcepack_20_low.zip,resourcepack.zip.sha1,resourcepack_low.zip.sha1,resourcepack_20.zip.sha1,resourcepack_20_low.zip.sha1'
+          artifacts: 'patreon.zip,patreon_low.zip,20.zip,20_low.zip,patreon.zip.sha1,patreon_low.zip.sha1,20.zip.sha1,20_low.zip.sha1'
           tag: 'resourcepack-${{ github.sha }}'
           token: ${{ secrets.GITHUB_TOKEN }}
 
