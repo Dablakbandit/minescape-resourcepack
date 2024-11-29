@@ -100,10 +100,10 @@ jobs:
       - name: Rename files for public release
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.public_release == 'true'
         run: |
-          cp patreon.zip resourcepack.zip
-          cp patreon_low.zip resourcepack_low.zip
-          cp 20.zip resourcepack_20.zip
-          cp 20_low.zip resourcepack_20_low.zip
+          mv patreon.zip resourcepack.zip
+          mv patreon_low.zip resourcepack_low.zip
+          mv 20.zip resourcepack_20.zip
+          mv 20_low.zip resourcepack_20_low.zip
 
       - name: Calculate SHA1 Hashes
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.public_release == 'true'
