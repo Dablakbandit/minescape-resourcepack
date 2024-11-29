@@ -65,8 +65,21 @@ jobs:
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
-            const { owner, repo } = context.repo
-            await github.repos.deleteRelease({ owner, repo, release_id: 'patreon' })
+            const { owner, repo } = context.repo;
+            try {
+              const release = await github.repos.getReleaseByTag({
+                owner,
+                repo,
+                tag: 'patreon'
+              });
+              await github.repos.deleteRelease({
+                owner,
+                repo,
+                release_id: release.data.id
+              });
+            } catch (error) {
+              console.log('No existing release found with tag patreon');
+            }
 
       - name: Upload Patreon Release
         uses: ncipollo/release-action@v1
