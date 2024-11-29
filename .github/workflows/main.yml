@@ -61,10 +61,12 @@ jobs:
           filename: '20_low.zip'
           exclusions: '*.git* README.md *.schema* *.zip *.py run/*'
 
-      - name: Delete
-        uses: ame-yu/action-delete-latest-release@v2
+      - uses: actions/github-script@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const { owner, repo } = context.repo
+            await github.repos.deleteRelease({ owner, repo, release_id: 'patreon' })
 
       - name: Upload Patreon Release
         uses: ncipollo/release-action@v1
