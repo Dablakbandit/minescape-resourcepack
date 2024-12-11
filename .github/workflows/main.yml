@@ -49,7 +49,7 @@ jobs:
       - name: Upgrade resource pack
         uses: AshleyThew/minecraft-resource-pack-upgrader@1.0.4
         with:
-            input_path: './'
+          input_path: './'
 
       - name: Archive Release
         uses: thedoctor0/zip-release@master
@@ -81,9 +81,9 @@ jobs:
           exclusions: '*.git* README.md *.schema* *.zip *.py run/*'
 
       - name: Upgrade resource pack
-        uses: AshleyThew/minecraft-resource-pack-upgrader@1.0.0
+        uses: AshleyThew/minecraft-resource-pack-upgrader@1.0.4
         with:
-            input_path: './'
+          input_path: './'
 
       - name: Archive Release
         uses: thedoctor0/zip-release@master
