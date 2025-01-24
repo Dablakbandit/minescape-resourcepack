@@ -23,6 +23,7 @@ for sound_name, sound in sounds.items():
             fromFile = os.path.join(soundsLocation, user_input + '.ogg')
             if os.path.exists(fromFile):
                 with open(fromFile, 'rb') as sound_data:
+                    os.makedirs(os.path.dirname(f'assets/minecraft/sounds/{soundFile}.ogg'), exist_ok=True)
                     with open(f'assets/minecraft/sounds/{soundFile}.ogg', 'wb') as out_file:
                         out_file.write(sound_data.read())
             else:
