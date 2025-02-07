@@ -111,10 +111,16 @@ jobs:
               console.log('No existing release found with tag patreon');
             }
 
+      - name: Calculate SHA1 Hashes for Patreon
+        run: |
+          for file in patreon.zip patreon_low.zip dev.zip 20.zip 20_low.zip 21.zip 21_low.zip; do
+            sha1sum $file | cut -d ' ' -f 1 > $file.sha1
+          done
+
       - name: Upload Patreon Release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: 'patreon.zip,patreon_low.zip,dev.zip,20.zip,20_low.zip,21.zip,21_low.zip,run/noted.txt'
+          artifacts: 'patreon.zip,patreon_low.zip,dev.zip,20.zip,20_low.zip,21.zip,21_low.zip,run/noted.txt,patreon.zip.sha1,patreon_low.zip.sha1,dev.zip.sha1,20.zip.sha1,20_low.zip.sha1,21.zip.sha1,21_low.zip.sha1'
           tag: 'patreon'
           makeLatest: true
           token: ${{ secrets.GITHUB_TOKEN }}
