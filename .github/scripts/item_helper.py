@@ -8,7 +8,7 @@ import win32clipboard
 from tkinter import Toplevel, Label, Button
 from PIL import ImageTk
 
-with open('assets/minecraft/models/item/beetroot.json') as f:
+with open('assets/minecraft/models/item/flint.json') as f:
     beetroot = json.load(f)
 
 def can_resize_image(image_path, target_size):
