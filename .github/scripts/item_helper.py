@@ -9,7 +9,7 @@ from tkinter import Toplevel, Label, Button
 from PIL import ImageTk
 
 with open('assets/minecraft/models/item/flint.json') as f:
-    beetroot = json.load(f)
+    flint = json.load(f)
 
 def can_resize_image(image_path, target_size):
     image = Image.open(image_path)
@@ -49,7 +49,7 @@ def on_no():
     confirm_window.destroy()
 
 fix = True
-for item in beetroot['overrides']:
+for item in flint['overrides']:
     modelFile = item['model']
     if modelFile == 'item/empty' or not modelFile.startswith('ms:'):
         continue
