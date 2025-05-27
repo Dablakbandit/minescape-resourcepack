@@ -1,2 +1,2 @@
 # minescape-resourcepack
-Resourcepack for the greatest server https://minescape.me
+Resourcepack for the greatest server https://minescape.com
