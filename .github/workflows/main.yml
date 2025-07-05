@@ -3,72 +3,174 @@ on:
   push:
     branches:
       - master
+  workflow_dispatch:
+    inputs:
+      public_release:
+        description: 'Create public release'
+        required: true
+        type: boolean
+        default: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
-    
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.8
+      - uses: actions/checkout@master
 
-    - name: Archive Release
-      uses: thedoctor0/zip-release@master
-      with:
-        filename: 'dev.zip'
-        exclusions: '*.git* README.md *.schema* *.zip *.py run/*'
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
 
-    - name: Delete dev files 
-      run: rm assets/minecraft/textures/particle/effect_*
+      - name: Archive Release
+        uses: thedoctor0/zip-release@master
+        with:
+          filename: 'dev.zip'
+          exclusions: '*.git* README.md *.schema* *.zip *.py run/*'
 
-    - name: Archive Release
-      uses: thedoctor0/zip-release@master
-      with:
-        filename: 'patreon.zip'
-        exclusions: '*.git* README.md *.schema* *.zip *.py run/*'
+      - name: Delete dev files
+        run: rm assets/minecraft/textures/particle/effect_*
 
-    - name: Run script
-      run: python .github/scripts/process_input.py
+      - name: Archive Release
+        uses: thedoctor0/zip-release@master
+        with:
+          filename: 'patreon.zip'
+          exclusions: '*.git* README.md *.schema* *.zip *.py run/*'
 
-    - name: Archive Release
-      uses: thedoctor0/zip-release@master
-      with:
-        filename: '20.zip'
-        exclusions: '*.git* README.md *.schema* *.zip *.py run/*'
+      - name: Run script
+        run: python .github/scripts/process_input.py
 
-    - name: Reset specific files or directories
-      run: |
-        git checkout -- assets/
-        rm assets/minecraft/textures/particle/effect_*
-        rm -R assets/minecraft/textures/item/custom/noted
-        rm -R assets/ms/models/noted
-        sed -i 's/ms:noted\/[a-zA-Z_0-9]*\b/ms:wooden_shovel\/note/g' assets/minecraft/models/item/carrot.json
+      - name: Archive Release
+        uses: thedoctor0/zip-release@master
+        with:
+          filename: '20.zip'
+          exclusions: '*.git* README.md *.schema* *.zip *.py run/*'
 
-    - name: Archive Release
-      uses: thedoctor0/zip-release@master
-      with:
-        filename: 'patreon_low.zip'
-        exclusions: '*.git* README.md *.schema* *.zip *.py run/*'
+      - name: Upgrade resource pack
+        uses: AshleyThew/minecraft-resource-pack-upgrader@v1.1.7
+        with:
+          input_path: './'
 
-    - name: Run script
-      run: python .github/scripts/process_input.py
+      - name: Archive Release
+        uses: thedoctor0/zip-release@master
+        with:
+          filename: '21.zip'
+          exclusions: '*.git* README.md *.schema* *.zip *.py run/*'
 
-    - name: Archive Release
-      uses: thedoctor0/zip-release@master
-      with:
-        filename: '20_low.zip'
-        exclusions: '*.git* README.md *.schema* *.zip *.py run/*'
+      - name: Reset specific files or directories
+        run: |
+          git checkout -- assets/
+          rm assets/minecraft/textures/particle/effect_*
+          rm -R assets/minecraft/textures/item/custom/noted
+          rm -R assets/ms/models/noted
+          sed -i 's/ms:noted\/[a-zA-Z_0-9]*\b/ms:wooden_shovel\/note/g' assets/minecraft/models/item/carrot.json
 
-    - name: Delete
-      uses: ame-yu/action-delete-latest-release@v2
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        
-    - name: Upload Release
-      uses: ncipollo/release-action@v1
-      with:
-        artifacts: "patreon.zip,patreon_low.zip,dev.zip,20.zip,20_low.zip,run/noted.txt"
-        tag: "patreon"
-        token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Archive Release
+        uses: thedoctor0/zip-release@master
+        with:
+          filename: 'patreon_low.zip'
+          exclusions: '*.git* README.md *.schema* *.zip *.py run/*'
+
+      - name: Run script
+        run: python .github/scripts/process_input.py
+
+      - name: Archive Release
+        uses: thedoctor0/zip-release@master
+        with:
+          filename: '20_low.zip'
+          exclusions: '*.git* README.md *.schema* *.zip *.py run/*'
+
+      - name: Upgrade resource pack
+        uses: AshleyThew/minecraft-resource-pack-upgrader@v1.1.7
+        with:
+          input_path: './'
+
+      - name: Archive Release
+        uses: thedoctor0/zip-release@master
+        with:
+          filename: '21_low.zip'
+          exclusions: '*.git* README.md *.schema* *.zip *.py run/*'
+
+      - uses: actions/github-script@v4
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const { owner, repo } = context.repo;
+            try {
+              const release = await github.repos.getReleaseByTag({
+                owner,
+                repo,
+                tag: 'patreon'
+              });
+              await github.repos.deleteRelease({
+                owner,
+                repo,
+                release_id: release.data.id
+              });
+            } catch (error) {
+              console.log('No existing release found with tag patreon');
+            }
+
+      - name: Calculate SHA1 Hashes for Patreon
+        run: |
+          for file in patreon.zip patreon_low.zip dev.zip 20.zip 20_low.zip 21.zip 21_low.zip; do
+            sha1sum $file | cut -d ' ' -f 1 > $file.sha1
+          done
+
+      - name: Upload Patreon Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: 'patreon.zip,patreon_low.zip,dev.zip,20.zip,20_low.zip,21.zip,21_low.zip,run/noted.txt,patreon.zip.sha1,patreon_low.zip.sha1,dev.zip.sha1,20.zip.sha1,20_low.zip.sha1,21.zip.sha1,21_low.zip.sha1'
+          tag: 'patreon'
+          makeLatest: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Rename files for public release
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.public_release == 'true'
+        run: |
+          mv patreon.zip resourcepack.zip
+          mv patreon_low.zip resourcepack_low.zip
+          mv 20.zip resourcepack_20.zip
+          mv 20_low.zip resourcepack_20_low.zip
+          mv 21.zip resourcepack_21.zip
+          mv 21_low.zip resourcepack_21_low.zip
+
+      - name: Calculate SHA1 Hashes
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.public_release == 'true'
+        run: |
+          for file in resourcepack.zip resourcepack_low.zip resourcepack_20.zip resourcepack_20_low.zip resourcepack_21.zip resourcepack_21_low.zip; do
+            sha1sum $file | cut -d ' ' -f 1 > $file.sha1
+          done
+
+      - uses: actions/github-script@v4
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.public_release == 'true'
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const { owner, repo } = context.repo;
+            try {
+              const release = await github.repos.getReleaseByTag({
+                owner,
+                repo,
+                tag: 'resourcepack'
+              });
+              await github.repos.deleteRelease({
+                owner,
+                repo,
+                release_id: release.data.id
+              });
+            } catch (error) {
+              console.log('No existing release found with tag patreon');
+            }
+
+      - name: Upload Resourcepack Release with SHA1
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.public_release == 'true'
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: 'resourcepack.zip,resourcepack_low.zip,resourcepack_20.zip,resourcepack_20_low.zip,resourcepack_21.zip,resourcepack_21_low.zip,resourcepack.zip.sha1,resourcepack_low.zip.sha1,resourcepack_20.zip.sha1,resourcepack_20_low.zip.sha1,resourcepack_21.zip.sha1,resourcepack_21_low.zip.sha1'
+          name: 'Resourcepack'
+          tag: 'resourcepack'
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update pack on server
+        run: curl -X GET "${{ secrets.UPDATE_URL }}"
