@@ -1,25 +1,26 @@
 {
-	"__comment": "Designed by Dablakbandit with Cubik Studio - https://cubik.studio",
+	"format_version": "1.21.6",
+	"credit": "Designed by Dablakbandit with Cubik Studio - https://cubik.studio",
 	"textures": {
-		"texture": "item/custom/stone_hoe/buymainexchange",
-		"particle": "item/custom/stone_hoe/buymainexchange"
+		"particle": "item/custom/stone_hoe/buymainexchange",
+		"texture": "item/custom/stone_hoe/buymainexchange"
 	},
-	"elements": [ 	 
+	"elements": [
 		{
-			"__comment": "Panel",
-			"from": [ -16, -16, 0 ],
-			"to": [ 32, 32, 0.001 ],
+			"name": "Panel",
+			"from": [-16, -16, 0],
+			"to": [32, 32, 0.001],
 			"faces": {
-				"north": { "uv": [ 0, 0, 9, 8 ], "texture": "#texture" },
-				"south": { "uv": [ 0, 0, 9, 8 ], "texture": "#texture" }
+				"north": {"uv": [0, 0, 9, 8], "texture": "#texture"},
+				"south": {"uv": [0, 0, 9, 8], "texture": "#texture"}
 			}
 		}
 	],
 	"gui_light": "front",
 	"display": {
 		"gui": {
-			"translation":  [ -72, 26, 0 ],
-			"scale":  [ 3.3333, 3, 0.0001 ]
+			"translation": [-72, 26, -8],
+			"scale": [3.3333, 3, 0.0001]
 		}
 	}
 }
