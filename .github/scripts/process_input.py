@@ -42,6 +42,22 @@ def modify_cape(model_file):
         json.dump(data, file, indent=4)
     return None
 
+def modify_trim(model_file):
+    with open(model_file, 'r') as file:
+        data = json.load(file)
+        
+        if 'display' in data and 'thirdperson_lefthand' in data['display']:
+            translation = data['display']['thirdperson_lefthand']['translation']
+            translation[0] -= 1.25
+            translation[1] -= 1.75
+            translation[2] -= 6.95
+        elif 'parent' in data:
+            return data['parent']
+
+    with open(model_file, 'w') as file:
+        json.dump(data, file, indent=4)
+    return None
+
 def list_files(input):
     with open(input, 'r') as file:
         seen_models = set()  # Set to store the models that have already been encountered
@@ -87,6 +103,17 @@ def process_input():
             clone.add(parent)
             model_file = f"assets/ms/models/{parent.replace('ms:', '')}.json"
             modify_cape(model_file)
+    trim = list_files('run/trim.txt')
+    clone = trim.copy()
+    for model in trim:
+        print(f'Trim: {model}')
+        # Example usage:
+        model_file = f"assets/ms/models/{model.replace('ms:', '')}.json"
+        parent = modify_trim(model_file)
+        if parent is not None and parent not in clone and parent != 'item/handheld':
+            clone.add(parent)
+            model_file = f"assets/ms/models/{parent.replace('ms:', '')}.json"
+            modify_trim(model_file)
 
 
 process_input()
