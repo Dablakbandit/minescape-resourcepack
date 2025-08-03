@@ -46,8 +46,8 @@ def modify_trim(model_file):
     with open(model_file, 'r') as file:
         data = json.load(file)
         
-        if 'display' in data and 'thirdperson_lefthand' in data['display']:
-            translation = data['display']['thirdperson_lefthand']['translation']
+        if 'display' in data and 'thirdperson_righthand' in data['display']:
+            translation = data['display']['thirdperson_righthand']['translation']
             translation[0] -= 1.25
             translation[1] -= 1.75
             translation[2] -= 6.95
