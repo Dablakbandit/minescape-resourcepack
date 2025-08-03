@@ -103,17 +103,13 @@ def process_input():
             clone.add(parent)
             model_file = f"assets/ms/models/{parent.replace('ms:', '')}.json"
             modify_cape(model_file)
-    trim = list_files('run/trim.txt')
-    clone = trim.copy()
-    for model in trim:
+    # Only process specific goldtrim parent models for trim
+    goldtrim_models = ['ms:trim/goldtrim_legs', 'ms:trim/goldtrim_combined', 'ms:trim/goldtrim_chest']
+    for model in goldtrim_models:
         print(f'Trim: {model}')
         # Example usage:
         model_file = f"assets/ms/models/{model.replace('ms:', '')}.json"
-        parent = modify_trim(model_file)
-        if parent is not None and parent not in clone and parent != 'item/handheld':
-            clone.add(parent)
-            model_file = f"assets/ms/models/{parent.replace('ms:', '')}.json"
-            modify_trim(model_file)
+        modify_trim(model_file)
 
 
 process_input()
