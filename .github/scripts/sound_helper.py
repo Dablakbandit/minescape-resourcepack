@@ -6,6 +6,17 @@ parser = argparse.ArgumentParser(description='Process sound files for MineScape 
 parser.add_argument('soundsLocation', type=str, help='The path to the sounds location')
 args = parser.parse_args()
 
+# Example Usage:
+# python sound_helper.py "C:\Users\Username\Downloads\SoundPack"
+# python sound_helper.py "D:\GameAssets\Audio\MinecraftSounds"
+# 
+# This script will:
+# 1. Read the sounds.json file to find required sound mappings
+# 2. Check if each sound file exists in assets/minecraft/sounds/
+# 3. Prompt for input if a sound file is missing
+# 4. Copy the specified sound file from the provided sounds location
+
+
 soundsLocation = args.soundsLocation
 if not os.path.exists(soundsLocation):
     print(f"Path {soundsLocation} does not exist.")
