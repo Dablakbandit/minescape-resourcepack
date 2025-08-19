@@ -173,4 +173,5 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update pack on server
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.public_release == 'true'
         run: curl -X GET "${{ secrets.UPDATE_URL }}"
