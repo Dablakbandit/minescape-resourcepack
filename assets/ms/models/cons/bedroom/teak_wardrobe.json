@@ -1,7 +1,9 @@
 {
+	"format_version": "1.21.6",
 	"credit": "Made with Blockbench",
 	"textures": {
-		"0": "item/custom/diamond_pickaxe/construction/teak_plank"
+		"0": "item/custom/diamond_pickaxe/construction/teak_plank",
+		"particle": "item/custom/diamond_pickaxe/construction/teak_plank"
 	},
 	"elements": [
 		{
@@ -298,8 +300,18 @@
 	],
 	"display": {
 		"thirdperson_righthand": {
-			"rotation": [67, 0, 0],
-			"translation": [0, 2.5, -7.25]
+			"scale": [0.1, 0.1, 0.1]
+		},
+		"thirdperson_lefthand": {
+			"scale": [0.1, 0.1, 0.1]
+		},
+		"firstperson_righthand": {
+			"rotation": [0, -70, 0],
+			"scale": [0.15, 0.15, 0.15]
+		},
+		"firstperson_lefthand": {
+			"rotation": [0, -70, 0],
+			"scale": [0.15, 0.15, 0.15]
 		},
 		"gui": {
 			"rotation": [17, 29, 0],
@@ -313,8 +325,8 @@
 		},
 		"fixed": {
 			"rotation": [0, -180, 0],
-			"translation": [0, 31.75, -23],
-			"scale": [2.97852, 2.97852, 2.97852]
+			"translation": [-16.25, 0, 6],
+			"scale": [3.5, 3, 3.5]
 		}
 	}
 }
