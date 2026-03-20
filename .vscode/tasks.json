@@ -1,0 +1,16 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+        {
+            "label": "Open in Blockbench",
+            "command": "${env:LOCALAPPDATA}\\Programs\\Blockbench\\Blockbench.exe",
+            "args": ["${file}"],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "isBackground": true
+        }
+    ]
+}
