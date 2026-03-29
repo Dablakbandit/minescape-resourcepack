@@ -61,12 +61,12 @@
 			"to": [7.75, 13.82132, 6.86756],
 			"rotation": {"angle": 0, "axis": "x", "origin": [8, 13.29632, 7.31756]},
 			"faces": {
-				"north": {"uv": [0, 0, -5, 5], "texture": "#1"},
-				"east": {"uv": [0, 0, -5, 5], "texture": "#1"},
-				"south": {"uv": [0, 0, -5, 5], "texture": "#1"},
-				"west": {"uv": [0, 0, -5, 5], "texture": "#1"},
-				"up": {"uv": [0, 0, -5, 5], "texture": "#1"},
-				"down": {"uv": [0, 0, -5, 5], "texture": "#1"}
+				"north": {"uv": [0, 0, 5, 5], "texture": "#1"},
+				"east": {"uv": [0, 0, 5, 5], "texture": "#1"},
+				"south": {"uv": [0, 0, 5, 5], "texture": "#1"},
+				"west": {"uv": [0, 0, 5, 5], "texture": "#1"},
+				"up": {"uv": [0, 0, 5, 5], "texture": "#1"},
+				"down": {"uv": [0, 0, 5, 5], "texture": "#1"}
 			}
 		},
 		{
@@ -383,11 +383,23 @@
 	],
 	"display": {
 		"ground": {
-			"translation": [0, 28.25, 0],
-			"scale": [4, 4, 4]
+			"translation": [
+				0,
+				28.25,
+				0
+			],
+			"scale": [
+				4,
+				4,
+				4
+			]
 		},
 		"fixed": {
-			"translation": [0, 18.5, -14.75]
+			"translation": [
+				0,
+				18.5,
+				-14.75
+			]
 		}
 	},
 	"groups": [
@@ -395,7 +407,10 @@
 			"name": "plinth",
 			"origin": [0, 0, 0],
 			"color": 0,
-			"children": [0, 1]
+			"children": [
+				0,
+				1
+			]
 		},
 		{
 			"name": "statue",
@@ -406,12 +421,24 @@
 					"name": "head",
 					"origin": [8, 8.70002, 9.22141],
 					"color": 0,
-					"children": [2, 3, 4, 5, 6,
+					"children": [
+						2,
+						3,
+						4,
+						5,
+						6,
 						{
 							"name": "hood",
 							"origin": [8, 10.08584, 8.64738],
 							"color": 0,
-							"children": [7, 8, 9, 10, 11, 12]
+							"children": [
+								7,
+								8,
+								9,
+								10,
+								11,
+								12
+							]
 						}
 					]
 				},
@@ -419,7 +446,16 @@
 					"name": "robe",
 					"origin": [8, 9.52687, 9.25775],
 					"color": 0,
-					"children": [13, 14, 15, 16, 17, 18, 19, 20]
+					"children": [
+						13,
+						14,
+						15,
+						16,
+						17,
+						18,
+						19,
+						20
+					]
 				}
 			]
 		},
@@ -432,13 +468,23 @@
 					"name": "arm",
 					"origin": [8, 10.06671, 8.60119],
 					"color": 0,
-					"children": [21, 22, 23]
+					"children": [
+						21,
+						22,
+						23
+					]
 				},
 				{
 					"name": "staff",
 					"origin": [5.9, 7.46671, 5.90119],
 					"color": 0,
-					"children": [24, 25, 26, 27, 28]
+					"children": [
+						24,
+						25,
+						26,
+						27,
+						28
+					]
 				}
 			]
 		}
