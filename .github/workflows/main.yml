@@ -69,6 +69,9 @@ jobs:
           sed -i 's/ms:noted\/[a-zA-Z_0-9]*\b/ms:wooden_shovel\/note/g' assets/minecraft/models/item/carrot.json
           sed -i 's/ms:noted\/[a-zA-Z_0-9]*\b/ms:wooden_shovel\/note/g' assets/minecraft/models/item/feather.json
 
+      - name: Merge sounds
+        run: python .github/scripts/merge_sounds.py
+
       - name: Archive Release
         uses: thedoctor0/zip-release@master
         with:
