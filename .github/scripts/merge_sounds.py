@@ -22,7 +22,8 @@ def merge_sounds():
 
     for filename in json_files:
         filepath = os.path.join(SOUNDS_SRC_DIR, filename)
-        with open(filepath, 'r') as f:
+        # Use utf-8-sig so files with a UTF-8 BOM still parse as JSON.
+        with open(filepath, 'r', encoding='utf-8-sig') as f:
             try:
                 data = json.load(f)
             except json.JSONDecodeError as e:
@@ -45,7 +46,7 @@ def merge_sounds():
         sys.exit(1)
 
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
-    with open(OUTPUT_FILE, 'w') as f:
+    with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
         json.dump(merged, f, indent=2)
         f.write('\n')
 
