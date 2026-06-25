@@ -29,7 +29,7 @@ jobs:
         uses: thedoctor0/zip-release@master
         with:
           filename: 'dev.zip'
-          exclusions: '*.git* README.md *.schema* *.zip *.py run/*'
+          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/*'
 
       - name: Delete dev files
         run: rm assets/minecraft/textures/particle/effect_*
@@ -38,7 +38,7 @@ jobs:
         uses: thedoctor0/zip-release@master
         with:
           filename: 'patreon.zip'
-          exclusions: '*.git* README.md *.schema* *.zip *.py run/*'
+          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/*'
 
       - name: Run script
         run: python .github/scripts/process_input.py
@@ -47,7 +47,7 @@ jobs:
         uses: thedoctor0/zip-release@master
         with:
           filename: '20.zip'
-          exclusions: '*.git* README.md *.schema* *.zip *.py run/*'
+          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/*'
 
       - name: Upgrade resource pack
         uses: AshleyThew/minecraft-resource-pack-upgrader@v1.1.9
@@ -58,7 +58,7 @@ jobs:
         uses: thedoctor0/zip-release@master
         with:
           filename: '21.zip'
-          exclusions: '*.git* README.md *.schema* *.zip *.py run/*'
+          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/*'
 
       - name: Reset specific files or directories
         run: |
@@ -76,7 +76,7 @@ jobs:
         uses: thedoctor0/zip-release@master
         with:
           filename: 'patreon_low.zip'
-          exclusions: '*.git* README.md *.schema* *.zip *.py run/*'
+          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/*'
 
       - name: Run script
         run: python .github/scripts/process_input.py
@@ -85,7 +85,7 @@ jobs:
         uses: thedoctor0/zip-release@master
         with:
           filename: '20_low.zip'
-          exclusions: '*.git* README.md *.schema* *.zip *.py run/*'
+          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/*'
 
       - name: Upgrade resource pack
         uses: AshleyThew/minecraft-resource-pack-upgrader@v1.1.9
@@ -96,7 +96,7 @@ jobs:
         uses: thedoctor0/zip-release@master
         with:
           filename: '21_low.zip'
-          exclusions: '*.git* README.md *.schema* *.zip *.py run/*'
+          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/*'
 
       - uses: actions/github-script@v4
         with:
