@@ -17,9 +17,10 @@ def find_namespaces():
         name for name in os.listdir(ASSETS_DIR)
         if os.path.isdir(os.path.join(ASSETS_DIR, name, SRC_DIRNAME))
     )
+    # Every namespace now commits its sounds.json directly, so there is normally nothing here.
+    # The script stays only until the workflow step that calls it is removed.
     if not namespaces:
-        print(f"ERROR: no <namespace>/{SRC_DIRNAME} directories found under {ASSETS_DIR}")
-        sys.exit(1)
+        print(f"Nothing to merge: no <namespace>/{SRC_DIRNAME} directories under {ASSETS_DIR}")
     return namespaces
 
 
