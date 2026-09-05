@@ -92,6 +92,20 @@ def process_input():
             clone.add(parent)
             model_file = f"assets/ms/models/{parent.replace('ms:', '')}.json"
             modify_neck(model_file)
+    # Body items that are not real chestplates (aprons, shirts...) are drawn on the overlay
+    # armour stand's off-hand, exactly like neck items, so they need the same left-hand shift.
+    # The plugin writes run/modify_body.txt with just those items.
+    body = list_files('run/modify_body.txt')
+    clone = body.copy()
+    for model in body:
+        print(f'Body: {model}')
+        model_file = f"assets/ms/models/{model.replace('ms:', '')}.json"
+        parent = modify_neck(model_file)
+        # Flat icons inherit from item/generated or item/handheld and have no display block to shift.
+        if parent is not None and parent not in clone and parent.startswith('ms:'):
+            clone.add(parent)
+            model_file = f"assets/ms/models/{parent.replace('ms:', '')}.json"
+            modify_neck(model_file)
     cape = list_files('run/cape.txt')
     clone = cape.copy()
     for model in cape:
