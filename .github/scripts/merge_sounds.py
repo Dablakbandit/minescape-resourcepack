@@ -27,9 +27,12 @@ def merge_namespace(namespace):
     """
     Merge one namespace's sources into its own sounds.json.
 
-    Sound events are per namespace, so mob and skill sounds no longer have to be generated into
+    Sound events are per namespace, so skill sounds no longer have to be generated into
     minecraft's file alongside everything else. A key only has to be unique within its namespace -
     mob:rat.attack and skill:chop cannot collide - so each namespace is merged on its own.
+
+    Only namespaces with a sounds_src directory are merged. The mob namespace has none: its
+    sounds.json is a single hand-maintained file that is committed as-is.
     """
     src_dir = os.path.join(ASSETS_DIR, namespace, SRC_DIRNAME)
     output_file = os.path.join(ASSETS_DIR, namespace, OUTPUT_NAME)
