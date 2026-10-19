@@ -22,6 +22,19 @@ jobs:
         with:
           python-version: 3.8
 
+      - name: Cache Minecraft shaders
+        # Each release's text shader, read once from its client jar; a new release adds to it.
+        uses: actions/cache@v4
+        with:
+          path: cache/mc_shaders
+          key: mc-shaders-${{ github.run_id }}
+          restore-keys: mc-shaders-
+
+      - name: Build slot text shaders
+        # Every release since 1.18.2: the base copy for clients without overlays, and an overlay per
+        # shader change after it.
+        run: python .github/scripts/build_shaders.py
+
       - name: Archive Release
         uses: thedoctor0/zip-release@master
         with:
@@ -39,6 +52,10 @@ jobs:
 
       - name: Run script
         run: python .github/scripts/process_input.py
+
+      - name: Slot text shaders without a base copy
+        # 1.20.3+ only: every client reads overlays, and one newer than them all keeps its own shader.
+        run: python .github/scripts/build_shaders.py --no-base
 
       - name: Archive Release
         uses: thedoctor0/zip-release@master
@@ -63,6 +80,7 @@ jobs:
           rm assets/minecraft/textures/particle/effect_*
           rm -R assets/minecraft/textures/item/custom/noted
           rm -R assets/ms/models/noted
+          python .github/scripts/build_shaders.py
           sed -i 's/ms:noted\/[a-zA-Z_0-9]*\b/ms:wooden_shovel\/note/g' assets/minecraft/models/item/carrot.json
           sed -i 's/ms:noted\/[a-zA-Z_0-9]*\b/ms:wooden_shovel\/note/g' assets/minecraft/models/item/feather.json
 
@@ -74,6 +92,9 @@ jobs:
 
       - name: Run script
         run: python .github/scripts/process_input.py
+
+      - name: Slot text shaders without a base copy
+        run: python .github/scripts/build_shaders.py --no-base
 
       - name: Archive Release
         uses: thedoctor0/zip-release@master
