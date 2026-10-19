@@ -635,7 +635,9 @@ def slot_layers(last_format):
     font = json.load(open(os.path.join(ROOT, GUI_FONT), encoding="utf-8"))
     found = False
     for provider in font["providers"]:
-        name = provider.get("file", "").removeprefix("minecraft:font/").removesuffix(".png")
+        # (CI's Python predates str.removeprefix)
+        match = re.fullmatch(r"minecraft:font/(.+)\.png", provider.get("file", ""))
+        name = match.group(1) if match else None
         if name not in SLOT_FONTS:
             continue
         row = (SLOT_FIRST_ASCENT - provider["ascent"]) // SLOT_ROW_HEIGHT
