@@ -562,10 +562,10 @@ def release_shader(version, names=NAMES, cache_suffix=""):
     except IOError:
         jar = zipfile.ZipFile(io.BytesIO(fetch(meta["url"])))
     entries = set(jar.namelist())
-    name = next(n for n in names if CORE + n + ".vsh" in entries)
+    name = next((n for n in names if CORE + n + ".vsh" in entries), None)
     files = {}
     for ext in (".vsh", ".fsh", ".json"):
-        if CORE + name + ext in entries:
+        if name and CORE + name + ext in entries:
             files[name + ext] = jar.read(CORE + name + ext).decode("utf-8")
     form = pack_format(jar.read("version.json"))
     os.makedirs(CACHE, exist_ok=True)
@@ -635,10 +635,165 @@ def patch_armour(files, form):
     return patched
 
 
+# MineScape stack counts (count_icons.py): the shaders that draw items in a screen, which are
+# rendertype_entity_translucent_cull up to 1.21.1, rendertype_item_entity_translucent_cull from 1.21.2
+# and item from 26.1. Both of the older ones are changed while they exist; only a count face is touched.
+COUNT_NAMES = ("item", "rendertype_item_entity_translucent_cull")
+COUNT_CULL_NAMES = ("rendertype_entity_translucent_cull",)
+COUNT_VERTEX = """
+// MineScape stack counts (.github/scripts/count_icons.py): a count face's texels are markers, the blue
+// saying which quarter of the face they are in; the face's corner is the quarter whose texel lies inside
+// the face from this vertex, found without counting vertices. Its dye is the count, as the plugin
+// shortened it: %(dye)s.
+int msCountCorner() {
+    ivec2 size = textureSize(Sampler0, 0);
+    ivec2 at = ivec2(floor(UV0 * vec2(size) + 0.5));
+    for (int q = 0; q < 4; q++) {
+        ivec2 p = at - ivec2(q & 1, q >> 1);
+        if (p.x < 0 || p.y < 0 || p.x >= size.x || p.y >= size.y) {
+            continue;
+        }
+        ivec4 c = ivec4(round(texelFetch(Sampler0, p, 0) * 255.0));
+        if (c.r == %(red)d && c.g == %(green)d && c.b == %(blue)d + q && c.a == 255) {
+            return q;
+        }
+    }
+    return -1;
+}
+
+"""
+COUNT_VERTEX_END = """
+    msCount = -1;
+    msLocal = vec2(0.0);
+    int msQuarter = msCountCorner();
+    if (msQuarter >= 0) {
+        if (ProjMat[2][3] != 0.0) {
+            // in the world (a hand, the ground, a frame): no count
+            gl_Position = vec4(-2.0, -2.0, -2.0, 1.0);
+        } else {
+            ivec3 dye = ivec3(round(Color.rgb * 255.0));
+            int code = dye.r << 16 | dye.g << 8 | dye.b;
+            if (code == %(undyed)d || (code >> 22) == 3) {
+                // an item without a count: never dyed, or dyed to say so
+                gl_Position = vec4(-2.0, -2.0, -2.0, 1.0);
+            } else {
+                msCount = code;
+                msLocal = vec2(float(msQuarter & 1), float(msQuarter >> 1));
+                vertexColor = vec4(1.0);
+            }
+        }
+    }
+"""
+COUNT_FRAGMENT = """
+// MineScape stack counts: the slot font's glyphs (0-9, K, M, the point), 5x7 pixels as two ints of rows
+// 0-3 and 4-6, five bits a row with the left pixel lowest; and their advances.
+const ivec2 MS_GLYPHS[13] = ivec2[](%(glyphs)s);
+const int MS_ADVANCE[13] = int[](%(advances)s);
+// OSRS's count colours: yellow, white from 100K, green from 10M.
+const vec3 MS_COUNT_COLOURS[3] = vec3[](vec3(1.0, 1.0, 0.0), vec3(1.0), vec3(0.0, 1.0, 128.0 / 255.0));
+// A glyph pixel's size in screen pixels: two thirds of a GUI pixel, whole, and at least one.
+const float MS_COUNT_SIZE = 2.0 / 3.0;
+// The count face's width in GUI pixels (count_icons.py), and its height.
+const vec2 MS_COUNT_FACE = vec2(%(width)d.0, 8.0);
+
+int msGlyphPixel(int glyph, int x, int y) {
+    if (x < 0 || x > 4 || y < 0 || y > 6) {
+        return 0;
+    }
+    int bits = y < 4 ? MS_GLYPHS[glyph].x : MS_GLYPHS[glyph].y;
+    return (bits >> ((y < 4 ? y : y - 4) * 5 + x)) & 1;
+}
+
+vec4 msCountTexture(vec4 texel) {
+    if (msCount < 0) {
+        return texel;
+    }
+    // screen pixels a GUI pixel
+    float gui = 1.0 / (MS_COUNT_FACE.x * length(vec2(dFdx(msLocal.x), dFdy(msLocal.x))));
+    int number = msCount & 0x7FFFF;
+    bool tenths = ((msCount >> 19) & 1) == 1;
+    int suffix = (msCount >> 20) & 3;
+    int colour = min((msCount >> 22) & 3, 2);
+    int whole = tenths ? number / 10 : number;
+    int glyphs[8];
+    int count = 0;
+    int place = 1;
+    for (int i = 0; i < 6 && whole / place >= 10; i++) {
+        place *= 10;
+    }
+    for (int i = 0; i < 7 && place > 0; i++) {
+        glyphs[count++] = (whole / place) %% 10;
+        place /= 10;
+    }
+    if (tenths) {
+        glyphs[count++] = 12;
+        glyphs[count++] = number %% 10;
+    }
+    if (suffix > 0) {
+        glyphs[count++] = 9 + min(suffix, 2);
+    }
+    int size = max(1, int(floor(gui * MS_COUNT_SIZE + 0.01)));
+    vec2 at = floor(msLocal * MS_COUNT_FACE * gui / float(size));
+    int x = int(at.x);
+    int y = int(at.y);
+    int lit = 0;
+    int shadow = 0;
+    int left = 0;
+    for (int i = 0; i < count; i++) {
+        lit |= msGlyphPixel(glyphs[i], x - left, y);
+        shadow |= msGlyphPixel(glyphs[i], x - 1 - left, y - 1);
+        left += MS_ADVANCE[glyphs[i]];
+    }
+    if (lit == 1) {
+        return vec4(MS_COUNT_COLOURS[colour], 1.0);
+    }
+    if (shadow == 1) {
+        return vec4(0.0, 0.0, 0.0, 1.0);
+    }
+    discard;
+}
+
+"""
+
+
+def patch_count(files, form):
+    """The item shader with stack counts, or None if its anchors are not there."""
+    sys.path.insert(0, os.path.dirname(__file__))
+    import count_icons
+    vsh_name = next(n for n in files if n.endswith(".vsh"))
+    fsh_name = vsh_name[:-4] + ".fsh"
+    vsh, fsh = files[vsh_name], files.get(fsh_name, "")
+    if vsh.count(MAIN) != 1 or vsh.count(POSITION) != 1 or fsh.count(MAIN) != 1 or fsh.count(TEXTURE) != 1:
+        return None
+    if not vsh.rstrip().endswith("}") or not re.search(r"\bvertexColor\s*=", vsh):
+        return None
+    patched = dict(files)
+    location = varying_location(vsh, fsh)
+    layout = (lambda n: "") if location is None else (lambda n: "layout(location = %d) " % (location + n))
+    glyphs, advances = count_icons.glyphs()
+    head, body = vsh.split(MAIN, 1)
+    declarations = layout(0) + "flat out int msCount;\n" + layout(1) + "out vec2 msLocal;\n"
+    if not re.search(r"uniform\s+sampler2D\s+Sampler0\s*;", vsh):
+        declarations += "uniform sampler2D Sampler0;\n"
+    declarations += COUNT_VERTEX % {"dye": count_icons.DYE, "red": count_icons.MARKER_RED,
+                                    "green": count_icons.MARKER_GREEN, "blue": count_icons.MARKER_BLUE}
+    body = body.rstrip()
+    body = body[:-1].rstrip() + "\n" + COUNT_VERTEX_END % {"undyed": count_icons.UNDYED} + "}\n"
+    patched[vsh_name] = head + declarations + MAIN + body
+    head, body = fsh.split(MAIN, 1)
+    declarations = layout(0) + "flat in int msCount;\n" + layout(1) + "in vec2 msLocal;\n"
+    declarations += COUNT_FRAGMENT % {"glyphs": ", ".join(glyphs), "advances": ", ".join(advances),
+                                      "width": count_icons.COUNT_FACE_WIDTH}
+    patched[fsh_name] = head + declarations + MAIN + body.replace(TEXTURE, "msCountTexture(" + TEXTURE + ")", 1)
+    return patched
+
+
 TARGETS = [
     # (name, shader names, the files besides the vertex shader, patch, overlay directory prefix)
     ("text", NAMES, (".fsh", ".json"), patch, "shader_"),
     ("armour", ARMOUR_NAMES, (".fsh", ".json"), patch_armour, "shader_armour_"),
+    ("count", COUNT_NAMES, (".fsh", ".json"), patch_count, "shader_count_"),
+    ("count_cull", COUNT_CULL_NAMES, (".fsh", ".json"), patch_count, "shader_count_cull_"),
 ]
 
 
@@ -772,6 +927,9 @@ def main():
             group["last"] = max(group["last"], following["first"] - 1)
 
         for i, group in enumerate(groups):
+            if not group["files"]:
+                # the release has none of these shaders (one drawn by another from then on)
+                continue
             patched = patcher(group["files"], group["first"])
             span = "%s %s, formats %d-%d" % (target, group["first_version"], group["first"], group["last"])
             if patched is None:

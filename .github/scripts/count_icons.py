@@ -1,0 +1,370 @@
+"""Every MineScape item is leather horse armour: its custom model data picks its model, and its dye
+carries its stack count, which the item shader draws over the icon.
+
+    assets/minecraft/models/item/leather_horse_armor.json   the items' models, by custom model data;
+                                                            edited by hand like any other item model
+    assets/minecraft/models/item/feather.json               noted icons, by the number noted_icons.json
+                                                            gives them; a noted item is the negative
+
+The plugin's items take their number from the overrides here (Items.java, MembersItems.java), and a
+noted item's custom model data is minus its noted icon's number, so the noted icons need no list of
+their own. The models the items had before stay where they were, so anything still on its old
+material (an item frame, a chest in the world) looks as it did.
+
+The count: the dye's 24 bits are colour << 22 | suffix << 20 | decimal << 19 | number (DYE below), the
+count shortened the OSRS way by the plugin (ItemCount). An undyed item's own colour, 0xA06540, means no
+count. Every item model gets one more face, the count face, along the icon's top, textured with
+count.png: every texel there is a marker whose colour says which quarter of the texture it is in, so the
+item shader (build_shaders.py) finds the face's corners by reading the texture at its own vertex. It
+draws the digits on that face in the slot font's glyphs, and hides the face anywhere but a screen (a
+perspective projection: in a hand, on the ground) and on an item without a count.
+
+    python .github/scripts/count_icons.py            in CI, before zipping: leather_horse_armor.json's
+                                                     overrides moved onto copies of their models with
+                                                     the count face, the noted icons added below zero
+    python .github/scripts/count_icons.py --items    after the 1.21.4 upgrader: each model as it is in
+                                                     the hand, with the count face in a screen
+    python .github/scripts/count_icons.py --restore  leather_horse_armor.json as committed, for a script that
+                                                     reads the items' own models (process_input.py), to be
+                                                     followed by this again
+    python .github/scripts/count_icons.py --migrate looks.json
+                                                     once, from the plugin's old looks (id, material,
+                                                     damage, custom model data): the models those looks
+                                                     had, as leather_horse_armor.json's overrides
+
+The first two rewrite leather_horse_armor.json in place (a copy of the original is kept in cache/ and
+read back if it is run again); in CI that's the checkout. Don't commit the rewritten file.
+
+Written (git-ignored):
+    assets/ms/models/count/                              the count face's models and the copies
+    assets/minecraft/items/leather_horse_armor.json      the 1.21.4 item definition
+    assets/minecraft/textures/item/custom/count.png      the count face's markers
+"""
+import json, os, shutil, sys
+
+from PIL import Image
+
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+MODELS = os.path.join(ROOT, "assets", "minecraft", "models", "item")
+COUNT_MODELS = os.path.join(ROOT, "assets", "ms", "models", "count")
+ITEMS = os.path.join(ROOT, "assets", "minecraft", "items")
+CACHE = os.path.join(ROOT, "cache")
+FONT = os.path.join(ROOT, "assets", "minecraft", "textures", "font", "slot.png")
+MARKER_TEXTURE = os.path.join(ROOT, "assets", "minecraft", "textures", "item", "custom", "count.png")
+ITEM = "leather_horse_armor"
+NOTED = "feather"
+SOURCE = os.path.join(MODELS, ITEM + ".json")
+SOURCE_COPY = os.path.join(CACHE, ITEM + ".source.json")
+SOURCES = os.path.join(CACHE, "count_sources.json")
+
+# The count face's texels: red and green fixed, blue MARKER_BLUE + the quarter (0 top left, 1 top
+# right, 2 bottom left, 3 bottom right), opaque.
+MARKER_RED, MARKER_GREEN, MARKER_BLUE = 0x3D, 0xC1, 0x58
+
+# The dye, 24 bits: colour << 22 | suffix << 20 | decimal << 19 | number.
+#   colour   0 yellow (under 100K), 1 white (under 10M), 2 green, as OSRS colours a stack's count;
+#            3 no count
+#   suffix   0 none, 1 K, 2 M
+#   decimal  the number is in tenths, drawn with a point before its last digit ("2.1M")
+# Leather's own colour, 0xA06540 (an item never dyed), is no count too.
+DYE = "colour << 22 | suffix << 20 | decimal << 19 | number"
+UNDYED = 0xA06540
+
+# The count face: along the icon's top, 32 wide so a long count is drawn full size past the slot's
+# edge, and in front of the icon. A flat copy's face sits just before the icon; the overlay's, drawn
+# beside a model of any depth, at the front of the model's box.
+COUNT_FACE_WIDTH = 32
+COUNT_FACE_Z = {"flat": 9, "overlay": 16}
+
+# Display transforms of Minecraft's own flat item models, which a flat copy keeps: a model with
+# item/generated at its root is baked from its layers, never from elements, so it can't be the parent.
+GENERATED = {
+    "ground": {"rotation": [0, 0, 0], "translation": [0, 2, 0], "scale": [0.5, 0.5, 0.5]},
+    "head": {"rotation": [0, 180, 0], "translation": [0, 13, 7], "scale": [1, 1, 1]},
+    "thirdperson_righthand": {"rotation": [0, 0, 0], "translation": [0, 3, 1], "scale": [0.55, 0.55, 0.55]},
+    "firstperson_righthand": {"rotation": [0, -90, 25], "translation": [1.13, 3.2, 1.13], "scale": [0.68, 0.68, 0.68]},
+    "fixed": {"rotation": [0, 180, 0], "scale": [1, 1, 1]},
+}
+HANDHELD = dict(GENERATED, **{
+    "thirdperson_righthand": {"rotation": [0, -90, 55], "translation": [0, 4.0, 0.5], "scale": [0.85, 0.85, 0.85]},
+    "thirdperson_lefthand": {"rotation": [0, 90, -55], "translation": [0, 4.0, 0.5], "scale": [0.85, 0.85, 0.85]},
+    "firstperson_righthand": {"rotation": [0, -90, 25], "translation": [1.13, 3.2, 1.13], "scale": [0.68, 0.68, 0.68]},
+    "firstperson_lefthand": {"rotation": [0, 90, -25], "translation": [1.13, 3.2, 1.13], "scale": [0.68, 0.68, 0.68]},
+})
+FLAT_ROOTS = {"builtin/generated": "generated", "item/generated": "generated",
+              "item/handheld": "handheld", "item/handheld_rod": "handheld"}
+FLAT_DISPLAYS = {"generated": GENERATED, "handheld": HANDHELD}
+
+# Durability of the materials whose models pick their icons by damage (for --migrate).
+DURABILITY = {
+    "wooden": 59, "stone": 131, "iron": 250, "golden": 32, "diamond": 1561, "netherite": 2031,
+    "leather_helmet": 55, "leather_chestplate": 80, "leather_leggings": 75, "leather_boots": 65,
+    "chainmail_helmet": 165, "chainmail_chestplate": 240, "chainmail_leggings": 225, "chainmail_boots": 195,
+    "iron_helmet": 165, "iron_chestplate": 240, "iron_leggings": 225, "iron_boots": 195,
+    "golden_helmet": 77, "golden_chestplate": 112, "golden_leggings": 105, "golden_boots": 91,
+    "diamond_helmet": 363, "diamond_chestplate": 528, "diamond_leggings": 495, "diamond_boots": 429,
+    "netherite_helmet": 407, "netherite_chestplate": 592, "netherite_leggings": 555, "netherite_boots": 481,
+    "turtle_helmet": 275, "bow": 384, "crossbow": 465, "fishing_rod": 64, "shears": 238, "shield": 336,
+    "trident": 250, "elytra": 432, "flint_and_steel": 64, "carrot_on_a_stick": 25, "warped_fungus_on_a_stick": 100,
+}
+TOOLS = ("_sword", "_shovel", "_pickaxe", "_axe", "_hoe")
+
+
+def durability(material):
+    if material in DURABILITY:
+        return DURABILITY[material]
+    for tool in TOOLS:
+        if material.endswith(tool):
+            return DURABILITY.get(material[:-len(tool)])
+    return None
+
+
+def model_path(ref):
+    ns, _, path = ref.partition(":") if ":" in ref else ("minecraft", "", ref)
+    return os.path.join(ROOT, "assets", ns, "models", path + ".json")
+
+
+def full(ref):
+    return ref if ":" in ref else "minecraft:" + ref
+
+
+def read_json(path):
+    with open(path, encoding="utf-8-sig") as f:
+        return json.load(f)
+
+
+def write_json(path, data, compact=False):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        if compact:
+            json.dump(data, f, separators=(",", ":"))
+        else:
+            json.dump(data, f, indent=4)
+            f.write("\n")
+
+
+def resolve(material, damage, cmd):
+    """The model the material's overrides pick for the look, as the client picks it: the last override
+    whose every predicate is at most the item's value. None if the material has no such model."""
+    path = os.path.join(MODELS, material + ".json")
+    if not os.path.exists(path):
+        return None
+    model = read_json(path)
+    most = durability(material)
+    values = {"custom_model_data": cmd, "damaged": 0,  # the plugin's items are unbreakable
+              "damage": damage / most if most else 0.0}
+    picked = None
+    for override in model.get("overrides", []):
+        predicate = override.get("predicate", {})
+        if all(k in values and values[k] >= v - 1e-9 for k, v in predicate.items()):
+            picked = override["model"]
+    return full(picked) if picked else None
+
+
+def chain(ref):
+    """The model and its parents in the pack, child first, and the root it ends on outside the pack."""
+    models, seen = [], set()
+    while ref and ref not in seen:
+        seen.add(ref)
+        path = model_path(ref)
+        if not os.path.exists(path):
+            return models, ref.split(":", 1)[1]
+        model = read_json(path)
+        models.append(model)
+        ref = full(model["parent"]) if "parent" in model else None
+    return models, None
+
+
+def count_face(z):
+    return {"from": [0, 8, z], "to": [COUNT_FACE_WIDTH, 16, z], "shade": False,
+            "faces": {"south": {"uv": [0, 0, 16, 16], "texture": "#count", "tintindex": 0}}}
+
+
+def flat_parent(kind, layers):
+    """The shared model of a flat copy: its layers as faces before and behind, the count face, and the
+    flat item's display; the copy names only its textures."""
+    elements = []
+    for i in range(layers):
+        front, back = 8.5 + i * 0.01, 7.5 - i * 0.01
+        elements.append({"from": [0, 0, front], "to": [16, 16, front], "shade": False,
+                         "faces": {"south": {"uv": [0, 0, 16, 16], "texture": "#layer%d" % i}}})
+        elements.append({"from": [0, 0, back], "to": [16, 16, back], "shade": False,
+                         "faces": {"north": {"uv": [16, 0, 0, 16], "texture": "#layer%d" % i}}})
+    elements.append(count_face(COUNT_FACE_Z["flat"]))
+    return {"gui_light": "front", "textures": {"count": "item/custom/count"}, "elements": elements,
+            "display": FLAT_DISPLAYS[kind]}
+
+
+def flatten(ref, parents):
+    """A flat copy of the icon with the count face, or None if it is not a flat icon (a model of its
+    own elements is used as it is, without a count, before 1.21.4)."""
+    models, root = chain(ref)
+    if any("elements" in m for m in models) or root not in FLAT_ROOTS:
+        return None
+    kind = FLAT_ROOTS[root]
+    textures, display = {}, {}
+    for model in reversed(models):
+        textures.update(model.get("textures", {}))
+        display.update(model.get("display", {}))
+
+    def texture(name, depth=0):
+        value = textures.get(name)
+        return texture(value[1:], depth + 1) if value and value.startswith("#") and depth < 8 else value
+
+    layers = []
+    for i in range(16):
+        value = texture("layer%d" % i)
+        if value is None:
+            break
+        layers.append(value)
+    if not layers:
+        return None
+    parent = "ms:count/flat/%s_%d" % (kind, len(layers))
+    parents[parent] = flat_parent(kind, len(layers))
+    copy = {"parent": parent, "textures": dict({"layer%d" % i: t for i, t in enumerate(layers)}, particle=layers[0])}
+    if display:
+        copy["display"] = display
+    return copy
+
+
+def marker_texture():
+    image = Image.new("RGBA", (16, 16))
+    for y in range(16):
+        for x in range(16):
+            image.putpixel((x, y), (MARKER_RED, MARKER_GREEN, MARKER_BLUE + (x >= 8) + 2 * (y >= 8), 255))
+    os.makedirs(os.path.dirname(MARKER_TEXTURE), exist_ok=True)
+    image.save(MARKER_TEXTURE)
+
+
+def models_by_number(source):
+    numbers = {}
+    for override in source.get("overrides", []):
+        number = override.get("predicate", {}).get("custom_model_data")
+        if number is not None and len(override["predicate"]) == 1:
+            numbers[int(number)] = full(override["model"])
+    return numbers
+
+
+def source():
+    """leather_horse_armor.json as committed: the copy in cache/ if this has already rewritten it."""
+    item = read_json(SOURCE)
+    if any(o["model"].startswith("ms:count/") for o in item.get("overrides", [])):
+        return read_json(SOURCE_COPY)
+    write_json(SOURCE_COPY, item)
+    return item
+
+
+def build():
+    item = source()
+    numbers = models_by_number(item)
+    noted = models_by_number(read_json(os.path.join(MODELS, NOTED + ".json")))
+    for number, ref in noted.items():
+        if number > 0:
+            numbers[-number] = ref
+
+    shutil.rmtree(COUNT_MODELS, ignore_errors=True)
+    marker_texture()
+    write_json(os.path.join(COUNT_MODELS, "overlay.json"),
+               {"gui_light": "front", "textures": {"count": "item/custom/count", "particle": "item/custom/count"},
+                "elements": [count_face(COUNT_FACE_Z["overlay"])]})
+    overrides, sources, parents = [], {}, {}
+    flat = solid = missing = 0
+    for number in sorted(numbers):
+        ref = numbers[number]
+        if not ref.startswith("minecraft:") and not os.path.exists(model_path(ref)):
+            missing += 1
+            continue
+        copy = flatten(ref, parents)
+        if copy is None:
+            target = ref
+            solid += 1
+        else:
+            name = ("n%d" % -number) if number < 0 else str(number)
+            target = "ms:count/flat/%s" % name
+            write_json(model_path(target), copy, compact=True)
+            flat += 1
+        overrides.append({"predicate": {"custom_model_data": number}, "model": target})
+        sources[str(number)] = ref
+    for ref, model in parents.items():
+        write_json(model_path(ref), model)
+    item = dict(item, overrides=overrides)
+    write_json(SOURCE, item)
+    write_json(SOURCES, sources)
+    print("%s: %d items and %d noted, %d as flat copies with a count, %d as their own models without one, %d with no model"
+          % (ITEM, sum(1 for n in sources if int(n) > 0), sum(1 for n in sources if int(n) < 0), flat, solid, missing))
+
+
+def items():
+    """The 1.21.4+ item definition: in a screen the model and the count face over it, a model of any
+    shape; anywhere else the model alone. Oversized in a screen, so a long count isn't cut at the slot."""
+    sources = read_json(SOURCES)
+    entries = []
+    for number, ref in sorted(sources.items(), key=lambda e: int(e[0])):
+        icon = {"type": "minecraft:model", "model": ref}
+        count = {"type": "minecraft:model", "model": "ms:count/overlay",
+                 "tints": [{"type": "minecraft:dye", "default": UNDYED}]}
+        entries.append({"threshold": int(number), "model": {
+            "type": "minecraft:select", "property": "minecraft:display_context",
+            "cases": [{"when": "gui", "model": {"type": "minecraft:composite", "models": [icon, count]}}],
+            "fallback": icon}})
+    definition = {"model": {"type": "minecraft:range_dispatch", "property": "minecraft:custom_model_data",
+                            "fallback": {"type": "minecraft:model", "model": "minecraft:item/" + ITEM,
+                                         "tints": [{"type": "minecraft:dye", "default": -6265536}]},
+                            "entries": entries},
+                  "oversized_in_gui": True}
+    write_json(os.path.join(ITEMS, ITEM + ".json"), definition)
+    # the flat copies are for the packs before 1.21.4
+    for name in os.listdir(os.path.join(COUNT_MODELS, "flat")):
+        if name[0].isdigit() or name[0] == "n":
+            os.remove(os.path.join(COUNT_MODELS, "flat", name))
+    print("%s: %d in the item definition" % (ITEM, len(entries)))
+
+
+def migrate(path):
+    """leather_horse_armor.json's overrides from the plugin's old looks: [{"id", "material", "damage",
+    "cmd"}], each id given the model its old look had."""
+    looks = read_json(path)
+    # 1 is the noted items' own look (their custom model data is minus their noted icon's): the plain
+    # note, should one ever show it
+    overrides, missing = [{"predicate": {"custom_model_data": 1}, "model": "ms:wooden_shovel/note"}], []
+    for look in sorted(looks, key=lambda l: l["id"]):
+        ref = resolve(look["material"].lower(), look["damage"], look["cmd"])
+        if ref is None or not os.path.exists(model_path(ref)):
+            # no override: the material's own icon, as the item showed before
+            missing.append(look)
+            ref = "minecraft:item/" + look["material"].lower()
+        overrides.append({"predicate": {"custom_model_data": look["id"]}, "model": ref})
+    write_json(SOURCE, {"parent": "minecraft:item/generated", "textures": {"layer0": "minecraft:item/" + ITEM},
+                        "overrides": overrides})
+    print("%s: %d overrides, %d with the vanilla icon of their old material" % (ITEM, len(overrides), len(missing)))
+    for look in missing[:30]:
+        print("  no model for", look)
+
+
+def glyphs():
+    """The slot font's digits, K, M and the point, as GLSL: each glyph's 5x7 pixels as two ints (rows
+    0-3 then 4-6, five bits a row, the left pixel lowest), and its advance."""
+    image = Image.open(FONT).convert("RGBA")
+    rows, advances = [], []
+    for ch in "0123456789KM.":
+        i = ord(ch) - 32
+        x0, y0 = (i % 16) * 16, (i // 16) * 16 + 6
+        bits = [[1 if image.getpixel((x0 + x, y0 + y))[3] > 128 and sum(image.getpixel((x0 + x, y0 + y))[:3]) > 100 else 0
+                 for x in range(5)] for y in range(7)]
+        value = lambda ys: sum(bits[y][x] << ((y - ys[0]) * 5 + x) for y in ys for x in range(5))
+        rows.append("ivec2(%d, %d)" % (value(range(0, 4)), value(range(4, 7))))
+        right = max([x for y in range(7) for x in range(5) if bits[y][x]], default=0)
+        advances.append(str(right + 2))
+    return rows, advances
+
+
+if __name__ == "__main__":
+    args = sys.argv[1:]
+    if "--items" in args:
+        items()
+    elif "--restore" in args:
+        write_json(SOURCE, source())
+    elif "--migrate" in args:
+        migrate(args[args.index("--migrate") + 1])
+    else:
+        build()
