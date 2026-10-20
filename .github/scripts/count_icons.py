@@ -40,7 +40,7 @@ Written (git-ignored):
     assets/minecraft/items/leather_horse_armor.json      the 1.21.4 item definition
     assets/minecraft/textures/item/custom/count.png      the count face's markers
 """
-import json, os, shutil, sys
+import json, math, os, shutil, sys
 
 from PIL import Image
 
@@ -58,23 +58,53 @@ SOURCE_COPY = os.path.join(CACHE, ITEM + ".source.json")
 SOURCES = os.path.join(CACHE, "count_sources.json")
 
 # The count face's texels: red and green fixed, blue MARKER_BLUE + the quarter (0 top left, 1 top
-# right, 2 bottom left, 3 bottom right), opaque.
+# right, 2 bottom left, 3 bottom right), opaque: along its edge, where a face square to the slot has
+# its corners; inside it, where a centred face (a 3D model's, below) has them (uv 1 to 15), blue
+# MARKER_BLUE + CENTRED + the quarter. One texture, so no other marker sits beside it in the atlas.
 MARKER_RED, MARKER_GREEN, MARKER_BLUE = 0x3D, 0xC1, 0x58
+CENTRED = 4
 
-# The dye, 24 bits: colour << 22 | suffix << 20 | decimal << 19 | number.
+# The dye, 24 bits: colour << 22 | suffix << 20 | decimal << 19 | selected << 18 | number.
 #   colour   0 yellow (under 100K), 1 white (under 10M), 2 green, as OSRS colours a stack's count;
 #            3 no count
 #   suffix   0 none, 1 K, 2 M
 #   decimal  the number is in tenths, drawn with a point before its last digit ("2.1M")
-# Leather's own colour, 0xA06540 (an item never dyed), is no count too.
-DYE = "colour << 22 | suffix << 20 | decimal << 19 | number"
+#   selected a light blue frame around the slot, as the player's selected item
+# Leather's own colour, 0xA06540 (an item never dyed), is neither.
+DYE = "colour << 22 | suffix << 20 | decimal << 19 | selected << 18 | number"
 UNDYED = 0xA06540
 
-# The count face: along the icon's top, 32 wide so a long count is drawn full size past the slot's
-# edge, and in front of the icon. A flat copy's face sits just before the icon; the overlay's, drawn
+# The count face, in GUI pixels from the icon's top left: over the whole slot with its border (a pixel
+# around the icon) for the selection frame, and 32 wide so a long count is drawn full size past the
+# slot's edge; in front of the icon. A flat copy's face sits just before the icon; the overlay's, drawn
 # beside a model of any depth, at the front of the model's box.
-COUNT_FACE_WIDTH = 32
+COUNT_FACE = {"left": -1, "top": -1, "width": 32, "height": 18}
 COUNT_FACE_Z = {"flat": 9, "overlay": 16}
+
+# A 3D model before 1.21.4 can't have the count face square to the slot: it is drawn in the model's
+# GUI pose, tilted and scaled with it. So its face is centred: put where the pose takes it to the
+# slot's middle, on the side the pose turns to the camera, big enough that the pose leaves the slot and
+# its count inside it; the shader draws the count and frame square to the slot from where the face
+# lands, whatever its tilt, taking the face's middle for the slot's. What it must cover, in GUI pixels
+# around the slot's middle (y up), the same each way so its middle stays the slot's: as far as a count
+# past the slot's right reaches; else the slot alone, where a count longer than the slot is cut.
+CENTRED_COVER = ((-23, 23, -9, 9), (-9, 9, -9, 9))
+# Minecraft's block model's display, for a block model with none of its own.
+BLOCK_DISPLAY = {
+    "gui": {"rotation": [30, 225, 0], "translation": [0, 0, 0], "scale": [0.625, 0.625, 0.625]},
+    "ground": {"rotation": [0, 0, 0], "translation": [0, 3, 0], "scale": [0.25, 0.25, 0.25]},
+    "fixed": {"rotation": [0, 0, 0], "translation": [0, 0, 0], "scale": [0.5, 0.5, 0.5]},
+    "thirdperson_righthand": {"rotation": [75, 45, 0], "translation": [0, 2.5, 0], "scale": [0.375, 0.375, 0.375]},
+    "firstperson_righthand": {"rotation": [0, 45, 0], "translation": [0, 0, 0], "scale": [0.4, 0.4, 0.4]},
+    "firstperson_lefthand": {"rotation": [0, 225, 0], "translation": [0, 0, 0], "scale": [0.4, 0.4, 0.4]},
+}
+CONTEXTS = ("thirdperson_righthand", "thirdperson_lefthand", "firstperson_righthand", "firstperson_lefthand",
+            "gui", "head", "ground", "fixed")
+# Display scales are capped at 4. A model too small in its GUI pose, or moved too far off its middle,
+# for any side of its box to cover the slot is copied smaller, its display scales that much larger,
+# so it looks the same everywhere and its box has room: by the first of these that leaves room.
+SHRINK = (1, 1.25, 1.5, 2, 2.5, 3, 4, 5, 6, 8)
+MAX_DISPLAY_SCALE = 4.0
 
 # Display transforms of Minecraft's own flat item models, which a flat copy keeps: a model with
 # item/generated at its root is baked from its layers, never from elements, so it can't be the parent.
@@ -176,7 +206,9 @@ def chain(ref):
 
 
 def count_face(z):
-    return {"from": [0, 8, z], "to": [COUNT_FACE_WIDTH, 16, z], "shade": False,
+    f = COUNT_FACE
+    # model y runs up from the icon's bottom
+    return {"from": [f["left"], 16 - f["top"] - f["height"], z], "to": [f["left"] + f["width"], 16 - f["top"], z], "shade": False,
             "faces": {"south": {"uv": [0, 0, 16, 16], "texture": "#count", "tintindex": 0}}}
 
 
@@ -199,6 +231,9 @@ def flatten(ref, parents):
     """A flat copy of the icon with the count face, or None if it is not a flat icon (a model of its
     own elements is used as it is, without a count, before 1.21.4)."""
     models, root = chain(ref)
+    if not models and ref.startswith("minecraft:item/"):
+        # a vanilla item's own icon, outside the pack: a flat item of its texture
+        models, root = [{"textures": {"layer0": ref}}], "item/generated"
     if any("elements" in m for m in models) or root not in FLAT_ROOTS:
         return None
     kind = FLAT_ROOTS[root]
@@ -231,9 +266,143 @@ def marker_texture():
     image = Image.new("RGBA", (16, 16))
     for y in range(16):
         for x in range(16):
-            image.putpixel((x, y), (MARKER_RED, MARKER_GREEN, MARKER_BLUE + (x >= 8) + 2 * (y >= 8), 255))
+            edge = x in (0, 15) or y in (0, 15)
+            base = MARKER_BLUE if edge else MARKER_BLUE + CENTRED
+            image.putpixel((x, y), (MARKER_RED, MARKER_GREEN, base + (x >= 8) + 2 * (y >= 8), 255))
     os.makedirs(os.path.dirname(MARKER_TEXTURE), exist_ok=True)
     image.save(MARKER_TEXTURE)
+
+
+def full_display(models, root):
+    """Every display context of the model as Minecraft resolves it: its own or its parents', the root's
+    (a vanilla block or flat item) for the rest, and a left hand as its right where it has none."""
+    display = {}
+    if root and root.startswith("block/"):
+        display.update(BLOCK_DISPLAY)
+    elif root in FLAT_ROOTS:
+        display.update(FLAT_DISPLAYS[FLAT_ROOTS[root]])
+    for model in reversed(models):
+        display.update(model.get("display", {}))
+    for left, right in (("thirdperson_lefthand", "thirdperson_righthand"), ("firstperson_lefthand", "firstperson_righthand")):
+        if left not in display and right in display:
+            display[left] = display[right]
+    out = {}
+    for context in CONTEXTS:
+        t = display.get(context, {})
+        out[context] = {"rotation": [float(v) for v in t.get("rotation", [0, 0, 0])],
+                        "translation": [float(v) for v in t.get("translation", [0, 0, 0])],
+                        "scale": [float(v) for v in t.get("scale", [1, 1, 1])]}
+    return out
+
+
+def mat_mul(a, b):
+    return [[sum(a[i][k] * b[k][j] for k in range(3)) for j in range(3)] for i in range(3)]
+
+
+def pose_matrix(rotation, scale):
+    """Rotation about x, then y, then z as Minecraft's item transforms compose them (Rx Ry Rz), then
+    the scale."""
+    rx, ry, rz = (math.radians(a) for a in rotation)
+    x = [[1, 0, 0], [0, math.cos(rx), -math.sin(rx)], [0, math.sin(rx), math.cos(rx)]]
+    y = [[math.cos(ry), 0, math.sin(ry)], [0, 1, 0], [-math.sin(ry), 0, math.cos(ry)]]
+    z = [[math.cos(rz), -math.sin(rz), 0], [math.sin(rz), math.cos(rz), 0], [0, 0, 1]]
+    return mat_mul(mat_mul(mat_mul(x, y), z), [[scale[0], 0, 0], [0, scale[1], 0], [0, 0, scale[2]]])
+
+
+def cofactor(m):
+    """The inverse transpose of m, times its determinant: how it turns a surface's normal."""
+    return [[m[(r + 1) % 3][(c + 1) % 3] * m[(r + 2) % 3][(c + 2) % 3]
+             - m[(r + 1) % 3][(c + 2) % 3] * m[(r + 2) % 3][(c + 1) % 3] for c in range(3)] for r in range(3)]
+
+
+# A face on each side of a box: its name, the axis it faces along and which way, and the two it spans
+SIDES = (("east", 0, 1, 1, 2), ("west", 0, -1, 1, 2), ("up", 1, 1, 0, 2), ("down", 1, -1, 0, 2),
+         ("south", 2, 1, 0, 1), ("north", 2, -1, 0, 1))
+
+
+def centred_face(gui, cover):
+    """The centred count face for a 3D model in this GUI pose covering this much, an element, or None if
+    no side of its box can hold one."""
+    rotation, translation, scale = gui["rotation"], gui["translation"], gui["scale"]
+    m = pose_matrix(rotation, scale)
+    turned = cofactor(m)
+    det_m = sum(m[0][c] * turned[0][c] for c in range(3))
+    best = None
+    for name, axis, sign, a, b in SIDES:
+        p, q = [m[0][a], m[1][a]], [m[0][b], m[1][b]]
+        det = p[0] * q[1] - p[1] * q[0]
+        # the side's outward normal after the pose: facing the camera (+z) or culled
+        facing = sign * turned[2][axis] * (1 if det_m > 0 else -1)
+        if facing <= 1e-6 or abs(det) < 1e-6:
+            continue
+        if best is None or abs(det) > best[0]:
+            best = (abs(det), name, a, b, p, q, det)
+    if best is None:
+        return None
+    _, name, a, b, p, q, det = best
+
+    def solve(x, y):
+        return (x * q[1] - y * q[0]) / det, (p[0] * y - p[1] * x) / det
+
+    # the point the pose takes to the slot's middle, on the side's plane through the model's middle
+    da, db = solve(-translation[0], -translation[1])
+    if True:
+        corners = [solve(x, y) for x in cover[:2] for y in cover[2:]]
+        frm, to = [8.0, 8.0, 8.0], [8.0, 8.0, 8.0]
+        frm[a], to[a] = 8 + da + min(c[0] for c in corners), 8 + da + max(c[0] for c in corners)
+        frm[b], to[b] = 8 + db + min(c[1] for c in corners), 8 + db + max(c[1] for c in corners)
+        if min(frm + to) >= -16 and max(frm + to) <= 32:
+            return {"from": [round(v, 4) for v in frm], "to": [round(v, 4) for v in to], "shade": False,
+                    "faces": {name: {"uv": [1, 1, 15, 15], "texture": "#count", "tintindex": 0}}}
+    return None
+
+
+def shrunk(element, k):
+    """The element k times smaller about the model's middle."""
+    element = json.loads(json.dumps(element))
+    for key in ("from", "to"):
+        element[key] = [round(8 + (v - 8) / k, 5) for v in element[key]]
+    if "rotation" in element and "origin" in element["rotation"]:
+        element["rotation"]["origin"] = [round(8 + (v - 8) / k, 5) for v in element["rotation"]["origin"]]
+    return element
+
+
+def solid_copy(ref):
+    """A 3D model with its centred count face, for the packs before 1.21.4, or None."""
+    models, root = chain(ref)
+    elements = next((m["elements"] for m in models if "elements" in m), None)
+    if not elements:
+        return None
+    display = full_display(models, root)
+    # as far as the cap allows: a scale already at it (Minecraft clamps those beyond) can't grow
+    largest = max(min(abs(v), MAX_DISPLAY_SCALE) for t in display.values() for v in t["scale"])
+    most = MAX_DISPLAY_SCALE / largest
+    # the full cover at any size first, the slot alone only if none fits
+    for cover in CENTRED_COVER:
+        for k in [k for k in SHRINK if k <= most] + ([most] if most > 1 else []):
+            gui = dict(display["gui"], scale=[v * k for v in display["gui"]["scale"]])
+            face = centred_face(gui, cover)
+            if face is None:
+                continue
+            copy = {"parent": ref, "textures": {"count": "item/custom/count"}}
+            if k == 1:
+                copy["elements"] = elements + [face]
+            else:
+                copy["elements"] = [shrunk(e, k) for e in elements] + [face]
+                copy["display"] = {c: dict(t, scale=[round(min(abs(v), MAX_DISPLAY_SCALE) * k, 5) * (1 if v >= 0 else -1) for v in t["scale"]])
+                                   for c, t in display.items()}
+            centred_check(ref, gui, face)
+            return copy
+    return None
+
+
+def centred_check(ref, gui, face):
+    """Fails unless the GUI pose takes the face's middle to the slot's middle, where the shader puts it."""
+    m = pose_matrix(gui["rotation"], gui["scale"])
+    middle = [(a + b) / 2 - 8 for a, b in zip(face["from"], face["to"])]
+    lands = [sum(m[i][k] * middle[k] for k in range(3)) + gui["translation"][i] for i in range(2)]
+    if max(abs(v) for v in lands) > 0.01:
+        raise SystemExit("%s: its count face's middle lands at %s, not the slot's middle" % (ref, lands))
 
 
 def models_by_number(source):
@@ -268,16 +437,25 @@ def build():
                {"gui_light": "front", "textures": {"count": "item/custom/count", "particle": "item/custom/count"},
                 "elements": [count_face(COUNT_FACE_Z["overlay"])]})
     overrides, sources, parents = [], {}, {}
-    flat = solid = missing = 0
+    flat = centred = solid = missing = 0
+    failed = []
     for number in sorted(numbers):
         ref = numbers[number]
         if not ref.startswith("minecraft:") and not os.path.exists(model_path(ref)):
             missing += 1
+            failed.append("%d %s: no such model" % (number, ref))
             continue
         copy = flatten(ref, parents)
         if copy is None:
-            target = ref
-            solid += 1
+            copy = solid_copy(ref)
+            if copy is None:
+                target = ref
+                solid += 1
+                failed.append("%d %s: no count face fits it before 1.21.4" % (number, ref))
+            else:
+                target = "ms:count/solid/%s" % (("n%d" % -number) if number < 0 else str(number))
+                write_json(model_path(target), copy, compact=True)
+                centred += 1
         else:
             name = ("n%d" % -number) if number < 0 else str(number)
             target = "ms:count/flat/%s" % name
@@ -290,8 +468,11 @@ def build():
     item = dict(item, overrides=overrides)
     write_json(SOURCE, item)
     write_json(SOURCES, sources)
-    print("%s: %d items and %d noted, %d as flat copies with a count, %d as their own models without one, %d with no model"
-          % (ITEM, sum(1 for n in sources if int(n) > 0), sum(1 for n in sources if int(n) < 0), flat, solid, missing))
+    print("%s: %d items and %d noted, %d as flat copies with a count, %d 3D with a centred count, %d as their own models without one, %d with no model"
+          % (ITEM, sum(1 for n in sources if int(n) > 0), sum(1 for n in sources if int(n) < 0), flat, centred, solid, missing))
+    # every item shows its count and selection on every client, or the pack isn't built
+    if failed:
+        raise SystemExit("%d items without a count face:\n  " % len(failed) + "\n  ".join(failed))
 
 
 def items():
@@ -313,10 +494,11 @@ def items():
                             "entries": entries},
                   "oversized_in_gui": True}
     write_json(os.path.join(ITEMS, ITEM + ".json"), definition)
-    # the flat copies are for the packs before 1.21.4
+    # the flat and 3D copies are for the packs before 1.21.4
     for name in os.listdir(os.path.join(COUNT_MODELS, "flat")):
         if name[0].isdigit() or name[0] == "n":
             os.remove(os.path.join(COUNT_MODELS, "flat", name))
+    shutil.rmtree(os.path.join(COUNT_MODELS, "solid"), ignore_errors=True)
     print("%s: %d in the item definition" % (ITEM, len(entries)))
 
 
@@ -343,9 +525,9 @@ def migrate(path):
 
 def glyphs():
     """The slot font's digits, K, M and the point, as GLSL: each glyph's 5x7 pixels as two ints (rows
-    0-3 then 4-6, five bits a row, the left pixel lowest), and its advance."""
+    0-3 then 4-6, five bits a row, the left pixel lowest), its advance, and its blank columns on the left."""
     image = Image.open(FONT).convert("RGBA")
-    rows, advances = [], []
+    rows, advances, blanks = [], [], []
     for ch in "0123456789KM.":
         i = ord(ch) - 32
         x0, y0 = (i % 16) * 16, (i // 16) * 16 + 6
@@ -353,9 +535,10 @@ def glyphs():
                  for x in range(5)] for y in range(7)]
         value = lambda ys: sum(bits[y][x] << ((y - ys[0]) * 5 + x) for y in ys for x in range(5))
         rows.append("ivec2(%d, %d)" % (value(range(0, 4)), value(range(4, 7))))
-        right = max([x for y in range(7) for x in range(5) if bits[y][x]], default=0)
-        advances.append(str(right + 2))
-    return rows, advances
+        lit = [x for y in range(7) for x in range(5) if bits[y][x]]
+        advances.append(str(max(lit, default=0) + 2))
+        blanks.append(str(min(lit, default=0)))
+    return rows, advances, blanks
 
 
 if __name__ == "__main__":

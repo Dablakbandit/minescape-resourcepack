@@ -654,8 +654,14 @@ int msCountCorner() {
             continue;
         }
         ivec4 c = ivec4(round(texelFetch(Sampler0, p, 0) * 255.0));
-        if (c.r == %(red)d && c.g == %(green)d && c.b == %(blue)d + q && c.a == 255) {
-            return q;
+        if (c.r == %(red)d && c.g == %(green)d && c.a == 255) {
+            // a face square to the slot, or a 3D model's centred one (count_icons.py)
+            if (c.b == %(blue)d + q) {
+                return q;
+            }
+            if (c.b == %(blue)d + %(centred)d + q) {
+                return 4 + q;
+            }
         }
     }
     return -1;
@@ -665,6 +671,8 @@ int msCountCorner() {
 COUNT_VERTEX_END = """
     msCount = -1;
     msLocal = vec2(0.0);
+    msGui = vec2(0.0);
+    msCentred = 0;
     int msQuarter = msCountCorner();
     if (msQuarter >= 0) {
         if (ProjMat[2][3] != 0.0) {
@@ -673,12 +681,20 @@ COUNT_VERTEX_END = """
         } else {
             ivec3 dye = ivec3(round(Color.rgb * 255.0));
             int code = dye.r << 16 | dye.g << 8 | dye.b;
-            if (code == %(undyed)d || (code >> 22) == 3) {
-                // an item without a count: never dyed, or dyed to say so
+            if (code == %(undyed)d || ((code >> 22) == 3 && ((code >> 18) & 1) == 0)) {
+                // an item without a count or a frame: never dyed, or dyed to say so
                 gl_Position = vec4(-2.0, -2.0, -2.0, 1.0);
             } else {
                 msCount = code;
-                msLocal = vec2(float(msQuarter & 1), float(msQuarter >> 1));
+                msLocal = vec2(float(msQuarter & 1), float((msQuarter >> 1) & 1));
+                msCentred = msQuarter >> 2;
+                // where it lands on the screen, in GUI pixels (y down): the projection undone
+                vec2 ndc = gl_Position.xy / gl_Position.w;
+                msGui = vec2((ndc.x - ProjMat[3][0]) / ProjMat[0][0], (ndc.y - ProjMat[3][1]) / ProjMat[1][1]);
+                if (msCentred == 1) {
+                    // through the middle of its 3D model: in front of it
+                    gl_Position.z += ProjMat[2][2] * 24.0 * gl_Position.w;
+                }
                 vertexColor = vec4(1.0);
             }
         }
@@ -686,15 +702,26 @@ COUNT_VERTEX_END = """
 """
 COUNT_FRAGMENT = """
 // MineScape stack counts: the slot font's glyphs (0-9, K, M, the point), 5x7 pixels as two ints of rows
-// 0-3 and 4-6, five bits a row with the left pixel lowest; and their advances.
+// 0-3 and 4-6, five bits a row with the left pixel lowest; their advances; and their blank columns on
+// the left (the 1's).
 const ivec2 MS_GLYPHS[13] = ivec2[](%(glyphs)s);
 const int MS_ADVANCE[13] = int[](%(advances)s);
+const int MS_BLANK[13] = int[](%(blanks)s);
 // OSRS's count colours: yellow, white from 100K, green from 10M.
 const vec3 MS_COUNT_COLOURS[3] = vec3[](vec3(1.0, 1.0, 0.0), vec3(1.0), vec3(0.0, 1.0, 128.0 / 255.0));
 // A glyph pixel's size in screen pixels: two thirds of a GUI pixel, whole, and at least one.
 const float MS_COUNT_SIZE = 2.0 / 3.0;
-// The count face's width in GUI pixels (count_icons.py), and its height.
-const vec2 MS_COUNT_FACE = vec2(%(width)d.0, 8.0);
+// The count face in GUI pixels (count_icons.py): its size, and its top left from the icon's.
+const vec2 MS_COUNT_FACE = vec2(%(width)d.0, %(height)d.0);
+const vec2 MS_COUNT_ORIGIN = vec2(%(left)d.0, %(top)d.0);
+// The selected item's frame: light blue, clear of the counts' yellow, white and green, along the
+// slot's border, a GUI pixel around the icon's 16.
+const vec4 MS_SELECTED = vec4(64.0 / 255.0, 184.0 / 255.0, 1.0, 1.0);
+// From a slot's count to where the next slot's frame begins, in GUI pixels: a count wider than this
+// (2147M at GUI scale 3) closes up rather than run into it, its glyphs full size with one screen pixel
+// between them instead of a glyph pixel, and none to the left of a 1; and nothing is drawn past it, so
+// a count is never under the next slot's frame (from 1.21.6 each item is drawn over the one before).
+const float MS_SLOT_PITCH = 17.0;
 
 int msGlyphPixel(int glyph, int x, int y) {
     if (x < 0 || x > 4 || y < 0 || y > 6) {
@@ -708,9 +735,25 @@ vec4 msCountTexture(vec4 texel) {
     if (msCount < 0) {
         return texel;
     }
-    // screen pixels a GUI pixel
+    // screen pixels a GUI pixel, and GUI pixels from the icon's top left: across the face; or for a 3D
+    // model's centred face (only before 1.21.4, where the GUI is drawn straight to the screen), from
+    // where the face lands on the screen, its middle the slot's, whatever its tilt
     float gui = 1.0 / (MS_COUNT_FACE.x * length(vec2(dFdx(msLocal.x), dFdy(msLocal.x))));
-    int number = msCount & 0x7FFFF;
+    vec2 slot = msLocal * MS_COUNT_FACE + MS_COUNT_ORIGIN;
+    if (msCentred == 1) {
+        gui = 1.0 / length(vec2(dFdx(msGui.x), dFdy(msGui.x)));
+        mat2 toGui = mat2(dFdx(msGui), dFdy(msGui)) * inverse(mat2(dFdx(msLocal), dFdy(msLocal)));
+        slot = toGui * (msLocal - 0.5) + 8.0;
+    }
+    bool framed = ((msCount >> 18) & 1) == 1 && slot.x >= -1.0 && slot.y >= -1.0 && slot.x < 17.0 && slot.y < 17.0
+            && (slot.x < 0.0 || slot.y < 0.0 || slot.x >= 16.0 || slot.y >= 16.0);
+    if ((msCount >> 22) == 3) {
+        if (framed) {
+            return MS_SELECTED;
+        }
+        discard;
+    }
+    int number = msCount & 0x3FFFF;
     bool tenths = ((msCount >> 19) & 1) == 1;
     int suffix = (msCount >> 20) & 3;
     int colour = min((msCount >> 22) & 3, 2);
@@ -733,22 +776,38 @@ vec4 msCountTexture(vec4 texel) {
         glyphs[count++] = 9 + min(suffix, 2);
     }
     int size = max(1, int(floor(gui * MS_COUNT_SIZE + 0.01)));
-    vec2 at = floor(msLocal * MS_COUNT_FACE * gui / float(size));
-    int x = int(at.x);
-    int y = int(at.y);
+    int width = 0;
+    for (int i = 0; i < count; i++) {
+        width += MS_ADVANCE[glyphs[i]];
+    }
+    // the advances end with a column for the shadow
+    bool close = float(width * size) > MS_SLOT_PITCH * gui + 0.5;
+    // in screen pixels from the face's top left, glyph pixels counted from each glyph's own left
+    vec2 at = floor(slot * gui);
+    float glyph = float(size);
+    int y = int(floor(at.y / glyph));
+    int below = int(floor((at.y - glyph) / glyph));
     int lit = 0;
     int shadow = 0;
-    int left = 0;
+    float left = 0.0;
     for (int i = 0; i < count; i++) {
-        lit |= msGlyphPixel(glyphs[i], x - left, y);
-        shadow |= msGlyphPixel(glyphs[i], x - 1 - left, y - 1);
-        left += MS_ADVANCE[glyphs[i]];
+        int g = glyphs[i];
+        float start = close ? left - float(MS_BLANK[g]) * glyph : left;
+        lit |= msGlyphPixel(g, int(floor((at.x - start) / glyph)), y);
+        shadow |= msGlyphPixel(g, int(floor((at.x - start - glyph) / glyph)), below);
+        left += close ? float(MS_ADVANCE[g] - 1 - MS_BLANK[g]) * glyph + 1.0 : float(MS_ADVANCE[g]) * glyph;
     }
-    if (lit == 1) {
-        return vec4(MS_COUNT_COLOURS[colour], 1.0);
+    // the count over the slot's own frame
+    if (slot.x < MS_SLOT_PITCH) {
+        if (lit == 1) {
+            return vec4(MS_COUNT_COLOURS[colour], 1.0);
+        }
+        if (shadow == 1) {
+            return vec4(0.0, 0.0, 0.0, 1.0);
+        }
     }
-    if (shadow == 1) {
-        return vec4(0.0, 0.0, 0.0, 1.0);
+    if (framed) {
+        return MS_SELECTED;
     }
     discard;
 }
@@ -770,20 +829,24 @@ def patch_count(files, form):
     patched = dict(files)
     location = varying_location(vsh, fsh)
     layout = (lambda n: "") if location is None else (lambda n: "layout(location = %d) " % (location + n))
-    glyphs, advances = count_icons.glyphs()
+    glyphs, advances, blanks = count_icons.glyphs()
     head, body = vsh.split(MAIN, 1)
-    declarations = layout(0) + "flat out int msCount;\n" + layout(1) + "out vec2 msLocal;\n"
+    declarations = (layout(0) + "flat out int msCount;\n" + layout(1) + "out vec2 msLocal;\n"
+                    + layout(2) + "out vec2 msGui;\n" + layout(3) + "flat out int msCentred;\n")
     if not re.search(r"uniform\s+sampler2D\s+Sampler0\s*;", vsh):
         declarations += "uniform sampler2D Sampler0;\n"
     declarations += COUNT_VERTEX % {"dye": count_icons.DYE, "red": count_icons.MARKER_RED,
-                                    "green": count_icons.MARKER_GREEN, "blue": count_icons.MARKER_BLUE}
+                                    "green": count_icons.MARKER_GREEN, "blue": count_icons.MARKER_BLUE,
+                                    "centred": count_icons.CENTRED}
     body = body.rstrip()
     body = body[:-1].rstrip() + "\n" + COUNT_VERTEX_END % {"undyed": count_icons.UNDYED} + "}\n"
     patched[vsh_name] = head + declarations + MAIN + body
     head, body = fsh.split(MAIN, 1)
-    declarations = layout(0) + "flat in int msCount;\n" + layout(1) + "in vec2 msLocal;\n"
-    declarations += COUNT_FRAGMENT % {"glyphs": ", ".join(glyphs), "advances": ", ".join(advances),
-                                      "width": count_icons.COUNT_FACE_WIDTH}
+    declarations = (layout(0) + "flat in int msCount;\n" + layout(1) + "in vec2 msLocal;\n"
+                    + layout(2) + "in vec2 msGui;\n" + layout(3) + "flat in int msCentred;\n")
+    declarations += COUNT_FRAGMENT % {"glyphs": ", ".join(glyphs), "advances": ", ".join(advances), "blanks": ", ".join(blanks),
+                                      "width": count_icons.COUNT_FACE["width"], "height": count_icons.COUNT_FACE["height"],
+                                      "left": count_icons.COUNT_FACE["left"], "top": count_icons.COUNT_FACE["top"]}
     patched[fsh_name] = head + declarations + MAIN + body.replace(TEXTURE, "msCountTexture(" + TEXTURE + ")", 1)
     return patched
 
