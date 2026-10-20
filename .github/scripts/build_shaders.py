@@ -714,14 +714,13 @@ const float MS_COUNT_SIZE = 2.0 / 3.0;
 // The count face in GUI pixels (count_icons.py): its size, and its top left from the icon's.
 const vec2 MS_COUNT_FACE = vec2(%(width)d.0, %(height)d.0);
 const vec2 MS_COUNT_ORIGIN = vec2(%(left)d.0, %(top)d.0);
-// The selected item's frame: light blue, clear of the counts' yellow, white and green, along the
-// slot's border, a GUI pixel around the icon's 16.
+// The selected item's frame: light blue, clear of the counts' yellow, white and green, a GUI pixel
+// along the inside of the icon's 16.
 const vec4 MS_SELECTED = vec4(64.0 / 255.0, 184.0 / 255.0, 1.0, 1.0);
-// From a slot's count to where the next slot's frame begins, in GUI pixels: a count wider than this
-// (2147M at GUI scale 3) closes up rather than run into it, its glyphs full size with one screen pixel
-// between them instead of a glyph pixel, and none to the left of a 1; and nothing is drawn past it, so
-// a count is never under the next slot's frame (from 1.21.6 each item is drawn over the one before).
-const float MS_SLOT_PITCH = 17.0;
+// The width a count has, the icon's, in GUI pixels: a count wider (2147M at GUI scale 3) closes up,
+// its glyphs full size with one screen pixel between them instead of a glyph pixel and none to the left
+// of a 1, or with none between them if it is still too wide.
+const float MS_SLOT_PITCH = 16.0;
 
 int msGlyphPixel(int glyph, int x, int y) {
     if (x < 0 || x > 4 || y < 0 || y > 6) {
@@ -745,8 +744,8 @@ vec4 msCountTexture(vec4 texel) {
         mat2 toGui = mat2(dFdx(msGui), dFdy(msGui)) * inverse(mat2(dFdx(msLocal), dFdy(msLocal)));
         slot = toGui * (msLocal - 0.5) + 8.0;
     }
-    bool framed = ((msCount >> 18) & 1) == 1 && slot.x >= -1.0 && slot.y >= -1.0 && slot.x < 17.0 && slot.y < 17.0
-            && (slot.x < 0.0 || slot.y < 0.0 || slot.x >= 16.0 || slot.y >= 16.0);
+    bool framed = ((msCount >> 18) & 1) == 1 && slot.x >= 0.0 && slot.y >= 0.0 && slot.x < 16.0 && slot.y < 16.0
+            && (slot.x < 1.0 || slot.y < 1.0 || slot.x >= 15.0 || slot.y >= 15.0);
     if ((msCount >> 22) == 3) {
         if (framed) {
             return MS_SELECTED;
@@ -777,11 +776,15 @@ vec4 msCountTexture(vec4 texel) {
     }
     int size = max(1, int(floor(gui * MS_COUNT_SIZE + 0.01)));
     int width = 0;
+    int ink = 0;
     for (int i = 0; i < count; i++) {
         width += MS_ADVANCE[glyphs[i]];
+        ink += MS_ADVANCE[glyphs[i]] - 1 - MS_BLANK[glyphs[i]];
     }
-    // the advances end with a column for the shadow
-    bool close = float(width * size) > MS_SLOT_PITCH * gui + 0.5;
+    // the advances end with a column for the shadow; closed up, a screen pixel between glyphs, or none
+    float room = MS_SLOT_PITCH * gui + 0.5;
+    bool close = float(width * size) > room;
+    float gap = float((ink + 1) * size + count - 1) > room ? 0.0 : 1.0;
     // in screen pixels from the face's top left, glyph pixels counted from each glyph's own left
     vec2 at = floor(slot * gui);
     float glyph = float(size);
@@ -795,9 +798,9 @@ vec4 msCountTexture(vec4 texel) {
         float start = close ? left - float(MS_BLANK[g]) * glyph : left;
         lit |= msGlyphPixel(g, int(floor((at.x - start) / glyph)), y);
         shadow |= msGlyphPixel(g, int(floor((at.x - start - glyph) / glyph)), below);
-        left += close ? float(MS_ADVANCE[g] - 1 - MS_BLANK[g]) * glyph + 1.0 : float(MS_ADVANCE[g]) * glyph;
+        left += close ? float(MS_ADVANCE[g] - 1 - MS_BLANK[g]) * glyph + gap : float(MS_ADVANCE[g]) * glyph;
     }
-    // the count over the slot's own frame
+    // the count over the frame, inside the icon's 16
     if (slot.x < MS_SLOT_PITCH) {
         if (lit == 1) {
             return vec4(MS_COUNT_COLOURS[colour], 1.0);

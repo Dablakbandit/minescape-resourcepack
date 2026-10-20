@@ -74,11 +74,12 @@ CENTRED = 4
 DYE = "colour << 22 | suffix << 20 | decimal << 19 | selected << 18 | number"
 UNDYED = 0xA06540
 
-# The count face, in GUI pixels from the icon's top left: over the whole slot with its border (a pixel
-# around the icon) for the selection frame, and 32 wide so a long count is drawn full size past the
-# slot's edge; in front of the icon. A flat copy's face sits just before the icon; the overlay's, drawn
-# beside a model of any depth, at the front of the model's box.
-COUNT_FACE = {"left": -1, "top": -1, "width": 32, "height": 18}
+# The count face, in GUI pixels from the icon's top left: over the icon's 16, no further. From 1.21.6
+# an item drawn past its 16 (oversized) is layered by its model's whole extent, which would overlap its
+# neighbours and lift them over a menu's slot text; so the count and the frame stay inside. In front of
+# the icon: a flat copy's face just before it; the overlay's, drawn beside a model of any depth, at the
+# front of the model's box.
+COUNT_FACE = {"left": 0, "top": 0, "width": 16, "height": 16}
 COUNT_FACE_Z = {"flat": 9, "overlay": 16}
 
 # A 3D model before 1.21.4 can't have the count face square to the slot: it is drawn in the model's
@@ -86,9 +87,8 @@ COUNT_FACE_Z = {"flat": 9, "overlay": 16}
 # slot's middle, on the side the pose turns to the camera, big enough that the pose leaves the slot and
 # its count inside it; the shader draws the count and frame square to the slot from where the face
 # lands, whatever its tilt, taking the face's middle for the slot's. What it must cover, in GUI pixels
-# around the slot's middle (y up), the same each way so its middle stays the slot's: as far as a count
-# past the slot's right reaches; else the slot alone, where a count longer than the slot is cut.
-CENTRED_COVER = ((-23, 23, -9, 9), (-9, 9, -9, 9))
+# around the slot's middle (y up), the same each way so its middle stays the slot's: the icon's 16.
+CENTRED_COVER = ((-8, 8, -8, 8),)
 # Minecraft's block model's display, for a block model with none of its own.
 BLOCK_DISPLAY = {
     "gui": {"rotation": [30, 225, 0], "translation": [0, 0, 0], "scale": [0.625, 0.625, 0.625]},
@@ -477,7 +477,7 @@ def build():
 
 def items():
     """The 1.21.4+ item definition: in a screen the model and the count face over it, a model of any
-    shape; anywhere else the model alone. Oversized in a screen, so a long count isn't cut at the slot."""
+    shape; anywhere else the model alone."""
     sources = read_json(SOURCES)
     entries = []
     for number, ref in sorted(sources.items(), key=lambda e: int(e[0])):
@@ -491,8 +491,7 @@ def items():
     definition = {"model": {"type": "minecraft:range_dispatch", "property": "minecraft:custom_model_data",
                             "fallback": {"type": "minecraft:model", "model": "minecraft:item/" + ITEM,
                                          "tints": [{"type": "minecraft:dye", "default": -6265536}]},
-                            "entries": entries},
-                  "oversized_in_gui": True}
+                            "entries": entries}}
     write_json(os.path.join(ITEMS, ITEM + ".json"), definition)
     # the flat and 3D copies are for the packs before 1.21.4
     for name in os.listdir(os.path.join(COUNT_MODELS, "flat")):
