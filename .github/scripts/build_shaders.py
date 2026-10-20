@@ -50,7 +50,9 @@ const float SLOT_DROP = 21.0;
 const float SLOT_ROW = 18.0;
 
 // 26.3 compiles every shader as Vulkan GLSL (OpenGL too, through SPIR-V), which has no gl_VertexID.
-#ifdef VULKAN
+#if defined(VULKAN) && defined(MS_DRAW_PARAMETERS) && defined(RENDERPEARL_INSTANCE_INDEX_INCLUDES_BASE_INSTANCE)
+#define SLOT_VERTEX (gl_VertexIndex - gl_BaseVertexARB)
+#elif defined(VULKAN)
 #define SLOT_VERTEX gl_VertexIndex
 #else
 #define SLOT_VERTEX gl_VertexID
@@ -58,14 +60,21 @@ const float SLOT_ROW = 18.0;
 
 // Which slot text this glyph is: -1 for none, 0 where the font sets it in its row, or its row from 1
 // where the font sets it in the title's line, from its marker's green.
+// The marker is looked for at each of the four places it could be from this vertex (its own texel,
+// one row up, a cell to the left, both) rather than from the vertex's corner: from 26.3 a draw starts
+// part way into a shared buffer, so the vertex index no longer tells the corner.
 int slotText() {
-    vec2 size = vec2(textureSize(Sampler0, 0));
-    int corner = SLOT_VERTEX % 4;
-    float u = corner < 2 ? UV0.x : UV0.x - SLOT_CELL / size.x;
-    float v = (corner == 0 || corner == 3) ? UV0.y : UV0.y - 1.0 / size.y;
-    vec4 marker = texelFetch(Sampler0, ivec2(floor(u * size.x + 0.5), floor(v * size.y + 0.5)), 0);
-    if (marker.a > 0.0 && marker.a < 2.5 / 255.0 && marker.r > 0.9 && marker.g < 0.1 && marker.b > 0.9) {
-        return int(round(marker.g * 255.0));
+    ivec2 size = textureSize(Sampler0, 0);
+    ivec2 at = ivec2(floor(UV0 * vec2(size) + 0.5));
+    for (int i = 0; i < 4; i++) {
+        ivec2 p = at - ivec2((i & 1) * int(SLOT_CELL), i >> 1);
+        if (p.x < 0 || p.y < 0 || p.x >= size.x || p.y >= size.y) {
+            continue;
+        }
+        vec4 marker = texelFetch(Sampler0, p, 0);
+        if (marker.a > 0.0 && marker.a < 2.5 / 255.0 && marker.r > 0.9 && marker.g < 0.1 && marker.b > 0.9) {
+            return int(round(marker.g * 255.0));
+        }
     }
     return -1;
 }
@@ -253,6 +262,25 @@ ARMOUR_NAMES = ("rendertype_armor_cutout_no_cull", "entity")
 TEXTURE = "texture(Sampler0, texCoord0)"
 # Before 1.20.5 (pack format 32) entities are drawn in view space; IViewRotMat turns that back.
 VIEW_ROT_BEFORE = 32
+# From 26.3 (pack format 97, the renderpearl renderer) a draw starts at a base vertex part way into a
+# shared buffer, so gl_VertexIndex % 4 is no longer a quad's corner: the index is counted from the
+# draw's start instead, gl_VertexIndex - gl_BaseVertexARB. That built-in needs GLSL 450 and the
+# device's draw parameters, which renderpearl announces with RENDERPEARL_INSTANCE_INDEX_INCLUDES_
+# BASE_INSTANCE; so those versions' vertex shaders are raised to 450 with the extension enabled
+# (MS_DRAW_PARAMETERS), and on a device without it the looks are drawn on Minecraft's own boxes,
+# unmoved (MS_NO_SHAPES), rather than torn apart.
+SHAPES_BEFORE = 97
+DRAW_PARAMETERS_HEADER = "#version 450\n#extension GL_ARB_shader_draw_parameters : enable\n#define MS_DRAW_PARAMETERS\n"
+
+
+def with_draw_parameters(vsh, form):
+    """The vertex shader raised to GLSL 450 with draw parameters on, from 26.3."""
+    if form < SHAPES_BEFORE:
+        return vsh
+    first, rest = vsh.split("\n", 1)
+    if not first.startswith("#version"):
+        return vsh
+    return DRAW_PARAMETERS_HEADER + rest
 VIEW_ROT = {"name": "IViewRotMat", "type": "matrix3x3", "count": 9, "values": [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]}
 
 ARMOUR_VERTEX = """
@@ -260,7 +288,9 @@ ARMOUR_VERTEX = """
 // (255, 0, 255, alpha 1; green 128 for the leggings'). The dye's low three bits per channel say the
 // look, 0b10 then its number; the tables give its tile and its shape: for leggings, flared at the
 // foot as a plateskirt (1) or robe (2); for a chestplate, lengthened below the waist (MS_TORSO_*).
-#ifdef VULKAN
+#if defined(VULKAN) && defined(MS_DRAW_PARAMETERS) && defined(RENDERPEARL_INSTANCE_INDEX_INCLUDES_BASE_INSTANCE)
+#define MS_VERTEX (gl_VertexIndex - gl_BaseVertexARB)
+#elif defined(VULKAN)
 #define MS_VERTEX gl_VertexIndex
 #else
 #define MS_VERTEX gl_VertexID
@@ -430,12 +460,14 @@ void main() {
         // the fragment shader dyes the look, all but what it marks to keep its own colour
         msTint = vec4(Color.rgb, 1.0);
         msColor = vec4(1.0, 1.0, 1.0, Color.a);
+#ifndef MS_NO_SHAPES
         msNarrow(msLayer, msPosition);
         if (msLayer == 2 && MS_SHAPE_2[look] != 0) {
             msHang(MS_SHAPE_2[look], msPosition);
         } else if (msLayer == 1 && MS_SHAPE_1[look] != 0) {
             msShown = msTorso(MS_SHAPE_1[look], msPosition);
         }
+#endif
     }"""
 ARMOUR_POSITION = """gl_Position = msShown ? ProjMat * ModelViewMat * vec4(msPosition, 1.0) : vec4(-2.0, -2.0, -2.0, 1.0);"""
 ARMOUR_FRAGMENT = """
@@ -564,7 +596,7 @@ def patch(files, form):
         directive = "#include" if "#include" in vsh else "#moj_import"
         include = "" if "globals.glsl" in vsh else directive + " <minecraft:globals.glsl>\n"
         clock = include + "#define MS_CLOCK GameTime\n\n"
-    patched[vsh_name] = head + clock + FUNCTIONS + body.replace(POSITION, LIFT, 1)
+    patched[vsh_name] = with_draw_parameters(head + clock + FUNCTIONS + body.replace(POSITION, LIFT, 1), form)
     return patched
 
 
@@ -582,6 +614,8 @@ def patch_armour(files, form):
     location = varying_location(vsh, fsh)
     layout = "" if location is None else "layout(location = %d) " % location
     declarations = layout + "out vec4 msTint;\n"
+    if form >= SHAPES_BEFORE:
+        declarations += "#ifndef RENDERPEARL_INSTANCE_INDEX_INCLUDES_BASE_INSTANCE\n#define MS_NO_SHAPES\n#endif\n"
     if not re.search(r"uniform\s+sampler2D\s+Sampler0\s*;", vsh):
         declarations += "uniform sampler2D Sampler0;\n"
     if form < VIEW_ROT_BEFORE and json_name in files:
@@ -594,7 +628,7 @@ def patch_armour(files, form):
     body = re.sub(r"\bColor\b", "msColor", body)
     body = re.sub(r"\bUV0\b", "msUV", body)
     body = body.replace(POSITION, ARMOUR_POSITION, 1)
-    patched[vsh_name] = head + declarations + ARMOUR_VERTEX % {"tables": armour_looks.glsl()} + body
+    patched[vsh_name] = with_draw_parameters(head + declarations + ARMOUR_VERTEX % {"tables": armour_looks.glsl()} + body, form)
     head, body = fsh.split(MAIN, 1)
     patched[fsh_name] = (head + layout + "in vec4 msTint;\n" + ARMOUR_FRAGMENT + MAIN
                          + body.replace(TEXTURE, "msArmour(" + TEXTURE + ")", 1))
