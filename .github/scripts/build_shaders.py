@@ -628,6 +628,47 @@ SLOT_FONTS = ("slot", "slot_box")
 SLOT_FIRST_ASCENT, SLOT_ROW_HEIGHT, SLOT_TITLE_ASCENT = -14, 18, 7
 
 
+# The fonts whose glyphs only move the cursor, drawn as bitmaps far off the line (ascent -32768) for
+# 1.18.2, which has no space glyphs. From 1.21.6 a title's glyphs, those included, decide its layer:
+# far-off quads stretch a title over every item. The overlay gives them as space glyphs instead,
+# each with the advance its bitmap had.
+SPACE_FONTS = ("assets/offset/font/default.json",)
+FAR_ASCENT = -1000
+
+
+def space_font(path):
+    """The font with its far-off bitmap glyphs as space glyphs of the same advance, or None if it has
+    none. The advance is Minecraft's for a bitmap glyph: its drawn width scaled to its height, plus one."""
+    from PIL import Image
+    font = json.load(open(os.path.join(ROOT, path), encoding="utf-8"))
+    advances, providers = {}, []
+    for provider in font["providers"]:
+        if provider.get("type") != "bitmap" or provider.get("ascent", 0) > FAR_ASCENT:
+            providers.append(provider)
+            continue
+        namespace, _, rel = provider["file"].partition(":")
+        texture = os.path.join(ROOT, "assets", namespace, "textures", rel)
+        image = Image.open(texture).convert("RGBA")
+        rows = provider["chars"]
+        cell_w, cell_h = image.width // len(rows[0]), image.height // len(rows)
+        alpha = image.getchannel("A").load()
+        for y, row in enumerate(rows):
+            for x, char in enumerate(row):
+                if char in ("\u0000", " "):
+                    continue
+                width = 0
+                for cx in range(cell_w - 1, -1, -1):
+                    if any(alpha[x * cell_w + cx, y * cell_h + cy] for cy in range(cell_h)):
+                        width = cx + 1
+                        break
+                # Java's (int) truncates toward zero
+                advances[char] = int(0.5 + width * provider["height"] / cell_h) + 1
+    if not advances:
+        return None
+    providers.append({"type": "space", "advances": advances})
+    return {"providers": providers}
+
+
 def slot_layers(last_format):
     """The overlay that sets slot text in the title's line, each row's glyphs from its own copy of the
     font texture (build_slot_rows.py), its markers' green the row from 1. None if the font has no slot
@@ -653,6 +694,13 @@ def slot_layers(last_format):
     path = os.path.join(ROOT, SLOT_OVERLAY, GUI_FONT)
     os.makedirs(os.path.dirname(path), exist_ok=True)
     open(path, "w", encoding="utf-8", newline="\n").write(json.dumps(font, indent=2, ensure_ascii=False) + "\n")
+    for rel in SPACE_FONTS:
+        spaced = space_font(rel)
+        if spaced:
+            out = os.path.join(ROOT, SLOT_OVERLAY, rel)
+            os.makedirs(os.path.dirname(out), exist_ok=True)
+            open(out, "w", encoding="utf-8", newline="\n").write(json.dumps(spaced, indent=2, ensure_ascii=False) + "\n")
+            print("overlay %s: %s as space glyphs" % (SLOT_OVERLAY, rel))
     print("overlay %s: slot text in the title's line, formats %d-%d" % (SLOT_OVERLAY, LAYERED_GUI_FROM, last_format))
     return {"formats": {"min_inclusive": LAYERED_GUI_FROM, "max_inclusive": last_format},
             "min_format": LAYERED_GUI_FROM, "max_format": last_format, "directory": SLOT_OVERLAY}
