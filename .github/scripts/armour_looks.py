@@ -1,5 +1,10 @@
 """Which look each leather armour item wears, for the armour shader (see build_shaders.py).
 
+Each look is a file to draw: armour/<part>/<number>_<name>.png at the pack's root, part chest, boots
+or legs, the number the item's LeatherArmourType model value and the name only a label; a number with
+no file wears armour/<part>/plain.png. build_armour.py makes the sheets from them, and the tables here
+tell the shader which tile each number is, so files with the same bytes share a tile.
+
 The server tells clients an item's look in the low three bits of each channel of its dye colour:
 nine bits, 0b10 then the look's number, which is the item's LeatherArmourType model value
 (LeatherArmourType.java in the plugin). The shader reads it, draws that look's tile of the armour
@@ -62,6 +67,8 @@ LEGGINGS = {
 LEGGINGS.update({11 - i: ("skirt_" + god, SKIRT) for i, god in enumerate(GODS)})
 LEGGINGS.update({5 - i: ("legs_" + god, LEGS) for i, god in enumerate(GODS)})
 
+import hashlib, os, re
+
 LOOKS = 128
 # Tiles across a sheet; each tile is one armour texture at the pack's 256x128.
 COLUMNS = 8
@@ -78,22 +85,62 @@ def layer_2(number):
     return LEGGINGS.get(number, ("plain", LEGS))
 
 
+# The look files, at the pack's root.
+SOURCE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "armour"))
+LAYER_PARTS = {1: ("chest", "boots"), 2: ("legs",)}
+FILE = re.compile(r"(\d+)_[A-Za-z0-9_]+\.png$")
+
+
+def files(part):
+    """number -> the look file of that number for the part."""
+    found = {}
+    folder = os.path.join(SOURCE, part)
+    for name in sorted(os.listdir(folder)) if os.path.isdir(folder) else []:
+        match = FILE.match(name)
+        if not match:
+            continue
+        number = int(match.group(1))
+        if number >= LOOKS:
+            raise ValueError("%s/%s: looks are numbered 0 to %d" % (part, name, LOOKS - 1))
+        if number in found:
+            raise ValueError("%s: two files for %d, %s and %s" % (part, number, os.path.basename(found[number]), name))
+        found[number] = os.path.join(folder, name)
+    return found
+
+
+def plain_file(part):
+    return os.path.join(SOURCE, part, "plain.png")
+
+
 def tiles(layer):
-    """The layer's distinct tiles in sheet order, the plain one first."""
-    looks = layer_1 if layer == 1 else (lambda n: layer_2(n)[0])
-    names = [looks(-1)]
+    """(the layer's distinct tiles in sheet order, each the file of each of its parts and the plain one
+    first; each number's index among them). Files with the same bytes are one tile."""
+    parts = LAYER_PARTS[layer]
+    found = [files(part) for part in parts]
+    digests = {}
+
+    def digest(path):
+        if path not in digests:
+            digests[path] = hashlib.sha1(open(path, "rb").read()).hexdigest()
+        return digests[path]
+
+    plain = tuple(plain_file(part) for part in parts)
+    keys, order, index = [tuple(digest(path) for path in plain)], [plain], []
     for number in range(LOOKS):
-        if looks(number) not in names:
-            names.append(looks(number))
-    return names
+        paths = tuple(f.get(number, p) for f, p in zip(found, plain))
+        key = tuple(digest(path) for path in paths)
+        if key not in keys:
+            keys.append(key)
+            order.append(paths)
+        index.append(keys.index(key))
+    return order, index
 
 
 def glsl():
     """The tables as GLSL: each number's tile, and each layer's shape."""
     def array(name, values):
         return "const int %s[%d] = int[](%s);\n" % (name, LOOKS, ", ".join(str(v) for v in values))
-    one, two = tiles(1), tiles(2)
-    return (array("MS_TILE_1", [one.index(layer_1(n)) for n in range(LOOKS)])
-            + array("MS_TILE_2", [two.index(layer_2(n)[0]) for n in range(LOOKS)])
+    return (array("MS_TILE_1", tiles(1)[1])
+            + array("MS_TILE_2", tiles(2)[1])
             + array("MS_SHAPE_1", [TORSO.get(n, TORSO_NONE) for n in range(LOOKS)])
             + array("MS_SHAPE_2", [layer_2(n)[1] for n in range(LOOKS)]))

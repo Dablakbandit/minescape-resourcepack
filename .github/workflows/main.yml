@@ -22,6 +22,12 @@ jobs:
         with:
           python-version: 3.8
 
+      - name: Build armour sheets
+        # The leather armour looks, one file each in armour/, made into the sheets the armour shader reads.
+        run: |
+          pip install pillow numpy
+          python .github/scripts/build_armour.py
+
       - name: Cache Minecraft shaders
         # Each release's text shader, read once from its client jar; a new release adds to it.
         uses: actions/cache@v4
@@ -39,7 +45,7 @@ jobs:
         uses: thedoctor0/zip-release@master
         with:
           filename: 'dev.zip'
-          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/*'
+          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/* armour/*'
 
       - name: Delete dev files
         run: rm assets/minecraft/textures/particle/effect_*
@@ -48,7 +54,7 @@ jobs:
         uses: thedoctor0/zip-release@master
         with:
           filename: 'patreon.zip'
-          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/*'
+          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/* armour/*'
 
       - name: Run script
         run: python .github/scripts/process_input.py
@@ -61,18 +67,22 @@ jobs:
         uses: thedoctor0/zip-release@master
         with:
           filename: '20.zip'
-          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/*'
+          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/* armour/*'
 
       - name: Upgrade resource pack
         uses: AshleyThew/minecraft-resource-pack-upgrader@v1.1.9
         with:
           input_path: './'
 
+      - name: Check item models' atlases
+        # From 26.1 an item model mixing item textures with a missing one breaks its whole item.
+        run: python .github/scripts/check_item_atlases.py
+
       - name: Archive Release
         uses: thedoctor0/zip-release@master
         with:
           filename: '21.zip'
-          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/*'
+          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/* armour/*'
 
       - name: Reset specific files or directories
         run: |
@@ -88,7 +98,7 @@ jobs:
         uses: thedoctor0/zip-release@master
         with:
           filename: 'patreon_low.zip'
-          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/*'
+          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/* armour/*'
 
       - name: Run script
         run: python .github/scripts/process_input.py
@@ -100,7 +110,7 @@ jobs:
         uses: thedoctor0/zip-release@master
         with:
           filename: '20_low.zip'
-          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/*'
+          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/* armour/*'
 
       - name: Upgrade resource pack
         uses: AshleyThew/minecraft-resource-pack-upgrader@v1.1.9
@@ -111,7 +121,7 @@ jobs:
         uses: thedoctor0/zip-release@master
         with:
           filename: '21_low.zip'
-          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/*'
+          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/* armour/*'
 
       - uses: actions/github-script@v4
         with:
