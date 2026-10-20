@@ -175,6 +175,14 @@ def tiles(layer):
     return order, index
 
 
+# OptiFine's armour rules (build_armour.py), matching an item's custom model data: by NBT before 1.20.5
+# (the base folder's, for every client reading no overlays), its component from 1.20.5 (pack format
+# 32), as floats from 1.21.4 (46). (overlay directory, first format, last format or None, rule)
+CIT_MATCH = [(None, None, None, "nbt.CustomModelData=%d"),
+             ("cit_1_20_5", 32, 45, "components.custom_model_data=%d"),
+             ("cit_1_21_4", 46, None, "components.custom_model_data.floats.0=regex:%d([.]0+)?[fF]?")]
+
+
 def glsl():
     """The tables as GLSL: each item tile's sheet tile, and its shape."""
     def array(name, values):

@@ -64,9 +64,9 @@ SOURCES = os.path.join(CACHE, "count_sources.json")
 ARMOUR = {"chest": "leather_chestplate", "legs": "leather_leggings", "boots": "leather_boots"}
 
 # The count face's texels: red and green fixed, blue MARKER_BLUE + the quarter (0 top left, 1 top
-# right, 2 bottom left, 3 bottom right), opaque: along its edge, where a face square to the slot has
-# its corners; inside it, where a centred face (a 3D model's, below) has them (uv 1 to 15), blue
-# MARKER_BLUE + CENTRED + the quarter. One texture, so no other marker sits beside it in the atlas.
+# right, 2 bottom left, 3 bottom right), opaque: along its edge, where 1.21.4's overlay, a face square
+# to the slot, has its corners; inside it (uv 1 to 15), blue MARKER_BLUE + CENTRED + the quarter, where
+# a face before 1.21.4 has them. One texture, so no other marker sits beside it in the atlas.
 MARKER_RED, MARKER_GREEN, MARKER_BLUE = 0x3D, 0xC1, 0x58
 CENTRED = 4
 
@@ -95,13 +95,9 @@ UNDYED = 0xA06540
 COUNT_FACE = {"left": 0, "top": 0, "width": 16, "height": 16}
 COUNT_FACE_Z = {"flat": 9, "overlay": 16}
 
-# A 3D model before 1.21.4 can't have the count face square to the slot: it is drawn in the model's
-# GUI pose, tilted and scaled with it. So its face is centred: put where the pose takes it to the
-# slot's middle, on the side the pose turns to the camera, big enough that the pose leaves the slot and
-# its count inside it; the shader draws the count and frame square to the slot from where the face
-# lands, whatever its tilt, taking the face's middle for the slot's. What it must cover, in GUI pixels
-# around the slot's middle (y up), the same each way so its middle stays the slot's: the icon's 16.
-CENTRED_COVER = ((-8, 8, -8, 8),)
+# Before 1.21.4 a count face is a point (point_face) that the shader spreads square to the slot: a flat
+# copy's just before its icon; a 3D model's where its GUI pose, tilted and scaled, takes the slot's
+# middle, on a plane through the model's middle.
 # Minecraft's block model's display, for a block model with none of its own.
 BLOCK_DISPLAY = {
     "gui": {"rotation": [30, 225, 0], "translation": [0, 0, 0], "scale": [0.625, 0.625, 0.625]},
@@ -113,11 +109,6 @@ BLOCK_DISPLAY = {
 }
 CONTEXTS = ("thirdperson_righthand", "thirdperson_lefthand", "firstperson_righthand", "firstperson_lefthand",
             "gui", "head", "ground", "fixed")
-# Display scales are capped at 4. A model too small in its GUI pose, or moved too far off its middle,
-# for any side of its box to cover the slot is copied smaller, its display scales that much larger,
-# so it looks the same everywhere and its box has room: by the first of these that leaves room.
-SHRINK = (1, 1.25, 1.5, 2, 2.5, 3, 4, 5, 6, 8)
-MAX_DISPLAY_SCALE = 4.0
 
 # Display transforms of Minecraft's own flat item models, which a flat copy keeps: a model with
 # item/generated at its root is baked from its layers, never from elements, so it can't be the parent.
@@ -225,6 +216,15 @@ def count_face(z):
             "faces": {"south": {"uv": [0, 0, 16, 16], "texture": "#count", "tintindex": 0}}}
 
 
+def point_face(at, side="south"):
+    """A count face before 1.21.4: a point, where the GUI pose puts the slot's middle, which the item
+    shader spreads to the icon's 16 in a screen and hides anywhere else. Shader packs draw items
+    without it, and a point shows nothing, so the face never shows in a hand or on the ground."""
+    at = [round(v, 4) for v in at]
+    return {"from": at, "to": list(at), "shade": False,
+            "faces": {side: {"uv": [1, 1, 15, 15], "texture": "#count", "tintindex": 0}}}
+
+
 def flat_parent(kind, layers):
     """The shared model of a flat copy: its layers as faces before and behind, the count face, and the
     flat item's display; the copy names only its textures."""
@@ -235,7 +235,7 @@ def flat_parent(kind, layers):
                          "faces": {"south": {"uv": [0, 0, 16, 16], "texture": "#layer%d" % i}}})
         elements.append({"from": [0, 0, back], "to": [16, 16, back], "shade": False,
                          "faces": {"north": {"uv": [16, 0, 0, 16], "texture": "#layer%d" % i}}})
-    elements.append(count_face(COUNT_FACE_Z["flat"]))
+    elements.append(point_face([8, 8, COUNT_FACE_Z["flat"]]))
     return {"gui_light": "front", "textures": {"count": "item/custom/count"}, "elements": elements,
             "display": FLAT_DISPLAYS[kind]}
 
@@ -322,91 +322,46 @@ def pose_matrix(rotation, scale):
     return mat_mul(mat_mul(mat_mul(x, y), z), [[scale[0], 0, 0], [0, scale[1], 0], [0, 0, scale[2]]])
 
 
-def cofactor(m):
-    """The inverse transpose of m, times its determinant: how it turns a surface's normal."""
-    return [[m[(r + 1) % 3][(c + 1) % 3] * m[(r + 2) % 3][(c + 2) % 3]
-             - m[(r + 1) % 3][(c + 2) % 3] * m[(r + 2) % 3][(c + 1) % 3] for c in range(3)] for r in range(3)]
-
-
 # A face on each side of a box: its name, the axis it faces along and which way, and the two it spans
 SIDES = (("east", 0, 1, 1, 2), ("west", 0, -1, 1, 2), ("up", 1, 1, 0, 2), ("down", 1, -1, 0, 2),
          ("south", 2, 1, 0, 1), ("north", 2, -1, 0, 1))
 
 
-def centred_face(gui, cover):
-    """The centred count face for a 3D model in this GUI pose covering this much, an element, or None if
-    no side of its box can hold one."""
-    rotation, translation, scale = gui["rotation"], gui["translation"], gui["scale"]
-    m = pose_matrix(rotation, scale)
-    turned = cofactor(m)
-    det_m = sum(m[0][c] * turned[0][c] for c in range(3))
+def centred_face(gui):
+    """A 3D model's count face, a point where this GUI pose takes the slot's middle, or None if that is
+    off the model's box."""
+    translation = gui["translation"]
+    m = pose_matrix(gui["rotation"], gui["scale"])
     best = None
+    # on the plane through the model's middle the pose turns most to the screen
     for name, axis, sign, a, b in SIDES:
         p, q = [m[0][a], m[1][a]], [m[0][b], m[1][b]]
         det = p[0] * q[1] - p[1] * q[0]
-        # the side's outward normal after the pose: facing the camera (+z) or culled
-        facing = sign * turned[2][axis] * (1 if det_m > 0 else -1)
-        if facing <= 1e-6 or abs(det) < 1e-6:
-            continue
-        if best is None or abs(det) > best[0]:
+        if abs(det) > 1e-6 and (best is None or abs(det) > best[0]):
             best = (abs(det), name, a, b, p, q, det)
     if best is None:
         return None
     _, name, a, b, p, q, det = best
-
-    def solve(x, y):
-        return (x * q[1] - y * q[0]) / det, (p[0] * y - p[1] * x) / det
-
-    # the point the pose takes to the slot's middle, on the side's plane through the model's middle
-    da, db = solve(-translation[0], -translation[1])
-    if True:
-        corners = [solve(x, y) for x in cover[:2] for y in cover[2:]]
-        frm, to = [8.0, 8.0, 8.0], [8.0, 8.0, 8.0]
-        frm[a], to[a] = 8 + da + min(c[0] for c in corners), 8 + da + max(c[0] for c in corners)
-        frm[b], to[b] = 8 + db + min(c[1] for c in corners), 8 + db + max(c[1] for c in corners)
-        if min(frm + to) >= -16 and max(frm + to) <= 32:
-            return {"from": [round(v, 4) for v in frm], "to": [round(v, 4) for v in to], "shade": False,
-                    "faces": {name: {"uv": [1, 1, 15, 15], "texture": "#count", "tintindex": 0}}}
-    return None
-
-
-def shrunk(element, k):
-    """The element k times smaller about the model's middle."""
-    element = json.loads(json.dumps(element))
-    for key in ("from", "to"):
-        element[key] = [round(8 + (v - 8) / k, 5) for v in element[key]]
-    if "rotation" in element and "origin" in element["rotation"]:
-        element["rotation"]["origin"] = [round(8 + (v - 8) / k, 5) for v in element["rotation"]["origin"]]
-    return element
+    at = [8.0, 8.0, 8.0]
+    at[a] = 8 + (-translation[0] * q[1] + translation[1] * q[0]) / det
+    at[b] = 8 + (-p[0] * translation[1] + p[1] * translation[0]) / det
+    if min(at) < -16 or max(at) > 32:
+        return None
+    return point_face(at, name)
 
 
 def solid_copy(ref):
-    """A 3D model with its centred count face, for the packs before 1.21.4, or None."""
+    """A 3D model with its count face, for the packs before 1.21.4, or None."""
     models, root = chain(ref)
     elements = next((m["elements"] for m in models if "elements" in m), None)
     if not elements:
         return None
-    display = full_display(models, root)
-    # as far as the cap allows: a scale already at it (Minecraft clamps those beyond) can't grow
-    largest = max(min(abs(v), MAX_DISPLAY_SCALE) for t in display.values() for v in t["scale"])
-    most = MAX_DISPLAY_SCALE / largest
-    # the full cover at any size first, the slot alone only if none fits
-    for cover in CENTRED_COVER:
-        for k in [k for k in SHRINK if k <= most] + ([most] if most > 1 else []):
-            gui = dict(display["gui"], scale=[v * k for v in display["gui"]["scale"]])
-            face = centred_face(gui, cover)
-            if face is None:
-                continue
-            copy = {"parent": ref, "textures": {"count": "item/custom/count"}}
-            if k == 1:
-                copy["elements"] = elements + [face]
-            else:
-                copy["elements"] = [shrunk(e, k) for e in elements] + [face]
-                copy["display"] = {c: dict(t, scale=[round(min(abs(v), MAX_DISPLAY_SCALE) * k, 5) * (1 if v >= 0 else -1) for v in t["scale"]])
-                                   for c, t in display.items()}
-            centred_check(ref, gui, face)
-            return copy
-    return None
+    gui = full_display(models, root)["gui"]
+    face = centred_face(gui)
+    if face is None:
+        return None
+    centred_check(ref, gui, face)
+    return {"parent": ref, "textures": {"count": "item/custom/count"}, "elements": elements + [face]}
 
 
 def centred_check(ref, gui, face):

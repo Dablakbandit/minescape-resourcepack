@@ -300,13 +300,18 @@ const vec2 MS_SHEET_TILE = vec2(256.0, 128.0);
 // A player model pixel, in blocks.
 const float MS_PIXEL = 0.9375 / 16.0;
 %(tables)s
+// The texture's mark (build_armour.py): 0 for none; a sheet's layer, 1 or 2 (alpha 1); the same plus
+// 2 for an item's own tile, OptiFine's CIT for shader packs, its texels all but clear (alpha 2); -1 for
+// that tile's overlay, which only shader packs are to draw (alpha 3).
 int msSheet() {
     ivec2 size = textureSize(Sampler0, 0);
     vec4 mark = texelFetch(Sampler0, ivec2(size.x - 1, 0), 0);
-    if (mark.a > 0.0 && mark.a < 2.5 / 255.0 && mark.r > 0.99 && mark.b > 0.99) {
-        return mark.g < 0.25 ? 1 : 2;
+    int alpha = int(round(mark.a * 255.0));
+    if (alpha < 1 || alpha > 3 || mark.r < 0.99 || mark.b < 0.99) {
+        return 0;
     }
-    return 0;
+    int layer = mark.g < 0.25 ? 1 : 2;
+    return alpha == 1 ? layer : (alpha == 2 ? layer + 2 : -1);
 }
 
 // The frame a vertex is moved in: the world's and its up, or in a screen's entity view (an inventory's
@@ -451,17 +456,21 @@ void main() {
     bool msShown = true;
     msTint = vec4(0.0);
     int msLayer = msSheet();
-    if (msLayer != 0) {
+    if (msLayer == -1) {
+        msShown = false;
+    } else if (msLayer != 0) {
+        bool own = msLayer > 2;
+        msLayer = own ? msLayer - 2 : msLayer;
         ivec3 c = ivec3(round(Color.rgb * 255.0));
         int dye = c.r << 16 | c.g << 8 | c.b;
         // the item's tile (count_icons.py's layout 0), or 0, the plain look, for leather it doesn't define
         int look = dye != %(undyed)d && (dye >> 22) == 0 ? (dye >> 13) & 511 : 0;
         int tile = msLayer == 1 ? MS_TILE_1[look] : MS_TILE_2[look];
         ivec2 grid = textureSize(Sampler0, 0) / ivec2(MS_SHEET_TILE);
-        msUV = (UV0 + vec2(tile %% grid.x, tile / grid.x)) / vec2(grid);
+        msUV = own ? UV0 : (UV0 + vec2(tile %% grid.x, tile / grid.x)) / vec2(grid);
         // an item's tile is coloured already; the plain one the fragment shader dyes, all but what it
-        // marks to keep its own colour
-        msTint = look == 0 ? vec4(Color.rgb, 1.0) : vec4(0.0);
+        // marks to keep its own colour; an item's own tile (alpha 0.5 here) is drawn whole
+        msTint = own ? vec4(0.0, 0.0, 0.0, 0.5) : (look == 0 ? vec4(Color.rgb, 1.0) : vec4(0.0));
         msColor = vec4(1.0, 1.0, 1.0, Color.a);
 #ifndef MS_NO_SHAPES
         msNarrow(msLayer, msPosition);
@@ -475,8 +484,12 @@ void main() {
 ARMOUR_POSITION = """gl_Position = msShown ? ProjMat * ModelViewMat * vec4(msPosition, 1.0) : vec4(-2.0, -2.0, -2.0, 1.0);"""
 ARMOUR_FRAGMENT = """
 // MineScape armour looks: the vertex shader's dye, kept off texels marked in their alpha as their own
-// colour (254) and lightened for (t) trims (253).
+// colour (254) and lightened for (t) trims (253). An item's own tile (OptiFine's, msTint.a 0.5) has
+// every texel all but clear for shader packs to drop: here they are whole.
 vec4 msArmour(vec4 texel) {
+    if (msTint.a > 0.25 && msTint.a < 0.75) {
+        return texel.a > 0.0 ? vec4(texel.rgb, 1.0) : texel;
+    }
     if (msTint.a < 0.5 || texel.a < 0.1) {
         return texel;
     }
@@ -650,6 +663,15 @@ COUNT_VERTEX = """
 // saying which quarter of the face they are in; the face's corner is the quarter whose texel lies inside
 // the face from this vertex, found without counting vertices. Its dye is the count, as the plugin
 // shortened it: %(dye)s.
+// Before 1.21.4 the face is a point (the inner markers), which a renderer without this shader (a shader
+// pack) can't show; it is spread here to the icon's 16, its corners by their order in the quad.
+#if defined(VULKAN) && defined(MS_DRAW_PARAMETERS) && defined(RENDERPEARL_INSTANCE_INDEX_INCLUDES_BASE_INSTANCE)
+#define MS_COUNT_VERTEX (gl_VertexIndex - gl_BaseVertexARB)
+#elif defined(VULKAN)
+#define MS_COUNT_VERTEX gl_VertexIndex
+#else
+#define MS_COUNT_VERTEX gl_VertexID
+#endif
 int msCountCorner() {
     ivec2 size = textureSize(Sampler0, 0);
     ivec2 at = ivec2(floor(UV0 * vec2(size) + 0.5));
@@ -660,7 +682,7 @@ int msCountCorner() {
         }
         ivec4 c = ivec4(round(texelFetch(Sampler0, p, 0) * 255.0));
         if (c.r == %(red)d && c.g == %(green)d && c.a == 255) {
-            // a face square to the slot, or a 3D model's centred one (count_icons.py)
+            // a face square to the slot (1.21.4's overlay), or a point to spread
             if (c.b == %(blue)d + q) {
                 return q;
             }
@@ -676,8 +698,6 @@ int msCountCorner() {
 COUNT_VERTEX_END = """
     msCount = -1;
     msLocal = vec2(0.0);
-    msGui = vec2(0.0);
-    msCentred = 0;
     int msQuarter = msCountCorner();
     if (msQuarter >= 0) {
         if (ProjMat[2][3] != 0.0) {
@@ -692,12 +712,14 @@ COUNT_VERTEX_END = """
             } else {
                 msCount = code;
                 msLocal = vec2(float(msQuarter & 1), float((msQuarter >> 1) & 1));
-                msCentred = msQuarter >> 2;
-                // where it lands on the screen, in GUI pixels (y down): the projection undone
-                vec2 ndc = gl_Position.xy / gl_Position.w;
-                msGui = vec2((ndc.x - ProjMat[3][0]) / ProjMat[0][0], (ndc.y - ProjMat[3][1]) / ProjMat[1][1]);
-                if (msCentred == 1) {
-                    // through the middle of its 3D model: in front of it
+                if (msQuarter >= 4) {
+                    // a point, at the slot's middle: out to the icon's 16 around it, in GUI pixels through
+                    // the projection, the quad's corners top left, bottom left, bottom right, top right
+                    // (Minecraft's order, facing the screen), its local place taken from that
+                    int corner = MS_COUNT_VERTEX %% 4;
+                    msLocal = vec2(corner >= 2 ? 1.0 : 0.0, corner == 1 || corner == 2 ? 1.0 : 0.0);
+                    gl_Position.xy += (msLocal - 0.5) * MS_COUNT_FACE_SIZE * vec2(ProjMat[0][0], ProjMat[1][1]) * gl_Position.w;
+                    // through the middle of a 3D model, or before a flat one: in front of it
                     gl_Position.z += ProjMat[2][2] * 24.0 * gl_Position.w;
                 }
                 vertexColor = vec4(1.0);
@@ -739,16 +761,9 @@ vec4 msCountTexture(vec4 texel) {
     if (msCount < 0) {
         return texel;
     }
-    // screen pixels a GUI pixel, and GUI pixels from the icon's top left: across the face; or for a 3D
-    // model's centred face (only before 1.21.4, where the GUI is drawn straight to the screen), from
-    // where the face lands on the screen, its middle the slot's, whatever its tilt
+    // screen pixels a GUI pixel, and GUI pixels from the icon's top left, across the face
     float gui = 1.0 / (MS_COUNT_FACE.x * length(vec2(dFdx(msLocal.x), dFdy(msLocal.x))));
     vec2 slot = msLocal * MS_COUNT_FACE + MS_COUNT_ORIGIN;
-    if (msCentred == 1) {
-        gui = 1.0 / length(vec2(dFdx(msGui.x), dFdy(msGui.x)));
-        mat2 toGui = mat2(dFdx(msGui), dFdy(msGui)) * inverse(mat2(dFdx(msLocal), dFdy(msLocal)));
-        slot = toGui * (msLocal - 0.5) + 8.0;
-    }
     bool framed = ((msCount >> 12) & 1) == 1 && slot.x >= 0.0 && slot.y >= 0.0 && slot.x < 16.0 && slot.y < 16.0
             && (slot.x < 1.0 || slot.y < 1.0 || slot.x >= 15.0 || slot.y >= 15.0);
     int code = msCount & 4095;
@@ -857,10 +872,10 @@ def patch_count(files, form):
     layout = (lambda n: "") if location is None else (lambda n: "layout(location = %d) " % (location + n))
     glyphs, advances, blanks = count_icons.glyphs()
     head, body = vsh.split(MAIN, 1)
-    declarations = (layout(0) + "flat out int msCount;\n" + layout(1) + "out vec2 msLocal;\n"
-                    + layout(2) + "out vec2 msGui;\n" + layout(3) + "flat out int msCentred;\n")
+    declarations = layout(0) + "flat out int msCount;\n" + layout(1) + "out vec2 msLocal;\n"
     if not re.search(r"uniform\s+sampler2D\s+Sampler0\s*;", vsh):
         declarations += "uniform sampler2D Sampler0;\n"
+    declarations += "const vec2 MS_COUNT_FACE_SIZE = vec2(%d.0, %d.0);\n" % (count_icons.COUNT_FACE["width"], count_icons.COUNT_FACE["height"])
     declarations += COUNT_VERTEX % {"dye": count_icons.DYE, "red": count_icons.MARKER_RED,
                                     "green": count_icons.MARKER_GREEN, "blue": count_icons.MARKER_BLUE,
                                     "centred": count_icons.CENTRED}
@@ -868,8 +883,7 @@ def patch_count(files, form):
     body = body[:-1].rstrip() + "\n" + COUNT_VERTEX_END % {"undyed": count_icons.UNDYED} + "}\n"
     patched[vsh_name] = head + declarations + MAIN + body
     head, body = fsh.split(MAIN, 1)
-    declarations = (layout(0) + "flat in int msCount;\n" + layout(1) + "in vec2 msLocal;\n"
-                    + layout(2) + "in vec2 msGui;\n" + layout(3) + "flat in int msCentred;\n")
+    declarations = layout(0) + "flat in int msCount;\n" + layout(1) + "in vec2 msLocal;\n"
     declarations += COUNT_FRAGMENT % {"glyphs": ", ".join(glyphs), "advances": ", ".join(advances), "blanks": ", ".join(blanks),
                                       "width": count_icons.COUNT_FACE["width"], "height": count_icons.COUNT_FACE["height"],
                                       "left": count_icons.COUNT_FACE["left"], "top": count_icons.COUNT_FACE["top"]}
@@ -1037,9 +1051,18 @@ def main():
         if no_base:
             write({}, base, names)
 
-    slot_entry = slot_layers(max(e["max_format"] for e in entries))
+    last = max(e["max_format"] for e in entries)
+    slot_entry = slot_layers(last)
     if slot_entry:
         entries.append(slot_entry)
+    # OptiFine's armour rules, as each range of versions matches custom model data (build_armour.py)
+    sys.path.insert(0, os.path.dirname(__file__))
+    import armour_looks
+    for directory, first, final, _ in armour_looks.CIT_MATCH:
+        if directory:
+            final = final or last
+            entries.append({"formats": {"min_inclusive": first, "max_inclusive": final},
+                            "min_format": first, "max_format": final, "directory": directory})
 
     meta_path = os.path.join(ROOT, "pack.mcmeta")
     raw = open(meta_path, encoding="utf-8").read()

@@ -17,6 +17,9 @@ plugin's LeatherArmourType:
     python .github/scripts/build_armour.py --split ../minescape.me/modules/minescape-items/src/main/java/me/minescape/gameplay/items/LeatherArmourType.java
 
 The top right texel of a sheet marks it as one: (255, 0, 255, alpha 1), green 128 on the leggings'.
+
+It also writes OptiFine's per-item armour textures for shader packs (see CIT below): each item's tile
+under assets/minecraft/optifine/cit/minescape/, and its rules there and in the cit_* overlays.
 """
 import os, re, sys
 
@@ -41,6 +44,18 @@ OVERLAYS = {
 }
 # Each part's boxes on the texture, as (u0, v0, u1, v1) in model pixels.
 AREAS = {"chest": art.CHEST_AREA, "boots": art.BOOTS_AREA, "legs": [(0, 16, 40, 32)]}
+
+# Shader packs draw armour without the armour shader, so OptiFine is also given each item's own tile
+# (its CIT, matched on custom model data): as leather's layer, every texel all but clear (alpha GHOST),
+# which a shader pack drops and the armour shader draws whole; and as leather's overlay, the tile as it
+# looks, which a shader pack draws undyed (the overlay always is) and the armour shader hides. The top
+# right texel says which, as on the sheets: alpha SHEET for a sheet, OWN_TILE for an item's own tile,
+# HIDE for its overlay.
+SHEET, OWN_TILE, HIDE = 1, 2, 3
+GHOST = 3
+CIT = os.path.join(ROOT, "assets", "minecraft", "optifine", "cit", "minescape")
+CIT_TEXTURES = "optifine/cit/minescape/armour"
+MATERIALS = {"chest": ("leather_chestplate", 1), "legs": ("leather_leggings", 2), "boots": ("leather_boots", 1)}
 
 
 def read(path, part):
@@ -103,13 +118,50 @@ def sheet(layer):
     for i, paths in enumerate(order):
         x, y = (i % looks.COLUMNS) * w, (i // looks.COLUMNS) * h
         out[y:y + h, x:x + w] = tile(layer, paths)
-    out[0, -1] = (255, 0 if layer == 1 else 128, 255, 1)
+    out[0, -1] = (255, 0 if layer == 1 else 128, 255, SHEET)
     return Image.fromarray(out), len(order)
 
 
+def cit(layer, image):
+    """The layer's sheet tiles as OptiFine's textures, and each armour item's rules for its tile."""
+    w, h = looks.TILE
+    px = np.array(image)
+    mark = (255, 0 if layer == 1 else 128, 255)
+    _, index = looks.tiles(layer)
+    os.makedirs(os.path.join(CIT, "armour"), exist_ok=True)
+    for t in sorted(set(index) - {0}):
+        x, y = (t % looks.COLUMNS) * w, (t // looks.COLUMNS) * h
+        own = px[y:y + h, x:x + w].copy()
+        opaque = own[..., 3] > 0
+        ghost, overlay = own.copy(), own.copy()
+        ghost[..., 3] = np.where(opaque, GHOST, 0)
+        overlay[..., 3] = np.where(opaque, 255, 0)
+        ghost[0, -1], overlay[0, -1] = mark + (OWN_TILE,), mark + (HIDE,)
+        Image.fromarray(ghost).save(os.path.join(CIT, "armour", "layer_%d_%d.png" % (layer, t)))
+        Image.fromarray(overlay).save(os.path.join(CIT, "armour", "layer_%d_%d_overlay.png" % (layer, t)))
+    for piece, (material, piece_layer) in MATERIALS.items():
+        if piece_layer != layer:
+            continue
+        for tile, item in looks.items(piece).items():
+            texture = "%s/layer_%d_%d" % (CIT_TEXTURES, layer, index[tile])
+            for directory, _, _, rule in looks.CIT_MATCH:
+                folder = os.path.join(ROOT, directory, "assets", "minecraft", "optifine", "cit", "minescape") if directory else CIT
+                os.makedirs(folder, exist_ok=True)
+                with open(os.path.join(folder, "%s_%d.properties" % (piece, item["custom_model_data"])), "w", newline="\n") as f:
+                    f.write("# %s, built by .github/scripts/build_armour.py from armour/%s.json\n" % (item["name"], piece))
+                    f.write("type=armor\nitems=%s\n%s\n" % (material, rule % item["custom_model_data"]))
+                    f.write("texture.leather_layer_%d=%s.png\ntexture.leather_layer_%d_overlay=%s_overlay.png\n" % (layer, texture, layer, texture))
+
+
 def build():
+    import shutil
+    shutil.rmtree(CIT, ignore_errors=True)
+    for directory, _, _, _ in looks.CIT_MATCH:
+        if directory:
+            shutil.rmtree(os.path.join(ROOT, directory), ignore_errors=True)
     for layer in (1, 2):
         image, count = sheet(layer)
+        cit(layer, image)
         for rel in OUTPUTS[layer]:
             path = os.path.join(TEXTURES, rel)
             os.makedirs(os.path.dirname(path), exist_ok=True)
