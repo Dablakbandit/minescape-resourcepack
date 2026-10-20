@@ -84,8 +84,11 @@ jobs:
           input_path: './'
 
       - name: Stack count icons as 1.21.4 item models
-        # In a screen the icon and its count, anywhere else the icon's own model.
-        run: python .github/scripts/count_icons.py --items
+        # In a screen the icon and its count, anywhere else the icon's own model. The upgrader runs in
+        # Docker as root, so what it wrote is handed back to the runner first.
+        run: |
+          sudo chown -R "$(id -u):$(id -g)" .
+          python .github/scripts/count_icons.py --items
 
       - name: Check item models' atlases
         # From 26.1 an item model mixing item textures with a missing one breaks its whole item.
@@ -136,7 +139,9 @@ jobs:
           input_path: './'
 
       - name: Stack count icons as 1.21.4 item models
-        run: python .github/scripts/count_icons.py --items
+        run: |
+          sudo chown -R "$(id -u):$(id -g)" .
+          python .github/scripts/count_icons.py --items
 
       - name: Archive Release
         uses: thedoctor0/zip-release@master
