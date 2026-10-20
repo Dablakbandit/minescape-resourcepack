@@ -1,20 +1,21 @@
-"""Which look each leather armour item wears, for the armour shader (see build_shaders.py).
+"""How each leather armour item looks worn, for the armour shader (see build_shaders.py).
 
-Each look is a file to draw: armour/<part>/<number>_<name>.png at the pack's root, part chest, boots
-or legs, the number the item's LeatherArmourType model value and the name only a label; a number with
-no file wears armour/<part>/plain.png. build_armour.py makes the sheets from them, and the tables here
-tell the shader which tile each number is, so files with the same bytes share a tile.
+armour/chest.json, armour/legs.json and armour/boots.json at the pack's root define every armour item
+of that piece: its custom model data (10000 + its tile, 1 to 511), the look it wears (a file
+armour/<piece>/<name>.png, or plain), the colour that look is dyed where it is grey, its inventory icon
+(count_icons.py colours it the same) and its shape. build_armour.py bakes each item's look in its
+colour into a tile of the armour sheets, and the tables here tell the shader which sheet tile each
+item's tile is, and its shape; items that look the same share a sheet tile.
 
-The server tells clients an item's look in the low three bits of each channel of its dye colour:
-nine bits, 0b10 then the look's number, which is the item's LeatherArmourType model value
-(LeatherArmourType.java in the plugin). The shader reads it, draws that look's tile of the armour
-sheet (build_armour.py paints them, from armour_art.py) and, for skirts and robes, hangs the
-leggings from the waist.
+The plugin puts an item's tile in its dye, (dye >> 13) & 511 (ItemCount); the shader draws that tile
+as it is, coloured already, and for skirts and robes hangs the leggings from the waist. Tile 0 is the
+plain look dyed by the dye itself: leather the plugin doesn't define.
 
-Numbers are per armour layer. Layer 1 draws chestplates and boots: a number's tile holds the chest
-look of that number on the body and arms, and the boots look of it on the legs. Layer 2 draws
-leggings, each with a shape. A number not listed is the plain look: the current platebody,
-platelegs or armour boots.
+Layer 1 draws chestplates and boots: its tile n holds chest item n's look on the body and arms and
+boots item n's on the legs, each piece showing only its own boxes. Layer 2 draws leggings.
+
+The look files are named by the old LeatherArmourType numbers, and the tables below map those numbers
+to looks for build_armour.py --split, which painted them from code (armour_art.py).
 
 Pure Python: CI's shader build imports it.
 """
@@ -67,12 +68,18 @@ LEGGINGS = {
 LEGGINGS.update({11 - i: ("skirt_" + god, SKIRT) for i, god in enumerate(GODS)})
 LEGGINGS.update({5 - i: ("legs_" + god, LEGS) for i, god in enumerate(GODS)})
 
-import hashlib, os, re
+import hashlib, json, os, re
 
 LOOKS = 128
+# An item's tile, 0 to 511 (the dye's nine bits); its custom model data is 10000 + it.
+TILES = 512
+CUSTOM_MODEL_DATA = 10000
 # Tiles across a sheet; each tile is one armour texture at the pack's 256x128.
 COLUMNS = 8
 TILE = (256, 128)
+PIECES = ("chest", "legs", "boots")
+SHAPES = {"chest": ("none", "fauld", "jerkin", "tunic"), "legs": ("legs", "skirt", "robe", "skirt_over_legs"),
+          "boots": ("none",)}
 
 
 def layer_1(number):
@@ -112,11 +119,38 @@ def plain_file(part):
     return os.path.join(SOURCE, part, "plain.png")
 
 
+def items(piece):
+    """tile -> the piece's item: {look (its file's path), colour (r, g, b), shape (a number), icon, name},
+    from armour/<piece>.json, checked."""
+    path = os.path.join(SOURCE, piece + ".json")
+    found = {}
+    for entry in json.load(open(path, encoding="utf-8"))["items"]:
+        where = "%s.json %s" % (piece, entry.get("name", entry.get("custom_model_data")))
+        tile = entry["custom_model_data"] - CUSTOM_MODEL_DATA
+        if not 1 <= tile < TILES:
+            raise ValueError("%s: custom model data is %d to %d" % (where, CUSTOM_MODEL_DATA + 1, CUSTOM_MODEL_DATA + TILES - 1))
+        if tile in found:
+            raise ValueError("%s: custom model data %d is %s's already" % (where, entry["custom_model_data"], found[tile]["name"]))
+        look = plain_file(piece) if entry["look"] == "plain" else os.path.join(SOURCE, piece, entry["look"] + ".png")
+        if not os.path.exists(look):
+            raise ValueError("%s: no look armour/%s/%s.png" % (where, piece, entry["look"]))
+        colour = entry["colour"].lstrip("#")
+        if not re.fullmatch(r"[0-9a-fA-F]{6}", colour):
+            raise ValueError("%s: colour %r is not #rrggbb" % (where, entry["colour"]))
+        shape = entry.get("shape", SHAPES[piece][0])
+        if shape not in SHAPES[piece]:
+            raise ValueError("%s: shape %r is none of %s" % (where, shape, ", ".join(SHAPES[piece])))
+        found[tile] = {"look": look, "colour": tuple(int(colour[i:i + 2], 16) for i in (0, 2, 4)),
+                       "shape": SHAPES[piece].index(shape), "icon": entry["icon"], "name": entry.get("name", str(tile)),
+                       "custom_model_data": entry["custom_model_data"]}
+    return found
+
+
 def tiles(layer):
-    """(the layer's distinct tiles in sheet order, each the file of each of its parts and the plain one
-    first; each number's index among them). Files with the same bytes are one tile."""
+    """(the layer's distinct sheet tiles in order, each a (look file, colour) per part of the layer, the
+    colour None for the plain tile dyed by the shader; each item tile's sheet tile). Tile 0 is plain."""
     parts = LAYER_PARTS[layer]
-    found = [files(part) for part in parts]
+    defined = [items(part) for part in parts]
     digests = {}
 
     def digest(path):
@@ -124,23 +158,29 @@ def tiles(layer):
             digests[path] = hashlib.sha1(open(path, "rb").read()).hexdigest()
         return digests[path]
 
-    plain = tuple(plain_file(part) for part in parts)
-    keys, order, index = [tuple(digest(path) for path in plain)], [plain], []
-    for number in range(LOOKS):
-        paths = tuple(f.get(number, p) for f, p in zip(found, plain))
-        key = tuple(digest(path) for path in paths)
+    plain = tuple((plain_file(part), None) for part in parts)
+    keys = [tuple((digest(f), c) for f, c in plain)]
+    order, index = [plain], [0]
+    for tile in range(1, TILES):
+        spec = tuple((d[tile]["look"], d[tile]["colour"]) if tile in d else (plain_file(part), None)
+                     for d, part in zip(defined, parts))
+        if all(c is None for _, c in spec):
+            index.append(0)
+            continue
+        key = tuple((digest(f), c) for f, c in spec)
         if key not in keys:
             keys.append(key)
-            order.append(paths)
+            order.append(spec)
         index.append(keys.index(key))
     return order, index
 
 
 def glsl():
-    """The tables as GLSL: each number's tile, and each layer's shape."""
+    """The tables as GLSL: each item tile's sheet tile, and its shape."""
     def array(name, values):
-        return "const int %s[%d] = int[](%s);\n" % (name, LOOKS, ", ".join(str(v) for v in values))
+        return "const int %s[%d] = int[](%s);\n" % (name, TILES, ", ".join(str(v) for v in values))
+    chest, legs = items("chest"), items("legs")
     return (array("MS_TILE_1", tiles(1)[1])
             + array("MS_TILE_2", tiles(2)[1])
-            + array("MS_SHAPE_1", [TORSO.get(n, TORSO_NONE) for n in range(LOOKS)])
-            + array("MS_SHAPE_2", [layer_2(n)[1] for n in range(LOOKS)]))
+            + array("MS_SHAPE_1", [chest[t]["shape"] if t in chest else TORSO_NONE for t in range(TILES)])
+            + array("MS_SHAPE_2", [legs[t]["shape"] if t in legs else LEGS for t in range(TILES)]))

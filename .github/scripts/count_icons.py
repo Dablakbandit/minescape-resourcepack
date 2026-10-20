@@ -8,7 +8,12 @@ carries its stack count, which the item shader draws over the icon.
 
 The plugin's items take their number from the overrides here (Items.java, MembersItems.java), and a
 noted item's custom model data is minus its noted icon's number, so the noted icons need no list of
-their own. The models the items had before stay where they were, so anything still on its old
+their own.
+
+Leather armour keeps its own material, to be worn: armour/<piece>.json (armour_looks.py) defines each
+piece's items by custom model data, 10000 + their tile, and this bakes each item's icon in its colour
+and adds it to leather_chestplate.json, leather_leggings.json or leather_boots.json after their own
+overrides; build_armour.py bakes how it looks worn. Its dye is any item's, with its tile. The models the items had before stay where they were, so anything still on its old
 material (an item frame, a chest in the world) looks as it did.
 
 The count: the dye's 24 bits are colour << 22 | suffix << 20 | decimal << 19 | number (DYE below), the
@@ -54,8 +59,9 @@ MARKER_TEXTURE = os.path.join(ROOT, "assets", "minecraft", "textures", "item", "
 ITEM = "leather_horse_armor"
 NOTED = "feather"
 SOURCE = os.path.join(MODELS, ITEM + ".json")
-SOURCE_COPY = os.path.join(CACHE, ITEM + ".source.json")
 SOURCES = os.path.join(CACHE, "count_sources.json")
+# Leather armour, each piece on its own material, defined in armour/<piece>.json (armour_looks.py)
+ARMOUR = {"chest": "leather_chestplate", "legs": "leather_leggings", "boots": "leather_boots"}
 
 # The count face's texels: red and green fixed, blue MARKER_BLUE + the quarter (0 top left, 1 top
 # right, 2 bottom left, 3 bottom right), opaque: along its edge, where a face square to the slot has
@@ -64,14 +70,21 @@ SOURCES = os.path.join(CACHE, "count_sources.json")
 MARKER_RED, MARKER_GREEN, MARKER_BLUE = 0x3D, 0xC1, 0x58
 CENTRED = 4
 
-# The dye, 24 bits: colour << 22 | suffix << 20 | decimal << 19 | selected << 18 | number.
-#   colour   0 yellow (under 100K), 1 white (under 10M), 2 green, as OSRS colours a stack's count;
-#            3 no count
-#   suffix   0 none, 1 K, 2 M
-#   decimal  the number is in tenths, drawn with a point before its last digit ("2.1M")
-#   selected a light blue frame around the slot, as the player's selected item
-# Leather's own colour, 0xA06540 (an item never dyed), is neither.
-DYE = "colour << 22 | suffix << 20 | decimal << 19 | selected << 18 | number"
+# The dye, 24 bits: layout << 22 | tile << 13 | selected << 12 | count.
+#   layout   0, an item's; any other is not a count (leather's own colour, 0xA06540, an item never
+#            dyed, is one of them)
+#   tile     an armour piece's look when worn (512 a part), 0 for other items
+#   selected a light blue frame inside the icon, as the player's selected item
+#   count    the stack's count, shortened to four characters at most (the plugin's ItemCount):
+#              0-999         as it is                       0-999
+#              1000-1089     1.0K-9.9K (tenths of a K)      1000 + tenths - 10
+#              1090-2079     10K-999K                       1090 + K - 10
+#              2080-2169     1.0M-9.9M                      2080 + tenths - 10
+#              2170-3159     10M-999M                       2170 + M - 10
+#              3160-3171     1.0B-2.1B                      3160 + tenths - 10
+#              4095          no count (a selected item without one)
+#            a decimal of 0 is left out ("2K"); yellow, white from 100K, green from 10M
+DYE = "layout << 22 | tile << 13 | selected << 12 | count"
 UNDYED = 0xA06540
 
 # The count face, in GUI pixels from the icon's top left: over the icon's 16, no further. From 1.21.6
@@ -414,91 +427,159 @@ def models_by_number(source):
     return numbers
 
 
-def source():
-    """leather_horse_armor.json as committed: the copy in cache/ if this has already rewritten it."""
-    item = read_json(SOURCE)
+def source(name):
+    """models/item/<name>.json as committed: the copy in cache/ if this has already rewritten it."""
+    path, copy = os.path.join(MODELS, name + ".json"), os.path.join(CACHE, name + ".source.json")
+    item = read_json(path)
     if any(o["model"].startswith("ms:count/") for o in item.get("overrides", [])):
-        return read_json(SOURCE_COPY)
-    write_json(SOURCE_COPY, item)
+        return read_json(copy)
+    os.makedirs(CACHE, exist_ok=True)
+    shutil.copyfile(path, copy)
     return item
 
 
-def build():
-    item = source()
-    numbers = models_by_number(item)
-    noted = models_by_number(read_json(os.path.join(MODELS, NOTED + ".json")))
-    for number, ref in noted.items():
-        if number > 0:
-            numbers[-number] = ref
+def texture_path(ref):
+    ns, _, path = ref.partition(":") if ":" in ref else ("minecraft", "", ref)
+    return os.path.join(ROOT, "assets", ns, "textures", path + ".png")
 
-    shutil.rmtree(COUNT_MODELS, ignore_errors=True)
-    marker_texture()
-    write_json(os.path.join(COUNT_MODELS, "overlay.json"),
-               {"gui_light": "front", "textures": {"count": "item/custom/count", "particle": "item/custom/count"},
-                "elements": [count_face(COUNT_FACE_Z["overlay"])]})
-    overrides, sources, parents = [], {}, {}
-    flat = centred = solid = missing = 0
-    failed = []
+
+def armour_icon(piece, item):
+    """The armour item's icon in its colour: its icon model with the layers the dye colours (layer0 of
+    a flat icon, as leather's item colours tint index 0; or the faces with tint index 0) baked in the
+    item's colour, a model of its own whose parent is the icon. Returns its reference."""
+    ref = full(item["icon"])
+    models, root = chain(ref)
+    if not models and not ref.startswith("minecraft:"):
+        raise SystemExit("armour/%s.json %s: no icon model %s" % (piece, item["name"], ref))
+    textures, tinted = {}, set()
+    for model in reversed(models):
+        textures.update(model.get("textures", {}))
+    elements = next((m["elements"] for m in models if "elements" in m), None)
+    if elements:
+        for element in elements:
+            for face in element.get("faces", {}).values():
+                if face.get("tintindex") == 0:
+                    tinted.add(face["texture"].lstrip("#"))
+    elif "layer0" in textures:
+        tinted.add("layer0")
+    baked = {}
+    for name in sorted(tinted):
+        value = textures.get(name)
+        while value and value.startswith("#"):
+            value = textures.get(value[1:])
+        source = texture_path(value) if value else None
+        if not source or not os.path.exists(source):
+            raise SystemExit("armour/%s.json %s: no texture %s for its icon's %s" % (piece, item["name"], value, name))
+        image = Image.open(source).convert("RGBA")
+        r, g, b = item["colour"]
+        pixels = [(round(pr * r / 255), round(pg * g / 255), round(pb * b / 255), pa) for pr, pg, pb, pa in image.getdata()]
+        image.putdata(pixels)
+        out = "item/custom/count/armour/%s/%d_%s" % (piece, item["custom_model_data"], name)
+        os.makedirs(os.path.dirname(texture_path(out)), exist_ok=True)
+        image.save(texture_path(out))
+        baked[name] = out
+    model = "ms:count/armour/%s/%d" % (piece, item["custom_model_data"])
+    write_json(model_path(model), {"parent": ref, "textures": baked})
+    return model
+
+
+def copies(numbers, name, parents, failed):
+    """Each number's model with its count face before 1.21.4: a flat copy, or a 3D model's own copy with
+    a centred face; written under ms:count/flat/<name>/ and ms:count/solid/<name>/. Returns the overrides
+    and how many of each."""
+    overrides = []
+    flat = centred = 0
     for number in sorted(numbers):
         ref = numbers[number]
         if not ref.startswith("minecraft:") and not os.path.exists(model_path(ref)):
-            missing += 1
-            failed.append("%d %s: no such model" % (number, ref))
+            failed.append("%s %d %s: no such model" % (name, number, ref))
             continue
+        label = ("n%d" % -number) if number < 0 else str(number)
         copy = flatten(ref, parents)
         if copy is None:
             copy = solid_copy(ref)
             if copy is None:
-                target = ref
-                solid += 1
-                failed.append("%d %s: no count face fits it before 1.21.4" % (number, ref))
-            else:
-                target = "ms:count/solid/%s" % (("n%d" % -number) if number < 0 else str(number))
-                write_json(model_path(target), copy, compact=True)
-                centred += 1
+                failed.append("%s %d %s: no count face fits it before 1.21.4" % (name, number, ref))
+                continue
+            target = "ms:count/solid/%s/%s" % (name, label)
+            centred += 1
         else:
-            name = ("n%d" % -number) if number < 0 else str(number)
-            target = "ms:count/flat/%s" % name
-            write_json(model_path(target), copy, compact=True)
+            target = "ms:count/flat/%s/%s" % (name, label)
             flat += 1
+        write_json(model_path(target), copy, compact=True)
         overrides.append({"predicate": {"custom_model_data": number}, "model": target})
-        sources[str(number)] = ref
+    return overrides, flat, centred
+
+
+def build():
+    shutil.rmtree(COUNT_MODELS, ignore_errors=True)
+    shutil.rmtree(os.path.dirname(texture_path("item/custom/count/armour/x")), ignore_errors=True)
+    marker_texture()
+    write_json(os.path.join(COUNT_MODELS, "overlay.json"),
+               {"gui_light": "front", "textures": {"count": "item/custom/count", "particle": "item/custom/count"},
+                "elements": [count_face(COUNT_FACE_Z["overlay"])]})
+    parents, failed, sources = {}, [], {}
+
+    # the items: leather horse armour, the noted icons below zero
+    item = source(ITEM)
+    numbers = models_by_number(item)
+    for number, ref in models_by_number(read_json(os.path.join(MODELS, NOTED + ".json"))).items():
+        if number > 0:
+            numbers[-number] = ref
+    overrides, flat, centred = copies(numbers, ITEM, parents, failed)
+    write_json(os.path.join(MODELS, ITEM + ".json"), dict(item, overrides=overrides))
+    sources[ITEM] = {str(n): r for n, r in numbers.items()}
+    print("%s: %d items and %d noted, %d as flat copies with a count, %d 3D with a centred count"
+          % (ITEM, sum(1 for n in numbers if n > 0), sum(1 for n in numbers if n < 0), flat, centred))
+
+    # the armour, on its own leather material: each item's icon in its colour, after the material's own
+    # overrides (things placed in the world before items had these)
+    import armour_looks
+    for piece, material in ARMOUR.items():
+        own = source(material)
+        numbers = {i["custom_model_data"]: armour_icon(piece, i) for i in armour_looks.items(piece).values()}
+        overrides, flat, centred = copies(numbers, material, parents, failed)
+        write_json(os.path.join(MODELS, material + ".json"), dict(own, overrides=own.get("overrides", []) + overrides))
+        sources[material] = {str(n): r for n, r in numbers.items()}
+        print("%s: %d armour items, %d as flat copies with a count, %d 3D with a centred count" % (material, len(numbers), flat, centred))
+
     for ref, model in parents.items():
         write_json(model_path(ref), model)
-    item = dict(item, overrides=overrides)
-    write_json(SOURCE, item)
     write_json(SOURCES, sources)
-    print("%s: %d items and %d noted, %d as flat copies with a count, %d 3D with a centred count, %d as their own models without one, %d with no model"
-          % (ITEM, sum(1 for n in sources if int(n) > 0), sum(1 for n in sources if int(n) < 0), flat, centred, solid, missing))
     # every item shows its count and selection on every client, or the pack isn't built
     if failed:
         raise SystemExit("%d items without a count face:\n  " % len(failed) + "\n  ".join(failed))
 
 
 def items():
-    """The 1.21.4+ item definition: in a screen the model and the count face over it, a model of any
-    shape; anywhere else the model alone."""
+    """The 1.21.4+ item definitions: in a screen the model and the count face over it, a model of any
+    shape; anywhere else the model alone. Leather armour's fall back to the upgrader's definition, its
+    models from before."""
     sources = read_json(SOURCES)
-    entries = []
-    for number, ref in sorted(sources.items(), key=lambda e: int(e[0])):
-        icon = {"type": "minecraft:model", "model": ref}
-        count = {"type": "minecraft:model", "model": "ms:count/overlay",
-                 "tints": [{"type": "minecraft:dye", "default": UNDYED}]}
-        entries.append({"threshold": int(number), "model": {
-            "type": "minecraft:select", "property": "minecraft:display_context",
-            "cases": [{"when": "gui", "model": {"type": "minecraft:composite", "models": [icon, count]}}],
-            "fallback": icon}})
-    definition = {"model": {"type": "minecraft:range_dispatch", "property": "minecraft:custom_model_data",
-                            "fallback": {"type": "minecraft:model", "model": "minecraft:item/" + ITEM,
-                                         "tints": [{"type": "minecraft:dye", "default": -6265536}]},
-                            "entries": entries}}
-    write_json(os.path.join(ITEMS, ITEM + ".json"), definition)
+    for material, numbers in sources.items():
+        entries = []
+        for number, ref in sorted(numbers.items(), key=lambda e: int(e[0])):
+            icon = {"type": "minecraft:model", "model": ref}
+            count = {"type": "minecraft:model", "model": "ms:count/overlay",
+                     "tints": [{"type": "minecraft:dye", "default": UNDYED}]}
+            entries.append({"threshold": int(number), "model": {
+                "type": "minecraft:select", "property": "minecraft:display_context",
+                "cases": [{"when": "gui", "model": {"type": "minecraft:composite", "models": [icon, count]}}],
+                "fallback": icon}})
+        path = os.path.join(ITEMS, material + ".json")
+        if material == ITEM:
+            fallback = {"type": "minecraft:model", "model": "minecraft:item/" + ITEM,
+                        "tints": [{"type": "minecraft:dye", "default": -6265536}]}
+        else:
+            fallback = read_json(path)["model"] if os.path.exists(path) else {
+                "type": "minecraft:model", "model": "minecraft:item/" + material,
+                "tints": [{"type": "minecraft:dye", "default": -6265536}]}
+        write_json(path, {"model": {"type": "minecraft:range_dispatch", "property": "minecraft:custom_model_data",
+                                    "fallback": fallback, "entries": entries}})
+        print("%s: %d in the item definition" % (material, len(entries)))
     # the flat and 3D copies are for the packs before 1.21.4
-    for name in os.listdir(os.path.join(COUNT_MODELS, "flat")):
-        if name[0].isdigit() or name[0] == "n":
-            os.remove(os.path.join(COUNT_MODELS, "flat", name))
+    shutil.rmtree(os.path.join(COUNT_MODELS, "flat"), ignore_errors=True)
     shutil.rmtree(os.path.join(COUNT_MODELS, "solid"), ignore_errors=True)
-    print("%s: %d in the item definition" % (ITEM, len(entries)))
 
 
 def migrate(path):
@@ -523,11 +604,11 @@ def migrate(path):
 
 
 def glyphs():
-    """The slot font's digits, K, M and the point, as GLSL: each glyph's 5x7 pixels as two ints (rows
+    """The slot font's digits, K, M, the point and B, as GLSL: each glyph's 5x7 pixels as two ints (rows
     0-3 then 4-6, five bits a row, the left pixel lowest), its advance, and its blank columns on the left."""
     image = Image.open(FONT).convert("RGBA")
     rows, advances, blanks = [], [], []
-    for ch in "0123456789KM.":
+    for ch in "0123456789KM.B":
         i = ord(ch) - 32
         x0, y0 = (i % 16) * 16, (i // 16) * 16 + 6
         bits = [[1 if image.getpixel((x0 + x, y0 + y))[3] > 128 and sum(image.getpixel((x0 + x, y0 + y))[:3]) > 100 else 0
@@ -545,7 +626,9 @@ if __name__ == "__main__":
     if "--items" in args:
         items()
     elif "--restore" in args:
-        write_json(SOURCE, source())
+        for name in [ITEM] + list(ARMOUR.values()):
+            source(name)
+            shutil.copyfile(os.path.join(CACHE, name + ".source.json"), os.path.join(MODELS, name + ".json"))
     elif "--migrate" in args:
         migrate(args[args.index("--migrate") + 1])
     else:

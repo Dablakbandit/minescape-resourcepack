@@ -285,9 +285,10 @@ VIEW_ROT = {"name": "IViewRotMat", "type": "matrix3x3", "count": 9, "values": [1
 
 ARMOUR_VERTEX = """
 // MineScape armour looks. An armour sheet is a grid of 256x128 tiles, its top right texel marked
-// (255, 0, 255, alpha 1; green 128 for the leggings'). The dye's low three bits per channel say the
-// look, 0b10 then its number; the tables give its tile and its shape: for leggings, flared at the
-// foot as a plateskirt (1) or robe (2); for a chestplate, lengthened below the waist (MS_TORSO_*).
+// (255, 0, 255, alpha 1; green 128 for the leggings'). The dye carries the item's tile, nine bits from
+// bit 13 (armour_looks.py, from armour/<piece>.json); the tables give its sheet tile and its shape: for
+// leggings, flared at the foot as a plateskirt (1) or robe (2); for a chestplate, lengthened below the
+// waist (MS_TORSO_*).
 #if defined(VULKAN) && defined(MS_DRAW_PARAMETERS) && defined(RENDERPEARL_INSTANCE_INDEX_INCLUDES_BASE_INSTANCE)
 #define MS_VERTEX (gl_VertexIndex - gl_BaseVertexARB)
 #elif defined(VULKAN)
@@ -452,13 +453,15 @@ void main() {
     int msLayer = msSheet();
     if (msLayer != 0) {
         ivec3 c = ivec3(round(Color.rgb * 255.0));
-        int data = ((c.r & 7) << 6) | ((c.g & 7) << 3) | (c.b & 7);
-        int look = (data >> 7) == 2 ? (data & 127) : 0;
+        int dye = c.r << 16 | c.g << 8 | c.b;
+        // the item's tile (count_icons.py's layout 0), or 0, the plain look, for leather it doesn't define
+        int look = dye != %(undyed)d && (dye >> 22) == 0 ? (dye >> 13) & 511 : 0;
         int tile = msLayer == 1 ? MS_TILE_1[look] : MS_TILE_2[look];
         ivec2 grid = textureSize(Sampler0, 0) / ivec2(MS_SHEET_TILE);
         msUV = (UV0 + vec2(tile %% grid.x, tile / grid.x)) / vec2(grid);
-        // the fragment shader dyes the look, all but what it marks to keep its own colour
-        msTint = vec4(Color.rgb, 1.0);
+        // an item's tile is coloured already; the plain one the fragment shader dyes, all but what it
+        // marks to keep its own colour
+        msTint = look == 0 ? vec4(Color.rgb, 1.0) : vec4(0.0);
         msColor = vec4(1.0, 1.0, 1.0, Color.a);
 #ifndef MS_NO_SHAPES
         msNarrow(msLayer, msPosition);
@@ -628,7 +631,9 @@ def patch_armour(files, form):
     body = re.sub(r"\bColor\b", "msColor", body)
     body = re.sub(r"\bUV0\b", "msUV", body)
     body = body.replace(POSITION, ARMOUR_POSITION, 1)
-    patched[vsh_name] = with_draw_parameters(head + declarations + ARMOUR_VERTEX % {"tables": armour_looks.glsl()} + body, form)
+    sys.path.insert(0, os.path.dirname(__file__))
+    import count_icons
+    patched[vsh_name] = with_draw_parameters(head + declarations + ARMOUR_VERTEX % {"tables": armour_looks.glsl(), "undyed": count_icons.UNDYED} + body, form)
     head, body = fsh.split(MAIN, 1)
     patched[fsh_name] = (head + layout + "in vec4 msTint;\n" + ARMOUR_FRAGMENT + MAIN
                          + body.replace(TEXTURE, "msArmour(" + TEXTURE + ")", 1))
@@ -681,7 +686,7 @@ COUNT_VERTEX_END = """
         } else {
             ivec3 dye = ivec3(round(Color.rgb * 255.0));
             int code = dye.r << 16 | dye.g << 8 | dye.b;
-            if (code == %(undyed)d || ((code >> 22) == 3 && ((code >> 18) & 1) == 0)) {
+            if (code == %(undyed)d || (code >> 22) != 0 || ((code & 4095) == 4095 && ((code >> 12) & 1) == 0)) {
                 // an item without a count or a frame: never dyed, or dyed to say so
                 gl_Position = vec4(-2.0, -2.0, -2.0, 1.0);
             } else {
@@ -701,12 +706,12 @@ COUNT_VERTEX_END = """
     }
 """
 COUNT_FRAGMENT = """
-// MineScape stack counts: the slot font's glyphs (0-9, K, M, the point), 5x7 pixels as two ints of rows
+// MineScape stack counts: the slot font's glyphs (0-9, K, M, the point, B), 5x7 pixels as two ints of rows
 // 0-3 and 4-6, five bits a row with the left pixel lowest; their advances; and their blank columns on
 // the left (the 1's).
-const ivec2 MS_GLYPHS[13] = ivec2[](%(glyphs)s);
-const int MS_ADVANCE[13] = int[](%(advances)s);
-const int MS_BLANK[13] = int[](%(blanks)s);
+const ivec2 MS_GLYPHS[14] = ivec2[](%(glyphs)s);
+const int MS_ADVANCE[14] = int[](%(advances)s);
+const int MS_BLANK[14] = int[](%(blanks)s);
 // OSRS's count colours: yellow, white from 100K, green from 10M.
 const vec3 MS_COUNT_COLOURS[3] = vec3[](vec3(1.0, 1.0, 0.0), vec3(1.0), vec3(0.0, 1.0, 128.0 / 255.0));
 // A glyph pixel's size in screen pixels: two thirds of a GUI pixel, whole, and at least one.
@@ -744,26 +749,44 @@ vec4 msCountTexture(vec4 texel) {
         mat2 toGui = mat2(dFdx(msGui), dFdy(msGui)) * inverse(mat2(dFdx(msLocal), dFdy(msLocal)));
         slot = toGui * (msLocal - 0.5) + 8.0;
     }
-    bool framed = ((msCount >> 18) & 1) == 1 && slot.x >= 0.0 && slot.y >= 0.0 && slot.x < 16.0 && slot.y < 16.0
+    bool framed = ((msCount >> 12) & 1) == 1 && slot.x >= 0.0 && slot.y >= 0.0 && slot.x < 16.0 && slot.y < 16.0
             && (slot.x < 1.0 || slot.y < 1.0 || slot.x >= 15.0 || slot.y >= 15.0);
-    if ((msCount >> 22) == 3) {
+    int code = msCount & 4095;
+    if (code == 4095) {
         if (framed) {
             return MS_SELECTED;
         }
         discard;
     }
-    int number = msCount & 0x3FFFF;
-    bool tenths = ((msCount >> 19) & 1) == 1;
-    int suffix = (msCount >> 20) & 3;
-    int colour = min((msCount >> 22) & 3, 2);
+    // the count's number, in tenths where it has a point; its suffix (0 none, 1 K, 2 M, 3 B); its colour
+    int number = code;
+    bool tenths = false;
+    int suffix = 0;
+    int colour = 0;
+    if (code >= 3160) {
+        number = code - 3160 + 10; tenths = true; suffix = 3; colour = 2;
+    } else if (code >= 2170) {
+        number = code - 2170 + 10; suffix = 2; colour = 2;
+    } else if (code >= 2080) {
+        number = code - 2080 + 10; tenths = true; suffix = 2; colour = 1;
+    } else if (code >= 1090) {
+        number = code - 1090 + 10; suffix = 1; colour = number >= 100 ? 1 : 0;
+    } else if (code >= 1000) {
+        number = code - 1000 + 10; tenths = true; suffix = 1;
+    }
+    // a decimal of 0 is left out
+    if (tenths && number %% 10 == 0) {
+        number /= 10;
+        tenths = false;
+    }
     int whole = tenths ? number / 10 : number;
-    int glyphs[8];
+    int glyphs[6];
     int count = 0;
     int place = 1;
-    for (int i = 0; i < 6 && whole / place >= 10; i++) {
+    for (int i = 0; i < 3 && whole / place >= 10; i++) {
         place *= 10;
     }
-    for (int i = 0; i < 7 && place > 0; i++) {
+    for (int i = 0; i < 4 && place > 0; i++) {
         glyphs[count++] = (whole / place) %% 10;
         place /= 10;
     }
@@ -772,7 +795,7 @@ vec4 msCountTexture(vec4 texel) {
         glyphs[count++] = number %% 10;
     }
     if (suffix > 0) {
-        glyphs[count++] = 9 + min(suffix, 2);
+        glyphs[count++] = suffix == 3 ? 13 : 9 + suffix;
     }
     int size = max(1, int(floor(gui * MS_COUNT_SIZE + 0.01)));
     int width = 0;

@@ -1,12 +1,14 @@
-"""Builds the armour sheets from the look files in armour/ (see armour_looks.py), for the armour shader
-(build_shaders.py) to pick between. The pack's build runs it; run it yourself to see a change in game:
+"""Builds the armour sheets from armour/<piece>.json and the look files in armour/ (see
+armour_looks.py), for the armour shader (build_shaders.py) to pick between. The pack's build runs it;
+run it yourself to see a change in game:
 
     python .github/scripts/build_armour.py
 
 A look file is a whole 256x128 armour texture (Minecraft's 64x32 layout, four texels a pixel), of
 which only its part's boxes are read: the body and arms for chest, the legs for boots, the legs and
 body for legs. Exact greys are dyed by the item's colour, any other colour keeps its own, alpha 253
-dyes a grey a light shade of the dye, and alpha under 128 is clear.
+dyes a grey a light shade of the colour, and alpha under 128 is clear. Each item's tile is baked in its
+colour; tile 0, the plain look, keeps those codes for the shader to dye.
 
 The looks were first painted in code (armour_art.py, armour_barrows.py, armour_boots.py, over the
 plain armour in .github/armour). --split paints any look that has no file yet, named after the
@@ -57,16 +59,39 @@ def read(path, part):
     return c
 
 
-def tile(layer, paths):
+def bake(px, area, colour):
+    """The area's dyed texels in the colour, its light ones in a light shade of it, all its texels then
+    their own colour (254), as the shader would dye them."""
+    if colour is None:
+        return
+    s = art.SCALE
+    tint = np.array(colour, np.float32) / 255.0
+    light = tint + (1.0 - tint) * 0.55
+    for u0, v0, u1, v1 in area:
+        block = px[int(v0 * s):int(v1 * s), int(u0 * s):int(u1 * s)]
+        alpha = block[..., 3]
+        rgb = block[..., :3].astype(np.float32)
+        for code, by in ((art.TINTED, tint), (art.LIGHT, light)):
+            mask = alpha == code
+            rgb[mask] = rgb[mask] * by
+        block[..., :3] = np.clip(np.round(rgb), 0, 255).astype(np.uint8)
+        block[..., 3] = np.where(alpha > 0, art.OWN, 0)
+
+
+def tile(layer, spec):
     if layer == 1:
-        chest, boots = paths
+        (chest, chest_colour), (boots, boots_colour) = spec
         c = read(chest, "chest")
         art.neckline(c)
         c.copy(read(boots, "boots"), art.BOOTS_AREA)
         art.rims(c, 1)
+        bake(c.px, art.CHEST_AREA, chest_colour)
+        bake(c.px, art.BOOTS_AREA, boots_colour)
         return c.px
-    c = read(paths[0], "legs")
+    (legs, colour), = spec
+    c = read(legs, "legs")
     art.rims(c, 2)
+    bake(c.px, AREAS["legs"], colour)
     return c.px
 
 
