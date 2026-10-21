@@ -138,6 +138,8 @@ These are made by the build and overwritten every time:
 - anything in `assets/ms/models/count/` and `assets/minecraft/textures/item/custom/count/`
 - `assets/minecraft/optifine/cit/minescape/` and the `cit_*` folders: each item's look as its own
   texture for OptiFine, so players using shader packs see the right armour too
+- `assets/minescape/stitches/`: the armour for the Stitch mod, which keeps the looks and shapes under
+  Iris shader packs
 - the `custom_model_data` overrides the build adds to `leather_chestplate.json`, `leather_leggings.json`
   and `leather_boots.json` (the committed files keep only their old ones; run `--restore` after a
   local build)

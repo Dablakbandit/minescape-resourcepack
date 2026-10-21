@@ -19,7 +19,8 @@ plugin's LeatherArmourType:
 The top right texel of a sheet marks it as one: (255, 0, 255, alpha 1), green 128 on the leggings'.
 
 It also writes OptiFine's per-item armour textures for shader packs (see CIT below): each item's tile
-under assets/minecraft/optifine/cit/minescape/, and its rules there and in the cit_* overlays.
+under assets/minecraft/optifine/cit/minescape/, and its rules there and in the cit_* overlays; and the
+armour as a stitch for the Stitch mod (armour_stitch.py), in assets/minescape/stitches/.
 """
 import os, re, sys
 
@@ -172,6 +173,10 @@ def build():
             os.makedirs(os.path.dirname(path), exist_ok=True)
             overlay.save(path)
         print("layer %d: %s, %d tiles" % (layer, image.size, count))
+    # the same looks and shapes for the Stitch mod, under shader packs
+    import armour_stitch
+    armour_stitch.write(ROOT)
+    print("stitch: assets/minescape/stitches/armour.*")
 
 
 # --- painting the looks from code, once ----------------------------------------------------------------
