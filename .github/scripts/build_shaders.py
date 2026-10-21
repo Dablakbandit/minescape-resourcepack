@@ -253,22 +253,14 @@ LIFT = """vec3 position = Position;
 GLOBALS_CLOCK_FROM = 88
 GAME_TIME = {"name": "GameTime", "type": "float", "count": 1, "values": [0.0]}
 
-# --- armour ----------------------------------------------------------------------------------------
-# Leather armour wears the looks in armour_looks.py: the armour sheets (build_armour.py) hold a tile
-# per look, and the item's dye carries which in its low bits. Up to 1.21.1 armour has its own shader;
-# from 1.21.2 it is the entity shader every entity draws with, which this leaves alone for any
-# texture that is not an armour sheet.
-ARMOUR_NAMES = ("rendertype_armor_cutout_no_cull", "entity")
+# Armour is built by Stitch (the armour stitch, armour_stitch.py, woven by the Stitch action in the
+# workflow), not here.
 TEXTURE = "texture(Sampler0, texCoord0)"
-# Before 1.20.5 (pack format 32) entities are drawn in view space; IViewRotMat turns that back.
-VIEW_ROT_BEFORE = 32
 # From 26.3 (pack format 97, the renderpearl renderer) a draw starts at a base vertex part way into a
 # shared buffer, so gl_VertexIndex % 4 is no longer a quad's corner: the index is counted from the
 # draw's start instead, gl_VertexIndex - gl_BaseVertexARB. That built-in needs GLSL 450 and the
 # device's draw parameters, which renderpearl announces with RENDERPEARL_INSTANCE_INDEX_INCLUDES_
-# BASE_INSTANCE; so those versions' vertex shaders are raised to 450 with the extension enabled
-# (MS_DRAW_PARAMETERS), and on a device without it the looks are drawn on Minecraft's own boxes,
-# unmoved (MS_NO_SHAPES), rather than torn apart.
+# BASE_INSTANCE; so those versions' vertex shaders are raised to 450 with the extension enabled.
 SHAPES_BEFORE = 97
 DRAW_PARAMETERS_HEADER = "#version 450\n#extension GL_ARB_shader_draw_parameters : enable\n#define MS_DRAW_PARAMETERS\n"
 
@@ -281,224 +273,6 @@ def with_draw_parameters(vsh, form):
     if not first.startswith("#version"):
         return vsh
     return DRAW_PARAMETERS_HEADER + rest
-VIEW_ROT = {"name": "IViewRotMat", "type": "matrix3x3", "count": 9, "values": [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]}
-
-ARMOUR_VERTEX = """
-// MineScape armour looks. An armour sheet is a grid of 256x128 tiles, its top right texel marked
-// (255, 0, 255, alpha 1; green 128 for the leggings'). The dye carries the item's tile, nine bits from
-// bit 13 (armour_looks.py, from armour/<piece>.json); the tables give its sheet tile and its shape: for
-// leggings, flared at the foot as a plateskirt (1) or robe (2); for a chestplate, lengthened below the
-// waist (MS_TORSO_*).
-#if defined(VULKAN) && defined(MS_DRAW_PARAMETERS) && defined(RENDERPEARL_INSTANCE_INDEX_INCLUDES_BASE_INSTANCE)
-#define MS_VERTEX (gl_VertexIndex - gl_BaseVertexARB)
-#elif defined(VULKAN)
-#define MS_VERTEX gl_VertexIndex
-#else
-#define MS_VERTEX gl_VertexID
-#endif
-const vec2 MS_SHEET_TILE = vec2(256.0, 128.0);
-// A player model pixel, in blocks.
-const float MS_PIXEL = 0.9375 / 16.0;
-%(tables)s
-// The texture's mark (build_armour.py): 0 for none; a sheet's layer, 1 or 2 (alpha 1); the same plus
-// 2 for an item's own tile, OptiFine's CIT for shader packs, its texels all but clear (alpha 2); -1 for
-// that tile's overlay, which only shader packs are to draw (alpha 3).
-int msSheet() {
-    ivec2 size = textureSize(Sampler0, 0);
-    vec4 mark = texelFetch(Sampler0, ivec2(size.x - 1, 0), 0);
-    int alpha = int(round(mark.a * 255.0));
-    if (alpha < 1 || alpha > 3 || mark.r < 0.99 || mark.b < 0.99) {
-        return 0;
-    }
-    int layer = mark.g < 0.25 ? 1 : 2;
-    return alpha == 1 ? layer : (alpha == 2 ? layer + 2 : -1);
-}
-
-// The frame a vertex is moved in: the world's and its up, or in a screen's entity view (an inventory's
-// player, drawn with an orthographic projection) the screen's up, found from the matrices. hand is -1
-// where that frame is mirrored, so cross(up, n) * hand is always the way u runs across a face seen
-// from outside: the character's left on its front.
-void msFrame(out mat3 toWorld, out vec3 up, out float hand) {
-    if (ProjMat[2][3] == 0.0) {
-        mat3 view = mat3(ModelViewMat);
-        toWorld = mat3(1.0);
-        up = normalize(inverse(view) * vec3(0.0, sign(ProjMat[1][1]), 0.0));
-        hand = sign(determinant(view)) * sign(ProjMat[0][0]) * sign(ProjMat[1][1]);
-        return;
-    }
-#ifdef MS_VIEW_ROT
-    toWorld = IViewRotMat;
-#else
-    toWorld = mat3(1.0);
-#endif
-    up = vec3(0.0, 1.0, 0.0);
-    hand = 1.0;
-}
-
-// Vanilla draws armour well clear of the body: the chestplate, its sleeves and the boots a pixel out,
-// the leggings half a pixel. Every box's sides come in to MS_NARROW out (the body box's front and back
-// too), close to the skin's outer layer and clear of each other. A side corner knows its face from u,
-// and its edge from which corner it is: maxU for corners 0 and 3, and the box mirrored (the left arm
-// and leg) when its first two corners are the lower ones. Top and bottom faces can't be told across
-// from the frame alone when a limb swings, so they stay, and the sheets clear their rims instead.
-const float MS_NARROW[3] = float[](0.0, 0.5, 0.35);
-const float MS_VANILLA[3] = float[](0.0, 1.0, 0.5);
-
-void msNarrow(int layer, inout vec3 position) {
-    vec2 p = UV0 * vec2(64.0, 32.0);
-    if (p.y < 19.5 || p.x > 56.5) {
-        return;
-    }
-    int corner = MS_VERTEX %% 4;
-    bool maxU = corner == 0 || corner == 3;
-    float u = p.x + (maxU ? -0.5 : 0.5);
-    // the legs' strip from u 0, the body's from 16, the arms' from 40
-    float u0 = u < 16.0 ? 0.0 : (u < 40.0 ? 16.0 : 40.0);
-    float w = u0 == 16.0 ? 8.0 : 4.0;
-    float x = u - u0;
-    mat3 toWorld;
-    vec3 up;
-    float hand;
-    msFrame(toWorld, up, hand);
-    vec3 n = normalize(toWorld * Normal);
-    // v 20 is both the sides' top edge and the top and bottom faces' edge (u 4 to 4 + 2w)
-    if (p.y < 20.5 && x > 4.0 && x < 4.0 + 2.0 * w && abs(dot(n, up)) > 0.7071) {
-        return;
-    }
-    bool mirrored = (corner < 2) == (p.y > 26.0);
-    bool side = x < 4.0 || (x > 4.0 + w && x < 8.0 + w);
-    float pull = MS_VANILLA[layer] - MS_NARROW[layer];
-    float deep = u0 == 16.0 ? pull : 0.0;
-    vec3 across = cross(up, n) * hand;
-    vec3 inward = length(across) > 0.1 ? normalize(across) * (mirrored ? -1.0 : 1.0) * (maxU ? -1.0 : 1.0) : vec3(0.0);
-    vec3 move = side ? -n * pull + inward * deep : inward * pull - n * deep;
-    position += transpose(toWorld) * (move * MS_PIXEL);
-}
-
-// Leggings worn as a skirt or robe: each leg box flares at its foot, out to its own side and a little
-// in from the middle, so the two halves open in a V between the legs and swing with them. Only the
-// lower ring of the sides moves (v 32 on the leg boxes, u 0-16); the art leaves the rest of a leg box
-// clear below the hem. Outward is a side face's normal; on the front and back it is found from up,
-// the legs swinging about an axis level with the ground. The left leg's box is mirrored, so its
-// corners run bottom first: a lower corner among the first two is the left leg's.
-const float MS_FLARE_OUT[4] = float[](0.0, 3.5, 2.5, 0.0);
-const float MS_FLARE_IN[4] = float[](0.0, 1.0, 0.75, 0.0);
-
-void msHang(int shape, inout vec3 position) {
-    vec2 p = UV0 * vec2(64.0, 32.0);
-    if (p.x > 16.0 || p.y < 31.0) {
-        return;
-    }
-    int corner = MS_VERTEX %% 4;
-    bool maxU = corner == 0 || corner == 3;
-    bool left = corner < 2;
-    // into the face the vertex is on, off the edge it shares with the next
-    float u = p.x + (maxU ? -0.5 : 0.5);
-    mat3 toWorld;
-    vec3 up;
-    float hand;
-    msFrame(toWorld, up, hand);
-    vec3 n = normalize(toWorld * Normal);
-    vec3 outward;
-    if (u < 4.0) {
-        outward = n;
-    } else if (u > 8.0 && u < 12.0) {
-        outward = -n;
-    } else {
-        // the character's left, seen from the front face (u 4-8); its right from the back
-        vec3 leftward = normalize(cross(up, n)) * hand * (u > 12.0 ? -1.0 : 1.0);
-        outward = left ? leftward : -leftward;
-    }
-    // the outer edges sit at u 0, 4 and 16, the inner at 8 and 12
-    bool outerEdge = p.x < 6.0 || p.x > 14.0;
-    position += transpose(toWorld) * (outward * (outerEdge ? MS_FLARE_OUT[shape] : MS_FLARE_IN[shape]) * MS_PIXEL);
-}
-
-// The chestplate's body box lengthened below the waist and flared there, into a plate fauld (1),
-// a jerkin (2) or a tunic (3): its lower ring moves, as the leggings' does. Its top stays, its top face's
-// corners being the one part of the box with no side to tell them where to go; its bottom face, under
-// the hem, hides. False for a vertex to hide.
-const float MS_TORSO_DROP[4] = float[](0.0, 1.5, 2.0, 3.0);
-const float MS_TORSO_FLARE[4] = float[](0.0, 0.25, 0.5, 0.75);
-
-bool msTorso(int shape, inout vec3 position) {
-    vec2 p = UV0 * vec2(64.0, 32.0);
-    int corner = MS_VERTEX %% 4;
-    bool maxU = corner == 0 || corner == 3;
-    float u = p.x + (maxU ? -0.5 : 0.5);
-    if (u < 16.0 || u > 40.0 || p.y < 16.0) {
-        return true;
-    }
-    mat3 toWorld;
-    vec3 up;
-    float hand;
-    msFrame(toWorld, up, hand);
-    vec3 n = normalize(toWorld * Normal);
-    if (dot(n, up) > 0.7) {
-        return true;
-    }
-    if (dot(n, up) < -0.7) {
-        return false;
-    }
-    if (corner < 2) {
-        return true;
-    }
-    vec3 side = normalize(cross(up, n)) * hand;
-    vec3 move = -up * MS_TORSO_DROP[shape] + (n + side * (maxU ? 1.0 : -1.0)) * MS_TORSO_FLARE[shape];
-    position += transpose(toWorld) * (move * MS_PIXEL);
-    return true;
-}
-
-void main() {
-    vec4 msColor = Color;
-    vec2 msUV = UV0;
-    vec3 msPosition = Position;
-    bool msShown = true;
-    msTint = vec4(0.0);
-    int msLayer = msSheet();
-    if (msLayer == -1) {
-        msShown = false;
-    } else if (msLayer != 0) {
-        bool own = msLayer > 2;
-        msLayer = own ? msLayer - 2 : msLayer;
-        ivec3 c = ivec3(round(Color.rgb * 255.0));
-        int dye = c.r << 16 | c.g << 8 | c.b;
-        // the item's tile (count_icons.py's layout 0), or 0, the plain look, for leather it doesn't define
-        int look = dye != %(undyed)d && (dye >> 22) == 0 ? (dye >> 13) & 511 : 0;
-        int tile = msLayer == 1 ? MS_TILE_1[look] : MS_TILE_2[look];
-        ivec2 grid = textureSize(Sampler0, 0) / ivec2(MS_SHEET_TILE);
-        msUV = own ? UV0 : (UV0 + vec2(tile %% grid.x, tile / grid.x)) / vec2(grid);
-        // an item's tile is coloured already; the plain one the fragment shader dyes, all but what it
-        // marks to keep its own colour; an item's own tile (alpha 0.5 here) is drawn whole
-        msTint = own ? vec4(0.0, 0.0, 0.0, 0.5) : (look == 0 ? vec4(Color.rgb, 1.0) : vec4(0.0));
-        msColor = vec4(1.0, 1.0, 1.0, Color.a);
-#ifndef MS_NO_SHAPES
-        msNarrow(msLayer, msPosition);
-        if (msLayer == 2 && MS_SHAPE_2[look] != 0) {
-            msHang(MS_SHAPE_2[look], msPosition);
-        } else if (msLayer == 1 && MS_SHAPE_1[look] != 0) {
-            msShown = msTorso(MS_SHAPE_1[look], msPosition);
-        }
-#endif
-    }"""
-ARMOUR_POSITION = """gl_Position = msShown ? ProjMat * ModelViewMat * vec4(msPosition, 1.0) : vec4(-2.0, -2.0, -2.0, 1.0);"""
-ARMOUR_FRAGMENT = """
-// MineScape armour looks: the vertex shader's dye, kept off texels marked in their alpha as their own
-// colour (254) and lightened for (t) trims (253). An item's own tile (OptiFine's, msTint.a 0.5) has
-// every texel all but clear for shader packs to drop: here they are whole.
-vec4 msArmour(vec4 texel) {
-    if (msTint.a > 0.25 && msTint.a < 0.75) {
-        return texel.a > 0.0 ? vec4(texel.rgb, 1.0) : texel;
-    }
-    if (msTint.a < 0.5 || texel.a < 0.1) {
-        return texel;
-    }
-    int code = int(round(texel.a * 255.0));
-    vec3 dye = code == 254 ? vec3(1.0) : (code == 253 ? mix(msTint.rgb, vec3(1.0), 0.55) : msTint.rgb);
-    return vec4(texel.rgb * dye, 1.0);
-}
-
-"""
 
 
 def varying_location(*sources):
@@ -616,43 +390,6 @@ def patch(files, form):
     return patched
 
 
-def patch_armour(files, form):
-    """The armour shader with the looks, or None if its anchors are not there."""
-    vsh_name = next(n for n in files if n.endswith(".vsh"))
-    fsh_name = vsh_name[:-4] + ".fsh"
-    json_name = vsh_name[:-4] + ".json"
-    vsh, fsh = files[vsh_name], files.get(fsh_name, "")
-    if vsh.count(MAIN) != 1 or vsh.count(POSITION) != 1 or fsh.count(MAIN) != 1 or fsh.count(TEXTURE) != 1:
-        return None
-    sys.path.insert(0, os.path.dirname(__file__))
-    import armour_looks
-    patched = dict(files)
-    location = varying_location(vsh, fsh)
-    layout = "" if location is None else "layout(location = %d) " % location
-    declarations = layout + "out vec4 msTint;\n"
-    if form >= SHAPES_BEFORE:
-        declarations += "#ifndef RENDERPEARL_INSTANCE_INDEX_INCLUDES_BASE_INSTANCE\n#define MS_NO_SHAPES\n#endif\n"
-    if not re.search(r"uniform\s+sampler2D\s+Sampler0\s*;", vsh):
-        declarations += "uniform sampler2D Sampler0;\n"
-    if form < VIEW_ROT_BEFORE and json_name in files:
-        program = json.loads(files[json_name])
-        if not any(u["name"] == VIEW_ROT["name"] for u in program.get("uniforms", [])):
-            program.setdefault("uniforms", []).append(VIEW_ROT)
-        patched[json_name] = json.dumps(program, indent=4) + "\n"
-        declarations += "uniform mat3 IViewRotMat;\n#define MS_VIEW_ROT\n"
-    head, body = vsh.split(MAIN, 1)
-    body = re.sub(r"\bColor\b", "msColor", body)
-    body = re.sub(r"\bUV0\b", "msUV", body)
-    body = body.replace(POSITION, ARMOUR_POSITION, 1)
-    sys.path.insert(0, os.path.dirname(__file__))
-    import count_icons
-    patched[vsh_name] = with_draw_parameters(head + declarations + ARMOUR_VERTEX % {"tables": armour_looks.glsl(), "undyed": count_icons.UNDYED} + body, form)
-    head, body = fsh.split(MAIN, 1)
-    patched[fsh_name] = (head + layout + "in vec4 msTint;\n" + ARMOUR_FRAGMENT + MAIN
-                         + body.replace(TEXTURE, "msArmour(" + TEXTURE + ")", 1))
-    return patched
-
-
 # MineScape stack counts (count_icons.py): the shaders that draw items in a screen, which are
 # rendertype_entity_translucent_cull up to 1.21.1, rendertype_item_entity_translucent_cull from 1.21.2
 # and item from 26.1. Both of the older ones are changed while they exist; only a count face is touched.
@@ -713,14 +450,22 @@ COUNT_VERTEX_END = """
                 msCount = code;
                 msLocal = vec2(float(msQuarter & 1), float((msQuarter >> 1) & 1));
                 if (msQuarter >= 4) {
-                    // a point, at the slot's middle: out to the icon's 16 around it, in GUI pixels through
-                    // the projection, the quad's corners top left, bottom left, bottom right, top right
-                    // (Minecraft's order, facing the screen), its local place taken from that
-                    int corner = MS_COUNT_VERTEX %% 4;
-                    msLocal = vec2(corner >= 2 ? 1.0 : 0.0, corner == 1 || corner == 2 ? 1.0 : 0.0);
-                    gl_Position.xy += (msLocal - 0.5) * MS_COUNT_FACE_SIZE * vec2(ProjMat[0][0], ProjMat[1][1]) * gl_Position.w;
-                    // through the middle of a 3D model, or before a flat one: in front of it
-                    gl_Position.z += ProjMat[2][2] * 24.0 * gl_Position.w;
+                    // a point, at the slot's middle, which a slot's item has on whole GUI pixels; anything
+                    // else drawn in a screen (an item held by the inventory's player) lands between them
+                    vec2 at = (gl_Position.xy / gl_Position.w - vec2(ProjMat[3][0], ProjMat[3][1])) / vec2(ProjMat[0][0], ProjMat[1][1]);
+                    if (any(greaterThan(abs(at - floor(at + 0.5)), vec2(0.02)))) {
+                        gl_Position = vec4(-2.0, -2.0, -2.0, 1.0);
+                        msCount = -1;
+                    } else {
+                        // out to the icon's 16 around it, in GUI pixels through the projection, the
+                        // quad's corners top left, bottom left, bottom right, top right (Minecraft's
+                        // order, facing the screen), its local place taken from that
+                        int corner = MS_COUNT_VERTEX %% 4;
+                        msLocal = vec2(corner >= 2 ? 1.0 : 0.0, corner == 1 || corner == 2 ? 1.0 : 0.0);
+                        gl_Position.xy += (msLocal - 0.5) * MS_COUNT_FACE_SIZE * vec2(ProjMat[0][0], ProjMat[1][1]) * gl_Position.w;
+                        // through the middle of a 3D model, or before a flat one: in front of it
+                        gl_Position.z += ProjMat[2][2] * 24.0 * gl_Position.w;
+                    }
                 }
                 vertexColor = vec4(1.0);
             }
@@ -894,7 +639,6 @@ def patch_count(files, form):
 TARGETS = [
     # (name, shader names, the files besides the vertex shader, patch, overlay directory prefix)
     ("text", NAMES, (".fsh", ".json"), patch, "shader_"),
-    ("armour", ARMOUR_NAMES, (".fsh", ".json"), patch_armour, "shader_armour_"),
     ("count", COUNT_NAMES, (".fsh", ".json"), patch_count, "shader_count_"),
     ("count_cull", COUNT_CULL_NAMES, (".fsh", ".json"), patch_count, "shader_count_cull_"),
 ]

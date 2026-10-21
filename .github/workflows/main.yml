@@ -46,6 +46,13 @@ jobs:
         # shader change after it.
         run: python .github/scripts/build_shaders.py
 
+      - name: Armour shaders, by Stitch
+        # The armour stitch (armour_stitch.py, written by build_armour.py) woven into Minecraft's armour
+        # shaders for every release from 1.18.2, as overlays; the base folder holds 1.18.2's.
+        uses: AshleyThew/stitch@v0
+        with:
+          pack: .
+
       - name: Archive Release
         uses: thedoctor0/zip-release@master
         with:
@@ -70,7 +77,15 @@ jobs:
 
       - name: Slot text shaders without a base copy
         # 1.20.3+ only: every client reads overlays, and one newer than them all keeps its own shader.
-        run: python .github/scripts/build_shaders.py --no-base
+        run: |
+          python .github/scripts/build_shaders.py --no-base
+          rm -f assets/minecraft/shaders/core/rendertype_armor_cutout_no_cull.*
+
+      - name: Armour shaders, by Stitch, without a base copy
+        uses: AshleyThew/stitch@v0
+        with:
+          pack: .
+          base: false
 
       - name: Archive Release
         uses: thedoctor0/zip-release@master
@@ -111,6 +126,13 @@ jobs:
           sed -i 's/ms:noted\/[a-zA-Z_0-9]*\b/ms:wooden_shovel\/note/g' assets/minecraft/models/item/feather.json
           python .github/scripts/count_icons.py
 
+      - name: Armour shaders, by Stitch
+        # The armour stitch (armour_stitch.py, written by build_armour.py) woven into Minecraft's armour
+        # shaders for every release from 1.18.2, as overlays; the base folder holds 1.18.2's.
+        uses: AshleyThew/stitch@v0
+        with:
+          pack: .
+
       - name: Archive Release
         uses: thedoctor0/zip-release@master
         with:
@@ -125,7 +147,15 @@ jobs:
           python .github/scripts/count_icons.py
 
       - name: Slot text shaders without a base copy
-        run: python .github/scripts/build_shaders.py --no-base
+        run: |
+          python .github/scripts/build_shaders.py --no-base
+          rm -f assets/minecraft/shaders/core/rendertype_armor_cutout_no_cull.*
+
+      - name: Armour shaders, by Stitch, without a base copy
+        uses: AshleyThew/stitch@v0
+        with:
+          pack: .
+          base: false
 
       - name: Archive Release
         uses: thedoctor0/zip-release@master
