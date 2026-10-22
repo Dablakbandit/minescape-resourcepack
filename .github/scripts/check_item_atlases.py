@@ -1,7 +1,8 @@
 """Fails the pack's build on an item model that would break its whole item from 26.1.
 
 From 26.1 item models draw from their own texture atlas (textures/item/...), and a model must take all
-its textures from one atlas. A texture that is missing, or lives outside textures/item, comes from the
+its textures from one atlas. A texture that is missing (or a face naming a texture variable the model
+never sets), or lives outside textures/item, comes from the
 block atlas instead, so a model mixing it with item textures fails to bake - and takes every model of
 its item definition down with it: one missing chicken texture turned every apple-headed mob into a
 missing-texture square. Older clients show only that one texture missing.
@@ -44,6 +45,16 @@ def textures(ref, depth=0):
         out.update(textures(data["parent"], depth + 1) or {})
     out.update(data.get("textures") or {})
     return out
+
+
+def faces(ref, depth=0):
+    """What each face of the model's elements draws (its own elements, or its nearest parent's)."""
+    data = model(ref)
+    if data is None or depth > 20:
+        return []
+    if "elements" in data:
+        return [face["texture"] for element in data["elements"] for face in (element.get("faces") or {}).values() if "texture" in face]
+    return faces(data["parent"], depth + 1) if data.get("parent") else []
 
 
 def resolve(value, variables):
@@ -96,6 +107,10 @@ def main():
                     in_items.append(texture)
                 elif not (vanilla and not path.startswith("item/")):
                     other.append(texture + ("" if exists else " (missing)"))
+            # a face naming a variable the model never sets draws the missing texture, from the block atlas
+            for value in faces(ref):
+                if resolve(value, variables) is None:
+                    other.append(value + " (missing)")
             if in_items and other:
                 fatal.append((name[:-5], ref, sorted(set(other))))
             elif other and any(o.endswith("(missing)") for o in other):

@@ -529,6 +529,10 @@ def items():
             fallback = read_json(path)["model"] if os.path.exists(path) else {
                 "type": "minecraft:model", "model": "minecraft:item/" + material,
                 "tints": [{"type": "minecraft:dye", "default": -6265536}]}
+            # the upgrader's own entries for the count copies, which are about to go: the entries above
+            # replace them
+            if fallback.get("type") in ("range_dispatch", "minecraft:range_dispatch"):
+                fallback = dict(fallback, entries=[e for e in fallback.get("entries", []) if "ms:count/" not in json.dumps(e)])
         write_json(path, {"model": {"type": "minecraft:range_dispatch", "property": "minecraft:custom_model_data",
                                     "fallback": fallback, "entries": entries}})
         print("%s: %d in the item definition" % (material, len(entries)))
