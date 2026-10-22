@@ -177,10 +177,19 @@ def tiles(layer):
 
 # OptiFine's armour rules (build_armour.py), matching an item's custom model data: by NBT before 1.20.5
 # (the base folder's, for every client reading no overlays), its component from 1.20.5 (pack format
-# 32), as floats from 1.21.4 (46). (overlay directory, first format, last format or None, rule)
+# 32), as floats from 1.21.4 (46). From 1.21.2 (42) OptiFine gives an item's tile to every leather layer,
+# the models' too, so there it is the tile without the models.
+# (overlay directory, first format, last format or None, rule)
 CIT_MATCH = [(None, None, None, "nbt.CustomModelData=%d"),
-             ("cit_1_20_5", 32, 45, "components.custom_model_data=%d"),
+             ("cit_1_20_5", 32, 41, "components.custom_model_data=%d"),
+             ("cit_1_21_2", 42, 45, "components.custom_model_data=%d"),
              ("cit_1_21_4", 46, None, "components.custom_model_data.floats.0=regex:%d([.]0+)?[fF]?")]
+CIT_FLAT_FROM = 42
+
+# The armour models' overlays (armour_models.py), leather's equipment asset as each range of releases
+# has it: (overlay directory, first format, last format or None)
+MODEL_OVERLAYS = [("armour_models_1_21_2", 42, 45), ("armour_models_1_21_4", 46, 74),
+                  ("armour_models_1_21_11", 75, 83), ("armour_models_26_1", 84, None)]
 
 
 def glsl():
@@ -191,4 +200,7 @@ def glsl():
     return (array("MS_TILE_1", tiles(1)[1])
             + array("MS_TILE_2", tiles(2)[1])
             + array("MS_SHAPE_1", [chest[t]["shape"] if t in chest else TORSO_NONE for t in range(TILES)])
-            + array("MS_SHAPE_2", [legs[t]["shape"] if t in legs else LEGS for t in range(TILES)]))
+            + array("MS_SHAPE_2", [legs[t]["shape"] if t in legs else LEGS for t in range(TILES)])
+            # the sheets' rows of looks (the traced models' data comes below them)
+            + "const int MS_SHEET_ROWS_1 = %d;\nconst int MS_SHEET_ROWS_2 = %d;\n"
+            % (-(-len(tiles(1)[0]) // COLUMNS), -(-len(tiles(2)[0]) // COLUMNS)))

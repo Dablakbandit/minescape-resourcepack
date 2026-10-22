@@ -128,8 +128,10 @@ def cit(layer, image):
     w, h = looks.TILE
     px = np.array(image)
     mark = (255, 0 if layer == 1 else 128, 255)
-    _, index = looks.tiles(layer)
+    order, index = looks.tiles(layer)
+    modelled = set()
     os.makedirs(os.path.join(CIT, "armour"), exist_ok=True)
+    import armour_models
     for t in sorted(set(index) - {0}):
         x, y = (t % looks.COLUMNS) * w, (t // looks.COLUMNS) * h
         own = px[y:y + h, x:x + w].copy()
@@ -138,20 +140,31 @@ def cit(layer, image):
         ghost[..., 3] = np.where(opaque, GHOST, 0)
         overlay[..., 3] = np.where(opaque, 255, 0)
         ghost[0, -1], overlay[0, -1] = mark + (OWN_TILE,), mark + (HIDE,)
-        Image.fromarray(ghost).save(os.path.join(CIT, "armour", "layer_%d_%d.png" % (layer, t)))
+        # its pieces' models below it (all but clear too), traced by the armour shader and under shader
+        # packs by the Stitch mod. From 1.21.2 OptiFine gives the tile to leather's extra layers as well,
+        # each of which would trace them again, so there the tile is flat.
+        parts = {kind: {"look": look, "colour": c} for kind, (look, c) in zip(looks.LAYER_PARTS[layer], order[t])}
+        flat = Image.fromarray(ghost)
+        traced = armour_models.traced(layer, flat, {0: parts})
+        traced.save(os.path.join(CIT, "armour", "layer_%d_%d.png" % (layer, t)))
+        if traced is not flat:
+            flat.save(os.path.join(CIT, "armour", "layer_%d_%d_flat.png" % (layer, t)))
+            modelled.add(t)
         Image.fromarray(overlay).save(os.path.join(CIT, "armour", "layer_%d_%d_overlay.png" % (layer, t)))
     for piece, (material, piece_layer) in MATERIALS.items():
         if piece_layer != layer:
             continue
         for tile, item in looks.items(piece).items():
             texture = "%s/layer_%d_%d" % (CIT_TEXTURES, layer, index[tile])
-            for directory, _, _, rule in looks.CIT_MATCH:
+            for directory, first, _, rule in looks.CIT_MATCH:
+                flat = first and first >= looks.CIT_FLAT_FROM and index[tile] in modelled
+                own = texture + ("_flat" if flat else "")
                 folder = os.path.join(ROOT, directory, "assets", "minecraft", "optifine", "cit", "minescape") if directory else CIT
                 os.makedirs(folder, exist_ok=True)
                 with open(os.path.join(folder, "%s_%d.properties" % (piece, item["custom_model_data"])), "w", newline="\n") as f:
                     f.write("# %s, built by .github/scripts/build_armour.py from armour/%s.json\n" % (item["name"], piece))
                     f.write("type=armor\nitems=%s\n%s\n" % (material, rule % item["custom_model_data"]))
-                    f.write("texture.leather_layer_%d=%s.png\ntexture.leather_layer_%d_overlay=%s_overlay.png\n" % (layer, texture, layer, texture))
+                    f.write("texture.leather_layer_%d=%s.png\ntexture.leather_layer_%d_overlay=%s_overlay.png\n" % (layer, own, layer, texture))
 
 
 def build():
@@ -160,9 +173,12 @@ def build():
     for directory, _, _, _ in looks.CIT_MATCH:
         if directory:
             shutil.rmtree(os.path.join(ROOT, directory), ignore_errors=True)
+    import armour_models
     for layer in (1, 2):
         image, count = sheet(layer)
         cit(layer, image)
+        # the models, traced on the sheet's own layer where there are no extra layers (to 1.21.1)
+        image = armour_models.traced(layer, image)
         for rel in OUTPUTS[layer]:
             path = os.path.join(TEXTURES, rel)
             os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -173,9 +189,16 @@ def build():
             os.makedirs(os.path.dirname(path), exist_ok=True)
             overlay.save(path)
         print("layer %d: %s, %d tiles" % (layer, image.size, count))
+    # the models, drawn by leather's extra layers from 1.21.2; the 1.21.2+ sheets say they have them
+    modelled = armour_models.build()
+    for layer in (1, 2):
+        path = os.path.join(TEXTURES, OUTPUTS[layer][1])
+        image = Image.open(path)
+        image.putpixel((image.width - 1, 0), (255, (0 if layer == 1 else 128) | 32, 255, SHEET))
+        image.save(path)
     # the same looks and shapes for the Stitch mod, under shader packs
     import armour_stitch
-    armour_stitch.write(ROOT)
+    armour_stitch.write(ROOT, modelled)
     print("stitch: assets/minescape/stitches/armour.*")
 
 
