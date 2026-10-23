@@ -23,7 +23,8 @@ jobs:
           python-version: 3.8
 
       - name: Build armour sheets
-        # The leather armour looks, one file each in armour/, made into the sheets the armour shader reads.
+        # The leather armour looks, the flat textures of the models in armour/models/, made into the sheets
+        # the armour shader reads.
         run: |
           pip install pillow numpy
           python .github/scripts/build_armour.py

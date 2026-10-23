@@ -1,9 +1,9 @@
 # MineScape armour: how to edit and add armour
 
 Every MineScape body armour piece (platebodies, robes, dragonhide, plateskirts, boots and so on) is
-defined in this folder. You edit pictures and a small JSON file; the pack's build does the rest: it
-paints each item in its colour onto the armour players wear, and makes its inventory icon (with stack
-counts and the selection frame) to match.
+defined in this folder. You edit Blockbench models and a small JSON file; the pack's build does the
+rest: it paints each item in its colour onto the armour players wear, and makes its inventory icon (with
+stack counts and the selection frame) to match.
 
 You never touch the generated textures. Everything you need is in `armour/`:
 
@@ -12,21 +12,27 @@ armour/
   chest.json        every chestplate item: its look, colour, icon and shape
   legs.json         every leggings item
   boots.json        every boots item
-  chest/            the chest looks:  <number>_<name>.png, and plain.png
-  legs/             the legs looks
-  boots/            the boots looks
+  models/           the looks: one Blockbench model each, models/<piece>/<number>_<name>.bbmodel
+  plain/            the plain looks (chest.png, legs.png, boots.png): leather the plugin doesn't define
+  unused/           old looks no item wears, kept to build a model from
   layer_1_overlay.png, layer_2_overlay.png    shared overlays (rarely changed)
 ```
 
 ---
 
-## 1. Looks: the PNG files
+## 1. Looks: the models
 
 A look is what a piece looks like worn, drawn in grey so one look can be used in many colours (the
-same platebody in bronze, iron, rune...).
+same platebody in bronze, iron, rune...). Each look is a Blockbench model, `armour/models/<piece>/<look>.bbmodel`
+(see [models/README.md](models/README.md)), and the model carries the flat look as its texture
+`<look>.png`: the armour drawn on Minecraft's own boxes, which the build bakes into the armour sheets and
+which players see wherever the model itself can't be drawn. Edit that texture in Blockbench (or export
+it, paint it, and load it back); the model's other texture, `<look>_details.png`, is its extra parts.
+
+The flat texture:
 
 - **Size:** 256 x 128, Minecraft's armour layout (64 x 32) at 4 texels per pixel. Start from
-  `plain.png` in the same folder or from a similar look.
+  `plain/<piece>.png` or from a similar look.
 - **Only your piece's part of the texture is used**; anything painted elsewhere is ignored:
 
   ![Which part of the 256 x 128 texture each piece uses](readme/layout.png)
@@ -54,9 +60,9 @@ same platebody in bronze, iron, rune...).
 
   ![Two platebody looks and the same looks baked in bronze, iron, mithril and rune](readme/colours.png)
 
-- **Name:** `<number>_<name>.png`, the number unique within its folder (use the next free one), the
-  name anything readable: `76_dragon_platebody.png`. Items point at a look by this file name without
-  `.png`.
+- **Name:** the model is `<number>_<name>.bbmodel`, the number unique within its folder (use the next
+  free one), the name anything readable: `76_dragon_platebody.bbmodel`, its flat texture
+  `76_dragon_platebody.png` inside it. Items point at a look by this name.
 
 Editing a look changes every item that uses it, in every colour.
 
@@ -73,7 +79,7 @@ Each item is one line in its piece's file:
 |---------------------|----------------------------------------------------------------------------------------------|
 | `custom_model_data` | The item's number: 10000 + 1 to 511, unique within the file. The server uses the same number. |
 | `name`              | A label for people (the item's name in the plugin). Not used by the game.                     |
-| `look`              | The look file in this piece's folder, without `.png`; or `plain`.                             |
+| `look`              | The look's model in `models/<piece>/`, without `.bbmodel`; or `plain`.                        |
 | `colour`            | `#rrggbb`: the dye for the look's greys and for the icon.                                     |
 | `icon`              | The inventory icon's item model (see 3).                                                      |
 | `shape`             | How it sits on the body (legs and chest only, see below). Leave it out for `legs` / `none`.   |
@@ -102,7 +108,8 @@ painted.
 
 ## 4. Adding a new armour item
 
-1. **Look:** reuse an existing look, or add `armour/<piece>/<next number>_<name>.png` (section 1).
+1. **Look:** reuse an existing look, or add `armour/models/<piece>/<next number>_<name>.bbmodel`
+   (section 1): copy a similar look's model and change its textures and cubes.
 2. **Icon:** reuse an icon model, or add a texture and a flat item model in `assets/ms/models/`.
 3. **Entry:** add a line to `armour/<piece>.json` with the **next free `custom_model_data`** in that
    file, the look, colour, icon and shape.
@@ -126,7 +133,7 @@ python .github/scripts/count_icons.py --restore
 ```
 
 The build stops with a message naming the item if something is wrong: a look or icon file that
-doesn't exist, a colour that isn't `#rrggbb`, a number used twice or outside 10001-10511, a shape
+doesn't exist (or a model without its flat texture), a colour that isn't `#rrggbb`, a number used twice or outside 10001-10511, a shape
 that isn't one of the above.
 
 ## Do not edit

@@ -1,6 +1,6 @@
 # Armour models
 
-One Blockbench model per armour look, named after the look it replaces:
+Each armour look is one Blockbench model, named after the look:
 
 ```
 armour/models/chest/<look>.bbmodel     e.g. chest/80_platebody_normal.bbmodel
@@ -9,8 +9,8 @@ armour/models/boots/<look>.bbmodel     e.g. boots/64_armour_boots.bbmodel
 ```
 
 Every item that uses a look (all its colours: bronze to rune, (g) and (t), degraded Barrows) gets that
-look's model. The flat look in `armour/<piece>/<look>.png` stays: the model is drawn from it, and players
-who can't run the model shaders still see it.
+look's model. The model is the whole look: its texture `<look>.png` is the flat look, which the build
+also bakes into the armour sheets for players who can't run the model shaders.
 
 ## What's in a model
 
@@ -25,7 +25,8 @@ Open one in Blockbench ("Generic Model" format). The outliner has:
 
 Two textures:
 
-- `<look>.png`: the flat look itself, on the boxes named `look <part>`. Edit the look PNG and these follow.
+- `<look>.png`: the flat look, on the boxes named `look <part>`, and what the armour sheets are baked
+  from. It must keep this name: the build reads the look from it.
 - `<look>_details.png`: everything else (pauldrons, skirts, belts, spikes).
 
 Both follow the looks' colour rule, so one model works in every colour of its items:

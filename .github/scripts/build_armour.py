@@ -1,20 +1,15 @@
-"""Builds the armour sheets from armour/<piece>.json and the look files in armour/ (see
+"""Builds the armour sheets from armour/<piece>.json and the looks in armour/models/ (see
 armour_looks.py), for the armour shader (build_shaders.py) to pick between. The pack's build runs it;
 run it yourself to see a change in game:
 
     python .github/scripts/build_armour.py
 
-A look file is a whole 256x128 armour texture (Minecraft's 64x32 layout, four texels a pixel), of
-which only its part's boxes are read: the body and arms for chest, the legs for boots, the legs and
+A look is a whole 256x128 armour texture (Minecraft's 64x32 layout, four texels a pixel): the texture
+<look>.png in its model, armour/models/<piece>/<look>.bbmodel, or armour/plain/<piece>.png for the plain
+look. Only its part's boxes are read: the body and arms for chest, the legs for boots, the legs and
 body for legs. Exact greys are dyed by the item's colour, any other colour keeps its own, alpha 253
 dyes a grey a light shade of the colour, and alpha under 128 is clear. Each item's tile is baked in its
 colour; tile 0, the plain look, keeps those codes for the shader to dye.
-
-The looks were first painted in code (armour_art.py, armour_barrows.py, armour_boots.py, over the
-plain armour in .github/armour). --split paints any look that has no file yet, named after the
-plugin's LeatherArmourType:
-
-    python .github/scripts/build_armour.py --split ../minescape.me/modules/minescape-items/src/main/java/me/minescape/gameplay/items/LeatherArmourType.java
 
 The top right texel of a sheet marks it as one: (255, 0, 255, alpha 1), green 128 on the leggings'.
 
@@ -22,7 +17,7 @@ It also writes OptiFine's per-item armour textures for shader packs (see CIT bel
 under assets/minecraft/optifine/cit/minescape/, and its rules there and in the cit_* overlays; and the
 armour as a stitch for the Stitch mod (armour_stitch.py), in assets/minescape/stitches/.
 """
-import os, re, sys
+import os, sys
 
 import numpy as np
 from PIL import Image
@@ -32,7 +27,6 @@ import armour_art as art
 import armour_looks as looks
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-PAINT_SOURCE = os.path.join(ROOT, ".github", "armour")
 TEXTURES = os.path.join(ROOT, "assets", "minecraft", "textures")
 # up to 1.21.1, and the equipment assets' own from 1.21.2
 OUTPUTS = {
@@ -202,70 +196,5 @@ def build():
     print("stitch: assets/minescape/stitches/armour.*")
 
 
-# --- painting the looks from code, once ----------------------------------------------------------------
-
-def painted(part, number):
-    """The part's look of that number as the code paints it, in the files' convention."""
-    plain = np.array(Image.open(os.path.join(PAINT_SOURCE, "layer_%d.png" % (2 if part == "legs" else 1))).convert("RGBA"))
-    plain[..., 3] = (plain[..., 3] > 25) * art.TINTED
-    base = art.Canvas(plain)
-    if part == "chest":
-        canvas = art.chest(looks.layer_1(number)[0] if number >= 0 else "plain", base)
-    elif part == "boots":
-        canvas = art.boots(looks.layer_1(number)[1] if number >= 0 else "plain", base)
-    else:
-        canvas = art.legs(looks.layer_2(number)[0] if number >= 0 else "plain", base)
-    c = art.Canvas()
-    c.copy(canvas, AREAS[part])
-    px = c.px.copy()
-    own = px[..., 3] == art.OWN
-    # an own colour that happens to be an exact grey would read back as dyed
-    same = own & (px[..., 0] == px[..., 1]) & (px[..., 1] == px[..., 2])
-    px[same, 2] = np.where(px[same, 2] < 255, px[same, 2] + 1, 254)
-    px[..., 3] = np.where(px[..., 3] == art.LIGHT, art.LIGHT, np.where(px[..., 3] > 0, 255, 0))
-    return Image.fromarray(px)
-
-
-def leather_types(java):
-    """(part, number, name) of each LeatherArmourType: the chest block, then the legs from
-    PLATELEGS_NORMAL, the boots from BOOTS, then the god pieces by their names."""
-    part, found = "chest", []
-    for name, number in re.findall(r"^\s*([A-Z0-9_]+)\(\(short\)\s*(\d+)\)", open(java, encoding="utf-8").read(), re.M):
-        if name == "PLATELEGS_NORMAL":
-            part = "legs"
-        elif name == "BOOTS":
-            part = "boots"
-        elif name.endswith("_PLATEBODY"):
-            part = "chest"
-        elif name.endswith(("_PLATELEGS", "_PLATESKIRT")):
-            part = "legs"
-        found.append((part, int(number), name.lower()))
-    return found
-
-
-def split(java):
-    """Writes every look without a file yet as its own file, and each part's plain look."""
-    wrote = 0
-    for part in ("chest", "boots", "legs"):
-        os.makedirs(os.path.join(looks.SOURCE, part), exist_ok=True)
-        if not os.path.exists(looks.plain_file(part)):
-            painted(part, -1).save(looks.plain_file(part))
-            wrote += 1
-    for part, number, name in leather_types(java):
-        if number in looks.files(part):
-            continue
-        painted(part, number).save(os.path.join(looks.SOURCE, part, "%d_%s.png" % (number, name)))
-        wrote += 1
-    for layer in (1, 2):
-        overlay = os.path.join(looks.SOURCE, "layer_%d_overlay.png" % layer)
-        if not os.path.exists(overlay):
-            Image.open(os.path.join(PAINT_SOURCE, "layer_%d_overlay.png" % layer)).save(overlay)
-            wrote += 1
-    print("wrote %d files to %s" % (wrote, os.path.relpath(looks.SOURCE, ROOT)))
-
-
 if __name__ == "__main__":
-    if "--split" in sys.argv:
-        split(sys.argv[sys.argv.index("--split") + 1])
-    else:
-        build()
+    build()
