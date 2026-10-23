@@ -12,7 +12,13 @@ on:
         default: false
 
 # Two packs built side by side, each from a fresh checkout: the full pack (dev, patreon, 20, 21) and the
-# low one (patreon_low, 20_low, 21_low: no noted icons). The release job then publishes all their zips.
+# low one (patreon_low, 20_low, 21_low: no noted icons). Each uploads its zips to a draft release of the
+# run's own, and the release job publishes that draft as the patreon release in place of the last one.
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GH_REPO: ${{ github.repository }}
+  DRAFT: build-${{ github.run_id }}-${{ github.run_attempt }}
+
 jobs:
   pack:
     strategy:
@@ -26,6 +32,10 @@ jobs:
       SUFFIX: ${{ matrix.set == 'low' && '_low' || '' }}
     steps:
       - uses: actions/checkout@master
+
+      - name: The run's draft release
+        if: matrix.set == 'full'
+        run: gh release create "$DRAFT" --draft --title patreon --notes ''
 
       - name: Set up Python
         uses: actions/setup-python@v2
@@ -139,41 +149,31 @@ jobs:
           filename: '21${{ env.SUFFIX }}.zip'
           exclusions: ${{ env.EXCLUDE }}
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: pack-${{ matrix.set }}
-          # the zips are compressed already
-          compression-level: 0
-          retention-days: 1
-          path: |
-            *.zip
-            run/noted.txt
+      - name: Upload to the run's draft release
+        # the zips with their SHA1s, side by side; the full pack's job also brings run/noted.txt
+        run: |
+          for file in *.zip; do
+            sha1sum "$file" | cut -d ' ' -f 1 > "$file.sha1"
+          done
+          files=(*.zip *.zip.sha1)
+          if [ "${{ matrix.set }}" = full ]; then files+=(run/noted.txt); fi
+          # the full pack's job made the draft as it began; wait for it no more than five minutes
+          for i in $(seq 60); do gh release view "$DRAFT" >/dev/null 2>&1 && break; sleep 5; done
+          printf '%s\n' "${files[@]}" | xargs -P 8 -I{} gh release upload "$DRAFT" {}
 
   release:
     needs: pack
     runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      GH_REPO: ${{ github.repository }}
     steps:
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: pack-*
-          merge-multiple: true
-
-      - name: Calculate SHA1 Hashes for Patreon
-        run: |
-          for file in patreon.zip patreon_low.zip dev.zip 20.zip 20_low.zip 21.zip 21_low.zip; do
-            sha1sum $file | cut -d ' ' -f 1 > $file.sha1
-          done
-
-      - name: Upload Patreon Release
-        # The old release goes only once the new files are ready; the files then go up side by side.
+      - name: Publish the patreon release
+        # The old release goes only once the new one is complete. Its tag stays where it was.
         run: |
           gh release delete patreon --yes || echo 'No existing release found with tag patreon'
-          gh release create patreon --title patreon --notes '' --latest
-          ls patreon.zip patreon_low.zip dev.zip 20.zip 20_low.zip 21.zip 21_low.zip *.sha1 run/noted.txt \
-            | xargs -P 8 -I{} gh release upload patreon {}
+          gh release edit "$DRAFT" --tag patreon --title patreon --draft=false --latest
+
+      - name: Fetch the zips for the public release
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.public_release == 'true'
+        run: gh release download patreon -p 'patreon*.zip' -p '20*.zip' -p '21*.zip'
 
       - name: Rename files for public release
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.public_release == 'true'
@@ -202,3 +202,11 @@ jobs:
       - name: Update pack on server
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.public_release == 'true'
         run: curl -X GET "${{ secrets.UPDATE_URL }}"
+
+  # a failed build leaves no half-filled draft behind; the last patreon release stays as it was
+  cleanup:
+    needs: pack
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh release delete "$DRAFT" --yes || true
