@@ -23,7 +23,6 @@ import numpy as np
 from PIL import Image
 
 sys.path.insert(0, os.path.dirname(__file__))
-import armour_art as art
 import armour_looks as looks
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -33,12 +32,23 @@ OUTPUTS = {
     1: ["models/armor/leather_layer_1.png", "entity/equipment/humanoid/leather.png"],
     2: ["models/armor/leather_layer_2.png", "entity/equipment/humanoid_leggings/leather.png"],
 }
+# armour/layer_<n>_overlay.png, likewise
 OVERLAYS = {
-    1: ["entity/equipment/humanoid/leather_overlay.png"],
-    2: ["entity/equipment/humanoid_leggings/leather_overlay.png"],
+    1: ["models/armor/leather_layer_1_overlay.png", "entity/equipment/humanoid/leather_overlay.png"],
+    2: ["models/armor/leather_layer_2_overlay.png", "entity/equipment/humanoid_leggings/leather_overlay.png"],
 }
+
+# A look is 256x128 RGBA: Minecraft's 64x32 armour layout at SCALE texels a model pixel. Greys the item's
+# dye tints have alpha TINTED; OWN keeps a texel's own colour; LIGHT dyes a grey a light shade of the dye.
+SCALE = 4
+TINTED, OWN, LIGHT = 255, 254, 253
 # Each part's boxes on the texture, as (u0, v0, u1, v1) in model pixels.
-AREAS = {"chest": art.CHEST_AREA, "boots": art.BOOTS_AREA, "legs": [(0, 16, 40, 32)]}
+CHEST_AREA = [(16, 16, 56, 32)]
+BOOTS_AREA = [(0, 16, 16, 32)]
+AREAS = {"chest": CHEST_AREA, "boots": BOOTS_AREA, "legs": [(0, 16, 40, 32)]}
+# How far in from vanilla's the armour shader draws each layer's sides (build_shaders.py, MS_NARROW).
+# The top and bottom faces stay where they were, so their rims are cleared to match.
+NARROW = {1: 0.5, 2: 0.15}
 
 # Shader packs draw armour without the armour shader, so OptiFine is also given each item's own tile
 # (its CIT, matched on custom model data): as leather's layer, every texel all but clear (alpha GHOST),
@@ -53,6 +63,50 @@ CIT_TEXTURES = "optifine/cit/minescape/armour"
 MATERIALS = {"chest": ("leather_chestplate", 1), "legs": ("leather_leggings", 2), "boots": ("leather_boots", 1)}
 
 
+class Canvas:
+    """A look's texels, addressed in model pixels."""
+
+    def __init__(self, px=None):
+        self.px = np.zeros((128, 256, 4), np.uint8) if px is None else px.copy()
+
+    def _box(self, u, v, w, h):
+        return (slice(int(round(v * SCALE)), int(round((v + h) * SCALE))),
+                slice(int(round(u * SCALE)), int(round((u + w) * SCALE))))
+
+    def clear(self, u, v, w, h):
+        self.px[self._box(u, v, w, h)] = 0
+
+    def copy(self, other, areas):
+        for u0, v0, u1, v1 in areas:
+            sl = self._box(u0, v0, u1 - u0, v1 - v0)
+            self.px[sl] = other.px[sl]
+
+
+def rims(c, layer):
+    """Clear the top and bottom faces' rims across (and the body box's front and back) by as much as
+    the shader pulls the sides in. Under a texel, as the leggings' is, it is left: a lip too thin to
+    see."""
+    k = NARROW[layer]
+    if k * SCALE < 1:
+        return
+    boxes = [(0, 4), (16, 8)] + ([(40, 4)] if layer == 1 else [])
+    for u0, w in boxes:
+        for u in (u0 + 4, u0 + 4 + w):
+            c.clear(u, 16, k, 4)
+            c.clear(u + w - k, 16, k, 4)
+            if w == 8:
+                c.clear(u, 16, w, k)
+                c.clear(u, 20 - k, w, k)
+
+
+def neckline(c):
+    """Clear where the chest box would sit in the jaw: the middle of its top face and of the top
+    row of its front and back."""
+    c.clear(21, 16, 6, 4)
+    c.clear(21.5, 20, 5, 0.75)
+    c.clear(33.5, 20, 5, 0.75)
+
+
 def read(path, part):
     """A look file as a canvas in the sheets' alpha codes, only its part's boxes kept."""
     px = np.array(Image.open(path).convert("RGBA"))
@@ -60,12 +114,12 @@ def read(path, part):
         raise ValueError("%s is %dx%d, not %dx%d" % (path, px.shape[1], px.shape[0], looks.TILE[0], looks.TILE[1]))
     alpha = px[..., 3]
     grey = (px[..., 0] == px[..., 1]) & (px[..., 1] == px[..., 2])
-    code = np.where(alpha == art.LIGHT, art.LIGHT, np.where(grey & (alpha != art.OWN), art.TINTED, art.OWN))
+    code = np.where(alpha == LIGHT, LIGHT, np.where(grey & (alpha != OWN), TINTED, OWN))
     out = px.copy()
     out[..., 3] = np.where(alpha >= 128, code, 0)
     out[alpha < 128] = 0
-    c = art.Canvas()
-    c.copy(art.Canvas(out), AREAS[part])
+    c = Canvas()
+    c.copy(Canvas(out), AREAS[part])
     return c
 
 
@@ -74,33 +128,33 @@ def bake(px, area, colour):
     their own colour (254), as the shader would dye them."""
     if colour is None:
         return
-    s = art.SCALE
+    s = SCALE
     tint = np.array(colour, np.float32) / 255.0
     light = tint + (1.0 - tint) * 0.55
     for u0, v0, u1, v1 in area:
         block = px[int(v0 * s):int(v1 * s), int(u0 * s):int(u1 * s)]
         alpha = block[..., 3]
         rgb = block[..., :3].astype(np.float32)
-        for code, by in ((art.TINTED, tint), (art.LIGHT, light)):
+        for code, by in ((TINTED, tint), (LIGHT, light)):
             mask = alpha == code
             rgb[mask] = rgb[mask] * by
         block[..., :3] = np.clip(np.round(rgb), 0, 255).astype(np.uint8)
-        block[..., 3] = np.where(alpha > 0, art.OWN, 0)
+        block[..., 3] = np.where(alpha > 0, OWN, 0)
 
 
 def tile(layer, spec):
     if layer == 1:
         (chest, chest_colour), (boots, boots_colour) = spec
         c = read(chest, "chest")
-        art.neckline(c)
-        c.copy(read(boots, "boots"), art.BOOTS_AREA)
-        art.rims(c, 1)
-        bake(c.px, art.CHEST_AREA, chest_colour)
-        bake(c.px, art.BOOTS_AREA, boots_colour)
+        neckline(c)
+        c.copy(read(boots, "boots"), BOOTS_AREA)
+        rims(c, 1)
+        bake(c.px, CHEST_AREA, chest_colour)
+        bake(c.px, BOOTS_AREA, boots_colour)
         return c.px
     (legs, colour), = spec
     c = read(legs, "legs")
-    art.rims(c, 2)
+    rims(c, 2)
     bake(c.px, AREAS["legs"], colour)
     return c.px
 

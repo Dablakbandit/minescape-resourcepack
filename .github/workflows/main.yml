@@ -11,9 +11,19 @@ on:
         type: boolean
         default: false
 
+# Two packs built side by side, each from a fresh checkout: the full pack (dev, patreon, 20, 21) and the
+# low one (patreon_low, 20_low, 21_low: no noted icons). The release job then publishes all their zips.
 jobs:
-  build:
+  pack:
+    strategy:
+      matrix:
+        set: [full, low]
     runs-on: ubuntu-latest
+    env:
+      # what no zip takes from the pack folder
+      EXCLUDE: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/* armour/*'
+      # the low pack's zips end _low
+      SUFFIX: ${{ matrix.set == 'low' && '_low' || '' }}
     steps:
       - uses: actions/checkout@master
 
@@ -34,8 +44,18 @@ jobs:
         uses: actions/cache@v4
         with:
           path: cache/mc_shaders
-          key: mc-shaders-${{ github.run_id }}
+          key: mc-shaders-${{ github.run_id }}-${{ matrix.set }}
           restore-keys: mc-shaders-
+
+      - name: The low pack's changes
+        # No dev particles, and no noted icons: noted items show the note.
+        if: matrix.set == 'low'
+        run: |
+          rm assets/minecraft/textures/particle/effect_*
+          rm -R assets/minecraft/textures/item/custom/noted
+          rm -R assets/ms/models/noted
+          sed -i 's/ms:noted\/[a-zA-Z_0-9]*\b/ms:wooden_shovel\/note/g' assets/minecraft/models/item/carrot.json
+          sed -i 's/ms:noted\/[a-zA-Z_0-9]*\b/ms:wooden_shovel\/note/g' assets/minecraft/models/item/feather.json
 
       - name: Build stack count icons
         # Every item is leather horse armour, its count in its dye: each model gets the count face the
@@ -54,20 +74,22 @@ jobs:
         with:
           pack: .
 
-      - name: Archive Release
+      - name: Archive dev
+        if: matrix.set == 'full'
         uses: thedoctor0/zip-release@master
         with:
           filename: 'dev.zip'
-          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/* armour/*'
+          exclusions: ${{ env.EXCLUDE }}
 
       - name: Delete dev files
+        if: matrix.set == 'full'
         run: rm assets/minecraft/textures/particle/effect_*
 
-      - name: Archive Release
+      - name: Archive patreon
         uses: thedoctor0/zip-release@master
         with:
-          filename: 'patreon.zip'
-          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/* armour/*'
+          filename: 'patreon${{ env.SUFFIX }}.zip'
+          exclusions: ${{ env.EXCLUDE }}
 
       - name: Run script
         # the items' own models, not their count copies, then the copies again from them
@@ -88,11 +110,11 @@ jobs:
           pack: .
           base: false
 
-      - name: Archive Release
+      - name: Archive 20
         uses: thedoctor0/zip-release@master
         with:
-          filename: '20.zip'
-          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/* armour/*'
+          filename: '20${{ env.SUFFIX }}.zip'
+          exclusions: ${{ env.EXCLUDE }}
 
       - name: Upgrade resource pack
         uses: AshleyThew/minecraft-resource-pack-upgrader@v1.1.9
@@ -108,97 +130,36 @@ jobs:
 
       - name: Check item models' atlases
         # From 26.1 an item model mixing item textures with a missing one breaks its whole item.
+        if: matrix.set == 'full'
         run: python .github/scripts/check_item_atlases.py
 
-      - name: Archive Release
+      - name: Archive 21
         uses: thedoctor0/zip-release@master
         with:
-          filename: '21.zip'
-          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/* armour/*'
+          filename: '21${{ env.SUFFIX }}.zip'
+          exclusions: ${{ env.EXCLUDE }}
 
-      - name: Reset specific files or directories
-        run: |
-          git checkout -- assets/
-          rm assets/minecraft/textures/particle/effect_*
-          rm -R assets/minecraft/textures/item/custom/noted
-          rm -R assets/ms/models/noted
-          python .github/scripts/build_shaders.py
-          sed -i 's/ms:noted\/[a-zA-Z_0-9]*\b/ms:wooden_shovel\/note/g' assets/minecraft/models/item/carrot.json
-          sed -i 's/ms:noted\/[a-zA-Z_0-9]*\b/ms:wooden_shovel\/note/g' assets/minecraft/models/item/feather.json
-          python .github/scripts/count_icons.py
-
-      - name: Armour shaders, by Stitch
-        # The armour stitch (armour_stitch.py, written by build_armour.py) woven into Minecraft's armour
-        # shaders for every release from 1.18.2, as overlays; the base folder holds 1.18.2's.
-        uses: AshleyThew/stitch@v0
+      - uses: actions/upload-artifact@v4
         with:
-          pack: .
+          name: pack-${{ matrix.set }}
+          # the zips are compressed already
+          compression-level: 0
+          retention-days: 1
+          path: |
+            *.zip
+            run/noted.txt
 
-      - name: Archive Release
-        uses: thedoctor0/zip-release@master
+  release:
+    needs: pack
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@v4
         with:
-          filename: 'patreon_low.zip'
-          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/* armour/*'
-
-      - name: Run script
-        # the items' own models, not their count copies, then the copies again from them
-        run: |
-          python .github/scripts/count_icons.py --restore
-          python .github/scripts/process_input.py
-          python .github/scripts/count_icons.py
-
-      - name: Slot text shaders without a base copy
-        run: |
-          python .github/scripts/build_shaders.py --no-base
-          rm -f assets/minecraft/shaders/core/rendertype_armor_cutout_no_cull.*
-
-      - name: Armour shaders, by Stitch, without a base copy
-        uses: AshleyThew/stitch@v0
-        with:
-          pack: .
-          base: false
-
-      - name: Archive Release
-        uses: thedoctor0/zip-release@master
-        with:
-          filename: '20_low.zip'
-          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/* armour/*'
-
-      - name: Upgrade resource pack
-        uses: AshleyThew/minecraft-resource-pack-upgrader@v1.1.9
-        with:
-          input_path: './'
-
-      - name: Stack count icons as 1.21.4 item models
-        run: |
-          sudo chown -R "$(id -u):$(id -g)" .
-          python .github/scripts/count_icons.py --items
-
-      - name: Archive Release
-        uses: thedoctor0/zip-release@master
-        with:
-          filename: '21_low.zip'
-          exclusions: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/* armour/*'
-
-      - uses: actions/github-script@v4
-        with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
-          script: |
-            const { owner, repo } = context.repo;
-            try {
-              const release = await github.repos.getReleaseByTag({
-                owner,
-                repo,
-                tag: 'patreon'
-              });
-              await github.repos.deleteRelease({
-                owner,
-                repo,
-                release_id: release.data.id
-              });
-            } catch (error) {
-              console.log('No existing release found with tag patreon');
-            }
+          pattern: pack-*
+          merge-multiple: true
 
       - name: Calculate SHA1 Hashes for Patreon
         run: |
@@ -207,12 +168,12 @@ jobs:
           done
 
       - name: Upload Patreon Release
-        uses: ncipollo/release-action@v1
-        with:
-          artifacts: 'patreon.zip,patreon_low.zip,dev.zip,20.zip,20_low.zip,21.zip,21_low.zip,run/noted.txt,patreon.zip.sha1,patreon_low.zip.sha1,dev.zip.sha1,20.zip.sha1,20_low.zip.sha1,21.zip.sha1,21_low.zip.sha1'
-          tag: 'patreon'
-          makeLatest: true
-          token: ${{ secrets.GITHUB_TOKEN }}
+        # The old release goes only once the new files are ready; the files then go up side by side.
+        run: |
+          gh release delete patreon --yes || echo 'No existing release found with tag patreon'
+          gh release create patreon --title patreon --notes '' --latest
+          ls patreon.zip patreon_low.zip dev.zip 20.zip 20_low.zip 21.zip 21_low.zip *.sha1 run/noted.txt \
+            | xargs -P 8 -I{} gh release upload patreon {}
 
       - name: Rename files for public release
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.public_release == 'true'
@@ -231,35 +192,12 @@ jobs:
             sha1sum $file | cut -d ' ' -f 1 > $file.sha1
           done
 
-      - uses: actions/github-script@v4
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.public_release == 'true'
-        with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
-          script: |
-            const { owner, repo } = context.repo;
-            try {
-              const release = await github.repos.getReleaseByTag({
-                owner,
-                repo,
-                tag: 'resourcepack'
-              });
-              await github.repos.deleteRelease({
-                owner,
-                repo,
-                release_id: release.data.id
-              });
-            } catch (error) {
-              console.log('No existing release found with tag patreon');
-            }
-
       - name: Upload Resourcepack Release with SHA1
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.public_release == 'true'
-        uses: ncipollo/release-action@v1
-        with:
-          artifacts: 'resourcepack.zip,resourcepack_low.zip,resourcepack_20.zip,resourcepack_20_low.zip,resourcepack_21.zip,resourcepack_21_low.zip,resourcepack.zip.sha1,resourcepack_low.zip.sha1,resourcepack_20.zip.sha1,resourcepack_20_low.zip.sha1,resourcepack_21.zip.sha1,resourcepack_21_low.zip.sha1'
-          name: 'Resourcepack'
-          tag: 'resourcepack'
-          token: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete resourcepack --yes || echo 'No existing release found with tag resourcepack'
+          gh release create resourcepack --title Resourcepack --notes '' --latest
+          ls resourcepack*.zip resourcepack*.zip.sha1 | xargs -P 8 -I{} gh release upload resourcepack {}
 
       - name: Update pack on server
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.public_release == 'true'
