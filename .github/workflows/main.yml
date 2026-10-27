@@ -38,9 +38,9 @@ jobs:
         run: gh release create "$DRAFT" --draft --title patreon --notes ''
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v6
         with:
-          python-version: 3.8
+          python-version: '3.13'
 
       - name: Build armour sheets
         # The leather armour looks, the flat textures of the models in armour/models/, made into the sheets
