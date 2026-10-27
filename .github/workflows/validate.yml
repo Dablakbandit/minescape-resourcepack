@@ -8,8 +8,8 @@ jobs:
     name: Validate jsons
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v7
       - name: json-syntax-check
-        uses: limitusus/json-syntax-check@v1
+        uses: limitusus/json-syntax-check@v2
         with:
           pattern: "\\.json$"

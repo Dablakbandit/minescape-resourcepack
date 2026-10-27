@@ -31,14 +31,14 @@ jobs:
       # the low pack's zips end _low
       SUFFIX: ${{ matrix.set == 'low' && '_low' || '' }}
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v7
 
       - name: The run's draft release
         if: matrix.set == 'full'
         run: gh release create "$DRAFT" --draft --title patreon --notes ''
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.13'
 
@@ -51,7 +51,7 @@ jobs:
 
       - name: Cache Minecraft shaders
         # Each release's text shader, read once from its client jar; a new release adds to it.
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: cache/mc_shaders
           key: mc-shaders-${{ github.run_id }}-${{ matrix.set }}
