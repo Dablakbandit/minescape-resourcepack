@@ -48,6 +48,8 @@ RECORD = 10
 TABLE_ROWS = 4
 # the alpha of every data texel: under the 0.1 any shader cuts out at
 QUIET = 1
+# a face whose texture is animated (its first texture position's alpha), and a model whose animation blends
+ANIMATED = 2
 # the models' colour codes, in alpha
 DYED, OWN, LIGHT = 1, 2, 3
 # each body part's pivot, in Minecraft's model space (pixels; y down, front -z)
@@ -55,7 +57,14 @@ PIVOT = {"head": (0, 0, 0), "body": (0, 0, 0), "right_arm": (-5, 2, 0), "left_ar
          "right_leg": (-1.9, 12, 0), "left_leg": (1.9, 12, 0)}
 # the armour's boxes, by slot: head, hat, body, right arm, left arm, right leg, left leg
 SLOT = {"body": 2, "right_arm": 3, "left_arm": 4, "right_leg": 5, "left_leg": 6}
-PIECE = {"chest": "chestplate", "boots": "boots", "legs": "leggings"}
+PIECE = {"chest": "chestplate", "boots": "boots", "legs": "leggings", "amulets": "amulet", "capes": "cape"}
+# A cape's groups: its shoulders, fixed to the body; the part that swings back about the swing group's
+# pivot (the hinge); and the part that flaps (wings), each side turning about the upright through the flap
+# group's pivot, the other way to the other side. Every cube in the right leg's space (the right leg
+# traces it, armour_stitch.py). They fill the model's five part rows, MAX_CUBES a row: the fixed cubes'
+# rows first, then the swinging ones', then the flapping ones' (the left side's, then the right's).
+CAPE_GROUPS = {"shoulders": "fixed", "swing": "swing", "flap": "flap"}
+CAPE_KINDS = ("fixed", "swing", "flap_left", "flap_right")
 UNDYED = -6265536
 # A model layer's texture. OptiFine's CIT gives every leather layer but the overlay an item's own tile
 # (build_armour.cit), these too, so under OptiFine (from 1.21.2) an item's look is flat.
@@ -118,7 +127,9 @@ def codes(image):
 
 def load(path, piece):
     """The piece's faces by body part, as (corners in the part's own space, (texture, x, y) a corner); its
-    cubes by body part (cube()); and its textures in colour codes."""
+    cubes by body part (cube()); and its textures in colour codes. A cape's (CAPE_GROUPS) fill the part
+    rows in turn, fixed then swinging, and its cubes carry its hinge and how many rows each takes
+    (whole["hinge"], whole["rows"])."""
     model = json.load(open(path, encoding="utf-8"))
     res = model.get("resolution", {"width": 16, "height": 16})
     textures = []
@@ -127,10 +138,22 @@ def load(path, piece):
         if not source.startswith("data:image/png;base64,"):
             raise SystemExit("%s: texture %s isn't embedded in the project" % (path, t.get("name")))
         image = Image.open(io.BytesIO(base64.b64decode(source.split(",", 1)[1])))
-        textures.append((codes(image), t.get("uv_width", res["width"]), t.get("uv_height", res["height"])))
+        uw, uh = t.get("uv_width", res["width"]), t.get("uv_height", res["height"])
+        # Blockbench's animated texture: its frames one under another, each as tall as its uv size makes
+        # it; faces map onto the first (the tracer steps through the rest, armour_stitch.trace_cape)
+        frame = max(1, round(image.width * uh / uw))
+        frames = image.height // frame if image.height >= 2 * frame else 1
+        image = codes(image)
+        if frames > 1:
+            image.info["animation"] = (frames, image.width, frame, int(t.get("frame_time", 1)), bool(t.get("frame_interpolate")))
+        textures.append((image, uw, uh * frames))
     cubes = {e["uuid"]: e for e in model["elements"] if e.get("type", "cube") == "cube"}
     faces = {part: [] for part in SLOT}
     whole = {part: [] for part in SLOT}
+    parts = CAPE_GROUPS if piece == "cape" else {name: name for name in SLOT}
+    if piece == "cape":
+        faces.update({"fixed": [], "swing": [], "flap": []})
+        whole.update({"fixed": [], "swing": [], "flap": []})
 
     def walk(node, inside, part, groups):
         if isinstance(node, str):
@@ -139,21 +162,54 @@ def load(path, piece):
                 return
             if part is None:
                 raise SystemExit("%s: cube %s is outside a body part's group" % (path, cube.get("name")))
-            faces[part].extend(cube_faces(cube, groups, part, textures))
-            whole[part].append(cube_of(cube, groups, part, textures))
+            space = "right_leg" if piece == "cape" else part
+            faces[part].extend(cube_faces(cube, groups, space, textures))
+            whole[part].append(cube_of(cube, groups, space, textures))
             return
         if node.get("export") is False:
             return
         name = node.get("name", "")
         if name == piece:
             inside = True
-        elif inside and name in SLOT:
-            part = name
+        elif inside and name in parts:
+            part = parts[name]
+            if name == "swing":
+                whole["hinge"] = to_part(tuple(node.get("origin", [0, 0, 0])), {}, groups, "right_leg")
+            if name == "flap":
+                whole["flap_pivot"] = to_part(tuple(node.get("origin", [0, 0, 0])), {}, groups, "right_leg")
         for child in node.get("children", []):
             walk(child, inside, part, groups + [(node.get("origin", [0, 0, 0]), node.get("rotation", [0, 0, 0]))])
 
     for node in model["outliner"]:
         walk(node, False, None, [])
+    if piece == "cape":
+        # a flapping cube's side, by its middle against the pivot
+        px = whole.get("flap_pivot", (0.0, 0.0, 0.0))[0]
+        middle = lambda c: sum(p[0] for p in c["corners"]) / len(c["corners"])
+        whole["flap_left"] = [c for c in whole["flap"] if middle(c) < px]
+        whole["flap_right"] = [c for c in whole["flap"] if middle(c) >= px]
+        del whole["flap"]
+        faces.pop("flap")
+        rows = {}
+        slots = list(TRACE_SLOTS)
+        total = sum(len(whole[k]) for k in CAPE_KINDS)
+        if total > CAPE_ROW_CUBES * len(TRACE_SLOTS):
+            raise SystemExit("%s: %d cubes; a cape can have %d (%d a row, %d rows)" % (
+                path, total, CAPE_ROW_CUBES * len(TRACE_SLOTS), CAPE_ROW_CUBES, len(TRACE_SLOTS)))
+        # MAX_CUBES a row, or as many more as the five rows need (a big cape, CAPE_ROW_CUBES at most)
+        per = MAX_CUBES
+        while sum(-(-len(whole[k]) // per) for k in CAPE_KINDS) > len(slots):
+            per += 1
+        for kind in CAPE_KINDS:
+            chunks = [whole[kind][i:i + per] for i in range(0, len(whole[kind]), per)]
+            for chunk in chunks:
+                whole[slots.pop(0)] = chunk
+            rows[kind] = len(chunks)
+            del whole[kind]
+            faces.pop(kind, None)
+        whole["rows"] = tuple(rows[k] for k in CAPE_KINDS)
+        whole.setdefault("hinge", (0.0, 0.0, 0.0))
+        whole.setdefault("flap_pivot", (0.0, 0.0, 0.0))
     return faces, whole, [t[0] for t in textures]
 
 
@@ -401,14 +457,15 @@ def build():
 #
 # Below a sheet's looks (the sheet the armour already draws), from row `top`:
 #     rows top, top + 1     by item tile (x): its chest (or leggings) model's, then its boots model's,
-#                           first header row, 0 none
+#                           first header row, 0 none; on the leggings' sheet the second is by amulet,
+#                           its place in armour_looks.amulets() by number
 #     rows top + 2, + 3     their colours
 #     header rows           five a model, one a body part (body, right arm, left arm, right leg, left
 #                           leg): its cube count; the sphere round it, centre and radius; its box; at
 #                           x 8 its first cube; from x HEADER_CUBES each cube's first three texels
 #                           (below), so a ray finds the cubes it meets in one row
 #     cubes                 from row `cubes`, CUBE texels each (a cube's never cross a row):
-#                               0       red 1 if it's turned; green its faces, blue those with clear
+#                               0       red 255 if it's turned; green its faces, blue those with clear
 #                                       texels, a bit each in FACE_ORDER
 #                               1, 2    its box in the part's space (round a turned cube)
 #                               3 on    each face's texture positions at its top left, top right and
@@ -422,8 +479,10 @@ def build():
 
 TRACE_SLOTS = ("body", "right_arm", "left_arm", "right_leg", "left_leg")
 CUBE = 32
-# the most cubes a body part's model has (the stitch tests them all)
+# the most cubes a body part's model has (the stitch tests them all); a cape's rows, when it needs, up to
+# CAPE_ROW_CUBES
 MAX_CUBES = 32
+CAPE_ROW_CUBES = 40
 # where a header row lists its cubes' first three texels (flags and box), side by side
 HEADER_CUBES = 16
 # a cube's faces, by its own axes' ends: x low and high, y low and high, z low and high
@@ -457,7 +516,7 @@ _loaded = {}
 
 def most_cubes():
     """The most cubes any traced body part has: the tracer tests that many, at most."""
-    return max([1] + [len(cubes.get(slot, [])) for kinds in (("chest", "boots"), ("legs",))
+    return max([1] + [len(cubes.get(slot, [])) for kinds in (("chest", "boots", "capes"), ("legs", "amulets"))
                       for _, _, cubes, _ in models_for(kinds) for slot in TRACE_SLOTS])
 
 
@@ -468,8 +527,34 @@ def models_for(kinds):
             if path not in _loaded:
                 _loaded[path] = load(path, PIECE[kind])
             _, cubes, textures = _loaded[path]
+            if kind == "amulets":
+                cubes = {slot: [seated(cube) for cube in part] for slot, part in cubes.items()}
             out.append((kind, look, cubes, textures))
     return out
+
+
+# An amulet is drawn over a chestplate, whose models stand up to about two pixels out from the body where it
+# hangs: its pieces in front of the body (z -2 and on) come this many pixels further out, along the body's
+# own front, so it sits on the armour from every side; a piece reaching back over the shoulders stretches
+# to meet those behind, which stay.
+AMULET_OUT = 1.5
+
+
+def seated(cube):
+    """An amulet's cube (cube_of()) moved out from the body by AMULET_OUT, as much as it lies in front."""
+    out = lambda z: AMULET_OUT * min(1.0, max(0.0, -z / 2.0))
+    m, v = cube["m"], list(cube["v"])
+    lo, hi = list(cube["lo"]), list(cube["hi"])
+    if not cube["turned"] and tuple(m[2]) == (0, 0, 1):
+        # upright, its own z the part's: each end by its own place
+        lo[2] -= out(lo[2] + v[2])
+        hi[2] -= out(hi[2] + v[2])
+    else:
+        zs = [p[2] for p in cube["corners"]]
+        v[2] -= out((min(zs) + max(zs)) / 2)
+    corners = [tuple(v[k] + sum((hi[i] if (n >> i) & 1 else lo[i]) * m[i][k] for i in range(3)) for k in range(3))
+               for n in range(8)]
+    return dict(cube, m=m, v=tuple(v), lo=lo, hi=hi, corners=corners)
 
 
 def clear(texture, uvs):
@@ -481,19 +566,35 @@ def clear(texture, uvs):
     return bool((alpha == 0).any())
 
 
+# Which table row a kind's models are listed in: the second is the boots' on the layer 1 sheet, the
+# amulets' on the layer 2 sheet; the capes share the boots', past their item tiles, from CAPE_COLUMN.
+TABLE_ROW = {"chest": 0, "legs": 0, "boots": 1, "amulets": 1, "capes": 1}
+CAPE_COLUMN = looks.TILES
+
+
 def traced(layer, sheet, entries=None):
     """The sheet with the tracer's data for its pieces' models below its looks. entries, {column: {kind:
     item}}, are the tables' columns, by default every item tile; with them only their models go in."""
-    kinds = ("chest", "boots") if layer == 1 else ("legs",)
+    kinds = ("chest", "boots", "capes") if layer == 1 else ("legs", "amulets")
     if entries is None:
-        tiles = {kind: looks.items(kind) for kind in kinds}
-        entries = {t: {kind: tiles[kind][t] for kind in kinds if t in tiles[kind]} for t in range(looks.TILES)}
+        tiles = {kind: looks.items(kind) for kind in kinds if kind not in ("amulets", "capes")}
+        entries = {t: {kind: tiles[kind][t] for kind in tiles if t in tiles[kind]} for t in range(looks.TILES)}
+        if layer == 2:
+            # the amulets by their place in number order, as the stitch finds them (MS_AMULET_NUMBER)
+            for i, (_, item) in enumerate(sorted(looks.amulets().items())):
+                entries.setdefault(i, {})["amulets"] = item
+        else:
+            # the capes likewise (MS_CAPE_NUMBER), past the item tiles
+            for i, (_, item) in enumerate(sorted(looks.capes().items())):
+                entries.setdefault(CAPE_COLUMN + i, {})["capes"] = item
         models = models_for(kinds)
     else:
         wanted = {(kind, look_name(item)) for columns in entries.values() for kind, item in columns.items()}
         models = [m for m in models_for(kinds) if (m[0], m[1]) in wanted]
         if not models:
             return sheet
+    # an amulet with no cubes (too many for the tracer) keeps its flat look, so isn't listed
+    models = [m for m in models if m[0] != "amulets" or any(m[2].values())]
     width = sheet.width
     # a cube's texels share a row, found with a shift (the stitch reads them by width)
     assert width & (width - 1) == 0 and width % CUBE == 0, width
@@ -503,16 +604,35 @@ def traced(layer, sheet, entries=None):
     count = 0
     for kind, look, cubes, textures in models:
         for slot in TRACE_SLOTS:
-            if len(cubes.get(slot, [])) > MAX_CUBES:
-                raise SystemExit("%s %s %s: %d cubes; a body part's model can have %d" % (kind, look, slot, len(cubes[slot]), MAX_CUBES))
+            most = CAPE_ROW_CUBES if kind == "capes" else MAX_CUBES
+            if len(cubes.get(slot, [])) > most:
+                raise SystemExit("%s %s %s: %d cubes; a body part's model can have %d" % (kind, look, slot, len(cubes[slot]), most))
             count += len(cubes.get(slot, []))
     rows = -(-count * CUBE // width)
     shelf = Shelf(cubes_row + rows + 1, width)
     placed = {}
     pieces = []
 
+    animations = {}
+
     def place(r, uvs):
         tex = uvs[0][0]
+        anim = models[r][3][tex].info.get("animation")
+        if anim:
+            # an animated texture goes in once, its frames side by side (as many as fit a row, then the
+            # next row); its faces read the first, and a face's texels say it's animated (ANIMATED)
+            frames, fw, fh, ticks, smooth = anim
+            key = (r, tex, "frames")
+            if key not in placed:
+                grid = max(1, min(frames, width // fw))
+                strip = Image.new("RGBA", (grid * fw, -(-frames // grid) * fh), (0, 0, 0, 0))
+                for k in range(frames):
+                    strip.paste(models[r][3][tex].crop((0, k * fh, fw, (k + 1) * fh)), ((k % grid) * fw, (k // grid) * fh))
+                placed[key] = shelf.place(strip.width, strip.height)
+                pieces.append((strip, placed[key]))
+                animations[r] = (frames, ticks, grid, fw, fh, smooth)
+            ax, ay = placed[key]
+            return [(round(u[1] + ax), round(u[2] + ay)) for u in uvs]
         xs = [u[1] for u in uvs]
         ys = [u[2] for u in uvs]
         x0, y0 = math.floor(min(xs) + 1e-6), math.floor(min(ys) + 1e-6)
@@ -547,6 +667,13 @@ def traced(layer, sheet, entries=None):
             line[2] = (min(255, math.ceil(max(math.dist(centre, p) for p in pts) * 4)), 0, 0, QUIET)
             line[3] = tuple(enc_lo(x) for x in lo) + (QUIET,)
             line[4] = tuple(enc_hi(x) for x in hi) + (QUIET,)
+            if kind == "capes" and slot == TRACE_SLOTS[0]:
+                # the swinging part's hinge and the flapping part's pivot; how many rows are fixed, swing,
+                # and flap on the left and on the right
+                line[5] = tuple(enc(x, what) for x in cubes["hinge"]) + (QUIET,)
+                line[9] = cubes["rows"][:3] + (QUIET,)
+                line[10] = tuple(enc(x, what) for x in cubes["flap_pivot"]) + (QUIET,)
+                line[11] = (cubes["rows"][3], 0, 0, QUIET)
             line[8] = u24(c)
             for n, cube in enumerate(mine):
                 texels = {}
@@ -565,8 +692,16 @@ def traced(layer, sheet, entries=None):
                         u, v = tuvs[corner]
                         assert 0 <= u < 4096 and 0 <= v < 4096
                         texels[3 + 3 * f + k] = u24(u << 12 | v)
-                texels[0] = (1 if cube["turned"] else 0, faces, cut, QUIET)
-                if cube["turned"]:
+                    if models[r][3][uvs[0][0]].info.get("animation"):
+                        texels[3 + 3 * f] = texels[3 + 3 * f][:3] + (ANIMATED,)
+                # An upright cube's box is kept to a quarter of a pixel, too coarse for an amulet's pieces
+                # (a fifth of a pixel to two pixels across; a thin chain's faces rounded together) and a
+                # cape's layers (a panel a hundredth of a pixel over its backing, which would hide it):
+                # theirs go as turned cubes, kept to 1/1024.
+                turned = cube["turned"] or kind in ("amulets", "capes")
+                # the stitch reads it as a colour, turned above half: 255, not 1
+                texels[0] = (255 if turned else 0, faces, cut, QUIET)
+                if turned:
                     texels[1] = tuple(enc_lo(x) for x in clo) + (QUIET,)
                     texels[2] = tuple(enc_hi(x) for x in chi) + (QUIET,)
                     # the part's space to the cube's own: m is a turn (and the mirror into Minecraft's
@@ -590,6 +725,12 @@ def traced(layer, sheet, entries=None):
                 for k in range(3):
                     line[HEADER_CUBES + 3 * n + k] = texels[k]
                 c += 1
+            if r in animations:
+                # its animated texture: frames, ticks a frame and how many a row (blended between frames,
+                # alpha ANIMATED), and a frame's size
+                frames, ticks, grid, fw, fh, smooth = animations[r]
+                line[6] = (frames, min(255, ticks), grid, ANIMATED if smooth else QUIET)
+                line[7] = u24(fw << 12 | fh)
     height = shelf.bottom + 1
     if height > 4095:
         raise SystemExit("the layer %d sheet with its traced models needs %d rows; 4095 is the most" % (layer, height))
@@ -602,10 +743,11 @@ def traced(layer, sheet, entries=None):
         for x, value in line.items():
             px[x, y] = value
     for x, columns in entries.items():
-        for i, kind in enumerate(kinds):
+        for kind in kinds:
             item = columns.get(kind)
             if item is None:
                 continue
+            i = TABLE_ROW[kind]
             r = next((r for r, m in enumerate(models) if m[0] == kind and m[1] == look_name(item)), None)
             if r is not None:
                 px[x, top + i] = u24(header + 5 * r)

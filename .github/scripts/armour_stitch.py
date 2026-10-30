@@ -125,11 +125,67 @@ void torso(int shape, vec2 uv, inout StitchVertex v) {
     v.position += move * PIXEL;
 }
 
-// The item's tile from its dye, or 0 (the plain look) for leather MineScape doesn't define.
+// The item's tile from its dye, or 0 (the plain look) for leather MineScape doesn't define. Layout 1 is
+// worn armour's, with the gloves or amulet worn beside it in place of a count.
 int item_tile(vec4 color) {
     ivec3 c = ivec3(round(color.rgb * 255.0));
     int dye = c.r << 16 | c.g << 8 | c.b;
-    return dye != UNDYED && (dye >> 22) == 0 ? (dye >> 13) & 511 : 0;
+    return dye != UNDYED && (dye >> 22) <= 1 ? (dye >> 13) & 511 : 0;
+}
+
+// What worn armour's dye carries (its low twelve bits, the item's number, in layout 1): a chestplate's
+// gloves (layer 1), a pair of leggings' amulet (layer 2), by its place in their table; -1 for none or one
+// without a look.
+int worn_index(int layer, vec4 color) {
+    ivec3 c = ivec3(round(color.rgb * 255.0));
+    int dye = c.r << 16 | c.g << 8 | c.b;
+    if ((dye >> 22) != 1) {
+        return -1;
+    }
+    int number = dye & 4095;
+    if (layer == 1) {
+        for (int i = 0; i < MS_GLOVES_COUNT; i++) {
+            if (MS_GLOVES_NUMBER[i] == number) {
+                return i;
+            }
+        }
+    } else {
+        for (int i = 0; i < MS_AMULET_COUNT; i++) {
+            if (MS_AMULET_NUMBER[i] == number) {
+                return i;
+            }
+        }
+    }
+    return -1;
+}
+
+// its look's sheet tile, or -1
+int worn_tile(int layer, vec4 color) {
+    int i = worn_index(layer, color);
+    return i < 0 ? -1 : (layer == 1 ? MS_GLOVES_TILE[i] : MS_AMULET_TILE[i]);
+}
+
+// The cape carried in worn boots' dye (layout 1, armour_looks.capes()): its place in MS_CAPE_NUMBER,
+// which is its column in the boots' table past MS_CAPE_COLUMN, else -1.
+int cape_index(vec4 color) {
+    ivec3 c = ivec3(round(color.rgb * 255.0));
+    int dye = c.r << 16 | c.g << 8 | c.b;
+    if ((dye >> 22) != 1) {
+        return -1;
+    }
+    int number = dye & 4095;
+    for (int i = 0; i < MS_CAPE_COUNT; i++) {
+        if (MS_CAPE_NUMBER[i] == number) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+// a unit vector in 30 bits, for an int varying (armour.frag.glsl's unpack_unit)
+int pack_unit(vec3 n) {
+    ivec3 q = ivec3(round((clamp(n, -1.0, 1.0) * 0.5 + 0.5) * 1023.0));
+    return (q.x << 20) | (q.y << 10) | q.z;
 }
 
 // Armour models (armour_models.py), from 1.21.2: leather's extra layers, each with its own texture,
@@ -294,7 +350,11 @@ int u24(vec4 t) {
 
 
 #if defined(STITCH_HAS_FRAGMENT_POSITION) && defined(STITCH_HAS_FRAGMENT_DEPTH) && defined(STITCH_HAS_VERTEX_INDEX)
-bool trace_card(int layer, int column, inout StitchVertex v) {
+// amulet >= 0: that amulet's model (the leggings' second table, by its place in MS_AMULET_NUMBER) on the
+// leggings' body's top face alone, which sits inside the torso and is never seen; any other face is left.
+// cape >= 0 likewise: that cape's model (the boots' table past MS_CAPE_COLUMN) on the right leg's top face,
+// inside the torso too (rt_info kind 7, traced in the body's frame: armour.frag.glsl's trace_cape).
+bool trace_card(int layer, int column, int amulet, int cape, inout StitchVertex v) {
     ivec2 size = stitch_texture_size();
     int top = u24(stitch_texel_fetch(ivec2(size.x - 2, 0)));
     int vid = stitch_vertex_index();
@@ -315,6 +375,20 @@ bool trace_card(int layer, int column, inout StitchVertex v) {
     float bw = box == 1 ? 8.0 : 4.0;
     float rel = u - (box == 3 ? 0.0 : (box == 1 ? 16.0 : 40.0));
     int face = in_face_column(k, rel, bw, 4.0) ? k : LATER_ORDER[k];
+#ifdef STITCH_HAS_QUAD_CORNERS
+    // Where the quad's corners can be shared, the face by its own rectangle in the box's texture layout,
+    // as the model layers find it: a draw may start a box part way through its faces (26.2 batches
+    // entities), and the vertex's number then names the wrong one. Faces east, west, down, up, north,
+    // south: the top row down then up, the row below west, north, east, south.
+    vec3 fp[4];
+    vec2 ft[4];
+    if (box != 0 && stitch_quad_corners(fp, ft)) {
+        vec2 corner0 = min(min(ft[0], ft[1]), min(ft[2], ft[3])) * vec2(64.0, 32.0);
+        vec2 rect = corner0 - vec2(box == 3 ? 0.0 : (box == 1 ? 16.0 : 40.0), 16.0);
+        face = rect.y < 3.99 ? (rect.x < 3.99 + bw ? 2 : 3)
+            : (rect.x < 3.99 ? 1 : (rect.x < 3.99 + bw ? 4 : (rect.x < 7.99 + bw ? 0 : 5)));
+    }
+#endif
     // a mirrored box (the left limbs) lists its corners backwards
     float g = face == 2 ? 16.0 : 20.0;
     float i = face == 2 ? 20.0 : (face == 3 ? 16.0 : 32.0);
@@ -324,15 +398,30 @@ bool trace_card(int layer, int column, inout StitchVertex v) {
     vec3 extent = part == 1 ? vec3(8.0, 12.0, 4.0) : vec3(4.0, 12.0, 4.0);
     // which of the item's models: the chest's (or leggings') on the body and arms, the boots' on the legs
     int kind = layer == 1 && part >= 4 ? 1 : 0;
+    if (amulet >= 0) {
+        if (part != 1 || face != 3) {
+            return false;
+        }
+        kind = 1;
+        column = amulet;
+    }
+    if (cape >= 0) {
+        if (part != 4 || face != 2) {
+            return false;
+        }
+        kind = 1;
+        column = MS_CAPE_COLUMN + cape;
+    }
     int model = u24(stitch_texel_fetch(ivec2(column, top + kind)));
     if (model <= 0 || part == 0) {
         return false;
     }
     tint = vec4(stitch_texel_fetch(ivec2(column, top + 2 + kind)).rgb, 1.0);
     v.color = vec4(1.0, 1.0, 1.0, v.color.a);
-    int row = model + part - 1;
+    // a cape's rows from the model's first (its fixed ones, then its swinging ones)
+    int row = cape >= 0 ? model : model + part - 1;
     int cubes = int(round(stitch_texel_fetch(ivec2(0, row)).r * 255.0));
-    if (face != 0 || cubes == 0) {
+    if (face != (amulet >= 0 ? 3 : (cape >= 0 ? 2 : 0)) || cubes == 0) {
         v.hidden = true;
         return true;
     }
@@ -346,16 +435,18 @@ bool trace_card(int layer, int column, inout StitchVertex v) {
     vec3 centre = (round(stitch_texel_fetch(ivec2(1, row)).rgb * 255.0) - 128.0) / 4.0;
     float sphere = stitch_texel_fetch(ivec2(2, row)).r * 255.0 / 4.0;
     vec3 up = stitch_up();
-    rt_info = ivec4(1, row, face / 2, cubes);
+    // an amulet's (kind 6) is drawn nearer the eye (AMULET_PULL); a cape's (kind 7) takes the world's up
+    rt_info = ivec4(cape >= 0 ? 7 : (amulet >= 0 ? 6 : 1), row, cape >= 0 ? pack_unit(up) : face / 2, cubes);
     // lit from above: the fragment shades the model itself
     v.normal = up;
 #ifdef STITCH_HAS_QUAD_CORNERS
     // Where the face's corners can be shared, the limb's transform is known here: the card is the
     // smallest rectangle that covers the model's box as the eye sees it, and each of its corners
-    // carries its own place in the part's space, so the fragment reads the same transform back.
+    // carries its own place in the part's space, so the fragment reads the same transform back. Not for
+    // an amulet's, on the body's top face, whose transform this reads mirrored: its card is rounded below.
     vec3 qp[4];
     vec2 qt[4];
-    if (stitch_quad_corners(qp, qt)) {
+    if (amulet < 0 && cape < 0 && stitch_quad_corners(qp, qt)) {
         vec3 l[4];
         for (int k = 0; k < 4; k++) {
             ivec3 s = CORNER[FACE[face * 4 + (mirrored ? 3 - k : k)]];
@@ -410,7 +501,28 @@ bool trace_card(int layer, int column, inout StitchVertex v) {
     }
 #endif
     // otherwise round this corner, wide enough to cover the part's model wherever the limb is
-    float radius = (length(centre - local) + sphere) * PIXEL;
+    float reach = length(centre - local) + sphere;
+    if (cape >= 0) {
+        // a cape is turned from the leg's frame to the body's about the leg's pivot, and its swinging rows
+        // about the hinge: every point of it is within this of the corner
+        vec4 split = stitch_texel_fetch(ivec2(9, row));
+        int fixedRows = int(round(split.r * 255.0));
+        int swingEnd = fixedRows + int(round(split.g * 255.0));
+        int rows = swingEnd + int(round(split.b * 255.0)) + int(round(stitch_texel_fetch(ivec2(11, row)).r * 255.0));
+        vec3 hinge = decode_corner(stitch_texel_fetch(ivec2(5, row)));
+        vec3 pivot = decode_corner(stitch_texel_fetch(ivec2(10, row)));
+        float far = 0.0;
+        for (int k = 0; k < 5; k++) {
+            if (k < rows) {
+                vec3 c = decode_corner(stitch_texel_fetch(ivec2(1, row + k)));
+                float span = stitch_texel_fetch(ivec2(2, row + k)).r * 255.0 / 4.0;
+                vec3 about = k < fixedRows ? vec3(0.0) : (k < swingEnd ? hinge : pivot);
+                far = max(far, length(about) + length(c - about) + span);
+            }
+        }
+        reach = length(local) + far;
+    }
+    float radius = reach * PIXEL;
     vec3 at = v.position;
     float d = length(at);
     vec3 dir = at / max(d, 1e-4);
@@ -425,6 +537,52 @@ bool trace_card(int layer, int column, inout StitchVertex v) {
     return true;
 }
 #endif
+
+// An amulet hangs over any chestplate, whose models stand up to two pixels proud of the body: it sits
+// AMULET_OUT pixels out from the body, along the body's own front (its model is built so,
+// armour_models.seated()), and is drawn nearer the eye by up to AMULET_PULL more, along the eye's own line,
+// for the few that stand out further.
+const float AMULET_OUT = %(amulet_out)s;
+const float AMULET_PULL = 2.25;
+
+// An amulet's flat look drawn over a chestplate by its depth (armour.frag.glsl): in the world along the
+// face's own front, in rt_orig (rt_info w 1); in a screen, whose preview faces the viewer and may be drawn
+// mirrored with its normals not (1.20.1), towards the viewer, found from the face's own steps across the
+// screen made right-handed by rt_orig.x (w 2)
+void lift_amulet(inout StitchVertex v) {
+    if (stitch_in_screen()) {
+        rt_orig = vec3(stitch_handedness(), 0.0, 0.0);
+        rt_info.w = 2;
+    } else if (length(v.normal) > 1e-4) {
+        rt_orig = normalize(v.normal);
+        rt_info.w = 1;
+    }
+}
+
+// Gloves alone on an arm's face where a chestplate's model draws the arm, or an amulet alone on the front
+// of the leggings' body: their texels on the box as a flat look would be, nothing between them (rt_info
+// kind 5).
+void worn_only(int layer, int tile, inout StitchVertex v) {
+    vec2 uv = v.uv;
+    vec2 sheet = vec2(stitch_texture_size());
+    int columns = int(sheet.x) / int(SHEET_TILE.x);
+    v.hidden = false;
+    v.uv = (uv + vec2(tile % columns, tile / columns)) * SHEET_TILE / sheet;
+    v.color = vec4(1.0, 1.0, 1.0, v.color.a);
+    tint = vec4(0.0);
+    rt_info = ivec4(5, 0, 0, 0);
+    narrow(layer, uv, v);
+    if (layer == 2 && !stitch_in_screen()) {
+        // as the traced model's: out from the body, then nearer the eye from the front alone (armour.frag.glsl)
+        v.position += normalize(v.normal) * AMULET_OUT * PIXEL;
+        float d = length(v.position);
+        float front = clamp(dot(-v.position / max(d, 1e-4), normalize(v.normal)), 0.0, 1.0);
+        v.position *= max(d - AMULET_PULL * PIXEL * front, d * 0.5) / max(d, 1e-4);
+    } else if (layer == 2) {
+        // in a screen (an inventory's preview), whose scale isn't the world's: the fragment lifts it
+        lift_amulet(v);
+    }
+}
 
 void stitch_vertex(inout StitchVertex v) {
     tint = vec4(0.0);
@@ -452,23 +610,67 @@ void stitch_vertex(inout StitchVertex v) {
     bool own = mark > 2;
     int layer = own ? mark - 2 : mark;
     int look = item_tile(v.color);
+    // what's worn with the armour, on the faces it covers: gloves on a chestplate's arms, an amulet on the
+    // front of the leggings' body (by a point inside the face: corners 0 and 1 sit on its low v edge, 0 and 3
+    // on its high u). Its sheet tile, else -1.
+    int worn = -1;
+    if (!own && v.corner >= 0) {
+        vec2 p = v.uv * vec2(64.0, 32.0);
+        float u = p.x + ((v.corner == 0 || v.corner == 3) ? -0.5 : 0.5);
+        float w = p.y + (v.corner < 2 ? 0.5 : -0.5);
+        if (layer == 1 ? (p.y > 15.5 && u > 40.0 && u < 56.0) : (u > 20.0 && u < 28.0 && w > 20.0 && w < 32.0)) {
+            worn = worn_tile(layer, v.color);
+        }
+    }
+#if defined(STITCH_HAS_FRAGMENT_POSITION) && defined(STITCH_HAS_FRAGMENT_DEPTH) && defined(STITCH_HAS_VERTEX_INDEX)
+    // an amulet in 3D where the tracer can draw it, its model traced on the leggings' body's top face, in
+    // place of its flat look on the front
+    if (layer == 2 && !own && !stitch_in_screen()) {
+        int amulet = worn_index(2, v.color);
+        int top = u24(stitch_texel_fetch(ivec2(stitch_texture_size().x - 2, 0)));
+        // one with no model (too many cubes for the tracer) keeps its flat look
+        if (amulet >= 0 && top > 0 && u24(stitch_texel_fetch(ivec2(amulet, top + 1))) > 0) {
+            worn = -1;
+            if (trace_card(layer, 0, amulet, -1, v)) {
+                return;
+            }
+        }
+    }
+    // a cape, carried on the boots, traced from the right leg's top face in the body's own frame
+    if (layer == 1 && !own && !stitch_in_screen()) {
+        int cape = cape_index(v.color);
+        int top = u24(stitch_texel_fetch(ivec2(stitch_texture_size().x - 2, 0)));
+        if (cape >= 0 && top > 0 && u24(stitch_texel_fetch(ivec2(MS_CAPE_COLUMN + cape, top + 1))) > 0
+                && trace_card(layer, 0, -1, cape, v)) {
+            return;
+        }
+    }
+#endif
 #ifdef STITCH_HAS_QUAD_CORNERS
     // a sheet with models (1.21.2 on): an item with a model draws it in the layers above, where its
-    // corners can be shared; its look here hides
+    // corners can be shared; its look here hides, but for the gloves or amulet worn on it
     vec2 at = v.uv * vec2(64.0, 32.0);
     int piece = layer == 2 ? 4 : (at.x < 16.0 && at.y > 16.0 ? 2 : 1);
     if (!own && (int(round(marker.g * 255.0)) & 32) != 0 && (MS_MODELLED[look] & piece) != 0) {
         vec3 p[4];
         vec2 t[4];
         if (stitch_quad_corners(p, t)) {
-            v.hidden = true;
+            if (worn >= 0) {
+                worn_only(layer, worn, v);
+            } else {
+                v.hidden = true;
+            }
             return;
         }
     }
 #endif
 #if defined(STITCH_HAS_FRAGMENT_POSITION) && defined(STITCH_HAS_FRAGMENT_DEPTH) && defined(STITCH_HAS_VERTEX_INDEX)
-    // the tables are by item tile on a sheet, in column 0 on an item's own tile
-    if (!stitch_in_screen() && trace_card(layer, own ? 0 : look, v)) {
+    // the tables are by item tile on a sheet, in column 0 on an item's own tile; a modelled part's faces
+    // but the one its model is traced on would hide, and draw what's worn on them instead
+    if (!stitch_in_screen() && trace_card(layer, own ? 0 : look, -1, -1, v)) {
+        if (v.hidden && worn >= 0) {
+            worn_only(layer, worn, v);
+        }
         return;
     }
 #endif
@@ -479,6 +681,14 @@ void stitch_vertex(inout StitchVertex v) {
     int columns = int(sheet.x) / int(SHEET_TILE.x);
     vec2 uv = v.uv;
     v.uv = (v.uv + (own ? vec2(0.0) : vec2(tile % columns, tile / columns))) * SHEET_TILE / sheet;
+    // what's worn over a flat look: the face reads its tile too, by how far it is from the armour's (rt_info
+    // kind 4, unused by a sheet's look otherwise), and the fragment draws its texels over the armour's
+    if (worn >= 0) {
+        rt_info = ivec4(4, worn % columns - tile % columns, worn / columns - tile / columns, 0);
+        if (layer == 2) {
+            lift_amulet(v);
+        }
+    }
     // an item's tile is coloured already; the plain one is dyed in the fragment; an own tile drawn whole
     tint = own ? vec4(0.0, 0.0, 0.0, 0.5) : (look == 0 ? vec4(v.color.rgb, 1.0) : vec4(0.0));
     v.color = vec4(1.0, 1.0, 1.0, v.color.a);
@@ -518,6 +728,10 @@ vec3 decode_point(vec4 t) {
 const int MAX_CUBES = %(max_cubes)d;
 const int CUBE_TEXELS = %(cube)d;
 const int HEADER_CUBES = %(header_cubes)d;
+// as armour.vert.glsl's: how far out from the body an amulet sits, and how much nearer the eye its model is
+// drawn on top, in pixels
+const float AMULET_OUT = %(amulet_out)s;
+const float AMULET_PULL = 2.25;
 
 int read24(vec4 t) {
     ivec3 b = ivec3(round(t.rgb * 255.0));
@@ -695,10 +909,198 @@ vec4 trace(StitchFragment f, vec3 dpx, vec3 dpy, vec3 dlx, vec3 dly) {
         n = -n;
     }
 #ifdef STITCH_HAS_FRAGMENT_DEPTH
-    stitch_set_depth(hitPos);
+    // an amulet's (kind 6) nearer the eye along its line, over a chestplate's model that stands out from
+    // the chest: by AMULET_PULL pixels where it hangs in front of the body (its part's front is z -2) and
+    // is seen from the front, less as the eye goes round, none from the side or behind, where the
+    // chestplate covers it as it would
+    float d = length(hitPos);
+    float pull = 0.0;
+    if (rt_info.x == 6 && (origin + dir * h.best).z < -2.0) {
+        pull = AMULET_PULL * 0.9375 / 16.0 * clamp(dot(eye, normalize(m * vec3(0.0, 0.0, -1.0))), 0.0, 1.0);
+    }
+    stitch_set_depth(hitPos * max(d - pull, d * 0.5) / max(d, 1e-4));
 #endif
     // lit towards the eye
     return model_texel(stitch_texel_fetch(ivec2(face_texel(h.cube, h.face, h.q))), 0.55 + 0.45 * max(dot(n, eye), 0.0));
+}
+
+// One part's cubes against a ray (trace()'s loop, for a row of its own): its box first.
+void trace_row(int row, vec3 origin, vec3 dir, inout Hit h) {
+    vec3 inv = 1.0 / dir;
+    vec3 t0 = (decode_point(stitch_texel_fetch(ivec2(3, row))) - origin) * inv;
+    vec3 t1 = (decode_point(stitch_texel_fetch(ivec2(4, row))) - origin) * inv;
+    vec3 near = min(t0, t1);
+    vec3 far = max(t0, t1);
+    if (max(max(near.x, near.y), near.z) > min(min(far.x, far.y), far.z) || min(min(far.x, far.y), far.z) <= 0.0) {
+        return;
+    }
+    ivec2 size = stitch_texture_size();
+    int first = read24(stitch_texel_fetch(ivec2(size.x - 3, 0)));
+    int shift = int(round(log2(float(size.x))));
+    int start = read24(stitch_texel_fetch(ivec2(8, row)));
+    int cubes = min(int(round(stitch_texel_fetch(ivec2(0, row)).r * 255.0)), MAX_CUBES);
+    for (int c = 0; c < MAX_CUBES; c++) {
+        if (c < cubes) {
+            trace_cube(ivec2(HEADER_CUBES + 3 * c, row), start + c, first, size.x, shift, origin, dir, inv, h);
+        }
+    }
+}
+
+// how far a cape's swinging part hangs back standing still, and how much more for each radian the legs
+// swing (radians): it sways back with each step, and none past a sitting leg's. It rolls a little to the
+// side with each step too (CAPE_SWAY a radian of the legs' swing, one way then the other), and by
+// CAPE_BREEZE either way, once every CAPE_BREEZE_SECONDS, standing still.
+const float CAPE_REST = 0.07;
+const float CAPE_SWING = 0.35;
+const float CAPE_SWAY = 0.12;
+const float CAPE_BREEZE = 0.025;
+const float CAPE_BREEZE_SECONDS = 3.0;
+// a cape's flapping sides (wings): back from where they're modelled by up to CAPE_FLAP radians and in
+// again, once every CAPE_FLAP_SECONDS, and by CAPE_FLAP_WALK more for each radian the legs swing (a side
+// on the pivot's left turns by the angle, the right side by its opposite: both tips back)
+const float CAPE_FLAP = 0.25;
+const float CAPE_FLAP_WALK = 0.35;
+const float CAPE_FLAP_SECONDS = 1.6;
+
+// p turned about x by a, y towards z
+vec3 turn_x(vec3 p, float a) {
+    float c = cos(a);
+    float s = sin(a);
+    return vec3(p.x, p.y * c - p.z * s, p.y * s + p.z * c);
+}
+
+// p turned about y by a, z towards x
+vec3 turn_y(vec3 p, float a) {
+    float c = cos(a);
+    float s = sin(a);
+    return vec3(p.x * c + p.z * s, p.y, p.z * c - p.x * s);
+}
+
+// p turned about z by a, x towards y
+vec3 turn_z(vec3 p, float a) {
+    float c = cos(a);
+    float s = sin(a);
+    return vec3(p.x * c - p.y * s, p.x * s + p.y * c, p.z);
+}
+
+// A hit's texel: on a face with an animated texture (its first texture position's alpha 2,
+// armour_models.ANIMATED), the frame for the game's clock, by the part's row (texels 6 and 7: frames,
+// ticks a frame, how many a row, blended or not; a frame's size), blended into the next as Minecraft's
+// own animations are.
+vec4 animated_texel(Hit h, int row) {
+    vec2 at = face_texel(h.cube, h.face, h.q);
+    if (int(round(stitch_texel_fetch(h.cube + ivec2(3 + 3 * h.face, 0)).a * 255.0)) != 2) {
+        return stitch_texel_fetch(ivec2(at));
+    }
+    vec4 info = stitch_texel_fetch(ivec2(6, row));
+    int frames = max(1, int(round(info.r * 255.0)));
+    float ticks = max(1.0, info.g * 255.0);
+    int grid = max(1, int(round(info.b * 255.0)));
+    int size = read24(stitch_texel_fetch(ivec2(7, row)));
+    vec2 frame = vec2(float(size >> 12), float(size & 4095));
+    float now = stitch_game_time * 24000.0 / ticks;
+    int k = int(mod(floor(now), float(frames)));
+    int next = (k + 1) % frames;
+    vec4 a = stitch_texel_fetch(ivec2(at + vec2(float(k % grid), float(k / grid)) * frame));
+    if (int(round(info.a * 255.0)) != 2) {
+        return a;
+    }
+    vec4 b = stitch_texel_fetch(ivec2(at + vec2(float(next % grid), float(next / grid)) * frame));
+    return vec4(mix(a.rgb, b.rgb, fract(now)), a.a);
+}
+
+// A cape (rt_info kind 7), traced from the right leg's card. A walking leg turns about its own x, which is
+// the body's too, and the body stands up (rt_info z, the world's up): the leg's turn from it is found and
+// undone, so the cape keeps to the body. Its rows from the model's first (texels 9 and 11 of it: how
+// many are fixed, swing, flap on the left and on the right): the fixed rows keep to the body; the
+// swinging ones turn back about the hinge (texel 5) as the leg swings; the flapping ones turn about the
+// upright through the pivot (texel 10), each side the other way.
+vec4 trace_cape(StitchFragment f, vec3 dpx, vec3 dpy, vec3 dlx, vec3 dly) {
+    vec3 nl = cross(dlx, dly);
+    vec3 np = cross(dpx, dpy);
+    float ln = length(nl);
+    if (ln < 1e-12) {
+        return vec4(0.0);
+    }
+    float s = sqrt(length(np) / ln);
+    mat3 m = mat3(dpx, dpy, np / s) * inverse(mat3(dlx, dly, nl));
+    vec3 t = rt_orig - m * rt_local;
+    mat3 mi = transpose(m) / (s * s);
+    vec3 origin = mi * (-t);
+    vec3 dir = mi * f.position;
+    int n = rt_info.z;
+    vec3 up = vec3(float((n >> 20) & 1023), float((n >> 10) & 1023), float(n & 1023)) / 1023.0 * 2.0 - 1.0;
+    vec3 x = normalize(m[0]);
+    vec3 down = -up + dot(up, x) * x;
+    float swing = 0.0;
+    if (length(down) > 1e-3) {
+        down = normalize(down);
+        vec3 y = normalize(m[1]);
+        swing = atan(dot(cross(down, y), x), dot(down, y));
+    }
+    // the ray in the body's frame, about the leg's pivot (its space's origin)
+    vec3 o = turn_x(origin, swing);
+    vec3 d = turn_x(dir, swing);
+    int row = rt_info.y;
+    vec4 split = stitch_texel_fetch(ivec2(9, row));
+    int fixedRows = int(round(split.r * 255.0));
+    int swingEnd = fixedRows + int(round(split.g * 255.0));
+    int leftEnd = swingEnd + int(round(split.b * 255.0));
+    int rows = leftEnd + int(round(stitch_texel_fetch(ivec2(11, row)).r * 255.0));
+    float walk = abs(swing) > 1.2 ? 0.0 : clamp(swing, -0.9, 0.9);
+    float seconds = stitch_game_time * 1200.0;
+    float back = CAPE_REST + CAPE_SWING * abs(walk);
+    float sway = CAPE_SWAY * walk + CAPE_BREEZE * sin(seconds / CAPE_BREEZE_SECONDS * 6.2831853);
+    // only ever back from where the wings are modelled, never forward into the body
+    float flap = (CAPE_FLAP + CAPE_FLAP_WALK * abs(walk)) * (0.5 - 0.5 * cos(seconds / CAPE_FLAP_SECONDS * 6.2831853));
+    vec3 hinge = decode_point(stitch_texel_fetch(ivec2(5, row)));
+    vec3 pivot = decode_point(stitch_texel_fetch(ivec2(10, row)));
+    // every row against the one nearest hit: the fixed rows' ray as it is; the swinging rows' turned back
+    // about the hinge and rolled, the other way to how they're drawn; each flapping side's turned about
+    // the upright through the pivot, the sides opposite
+    Hit h = Hit(1e30, ivec2(0), -1, vec3(0.0), vec3(0.0));
+    int hitRow = row;
+    int hitKind = 0;
+    for (int k = 0; k < 5; k++) {
+        if (k < rows) {
+            int kind = k < fixedRows ? 0 : (k < swingEnd ? 1 : (k < leftEnd ? 2 : 3));
+            vec3 ok = o;
+            vec3 dk = d;
+            if (kind == 1) {
+                ok = hinge + turn_x(turn_z(o - hinge, -sway), -back);
+                dk = turn_x(turn_z(d, -sway), -back);
+            } else if (kind >= 2) {
+                float a = kind == 2 ? flap : -flap;
+                ok = pivot + turn_y(o - pivot, -a);
+                dk = turn_y(d, -a);
+            }
+            float before = h.best;
+            trace_row(row + k, ok, dk, h);
+            if (h.best < before) {
+                hitRow = row + k;
+                hitKind = kind;
+            }
+        }
+    }
+    if (h.face < 0) {
+        return vec4(0.0);
+    }
+    vec3 nb = h.normal;
+    if (hitKind == 1) {
+        nb = turn_z(turn_x(nb, back), sway);
+    } else if (hitKind >= 2) {
+        nb = turn_y(nb, hitKind == 2 ? flap : -flap);
+    }
+    vec3 nrm = normalize(m * turn_x(nb, -swing));
+    vec3 hitPos = m * (origin + dir * h.best) + t;
+    vec3 eye = normalize(-hitPos);
+    if (dot(nrm, eye) < 0.0) {
+        nrm = -nrm;
+    }
+#ifdef STITCH_HAS_FRAGMENT_DEPTH
+    stitch_set_depth(hitPos);
+#endif
+    return model_texel(animated_texel(h, hitRow), 0.55 + 0.45 * max(dot(nrm, eye), 0.0));
 }
 
 vec4 stitch_texel(StitchFragment f, vec4 texel) {
@@ -707,11 +1109,55 @@ vec4 stitch_texel(StitchFragment f, vec4 texel) {
     vec3 dpy = dFdy(rt_orig);
     vec3 dlx = dFdx(rt_local);
     vec3 dly = dFdy(rt_local);
-    if (rt_info.x == 1) {
+    if (rt_info.x == 1 || rt_info.x == 6) {
         return trace(f, dpx, dpy, dlx, dly);
+    }
+    if (rt_info.x == 7) {
+        return trace_cape(f, dpx, dpy, dlx, dly);
     }
     if (rt_info.x == 3) {
         return model_texel(texel, 1.0);
+    }
+    // An amulet's flat look (rt_info w 1 or 2, armour.vert.glsl's lift_amulet), on the leggings' body half a
+    // pixel inside a chestplate's own and further inside its models: drawn as though AMULET_OUT + 0.5 pixels
+    // out, a pixel's size from how Minecraft's texture layout (four of the sheet's texels a pixel) steps
+    // across the face, so the same in an inventory's preview as in the world
+    vec3 lifted = f.position;
+    if (rt_info.w != 0) {
+        vec3 px = dFdx(f.position);
+        vec3 py = dFdy(f.position);
+        vec3 across = cross(px, py);
+        vec2 ux = dFdx(f.uv) * vec2(stitch_texture_size()) / 4.0;
+        vec2 uy = dFdy(f.uv) * vec2(stitch_texture_size()) / 4.0;
+        float area = abs(ux.x * uy.y - ux.y * uy.x);
+        if (area > 1e-12 && length(across) > 1e-12) {
+            vec3 away = rt_info.w == 1 ? rt_orig : normalize(across) * rt_orig.x;
+            lifted += away * (AMULET_OUT + 0.5) * sqrt(length(across) / area);
+        }
+    }
+    if (rt_info.x == 5) {
+        // what's worn, alone (armour.vert.glsl, worn_only)
+        if (texel.a > 0.5) {
+#ifdef STITCH_HAS_FRAGMENT_DEPTH
+            if (rt_info.w != 0) {
+                stitch_set_depth(lifted);
+            }
+#endif
+            return vec4(texel.rgb, 1.0);
+        }
+        return vec4(0.0);
+    }
+    if (rt_info.x == 4) {
+        // the worn item's tile, baked in its colour: a texel there is drawn as it is
+        vec4 g = stitch_texel_fetch(ivec2(floor(f.uv * vec2(stitch_texture_size()))) + rt_info.yz * ivec2(256, 128));
+        if (g.a > 0.5) {
+#ifdef STITCH_HAS_FRAGMENT_DEPTH
+            if (rt_info.w != 0) {
+                stitch_set_depth(lifted);
+            }
+#endif
+            return vec4(g.rgb, 1.0);
+        }
     }
     if (tint.a > 0.25 && tint.a < 0.75) {
         return texel.a > 0.0 ? vec4(texel.rgb, 1.0) : texel;
@@ -732,6 +1178,7 @@ DEFINITION = {
     "fragment": "minescape:stitches/armour.frag.glsl",
     "varyings": [{"name": "tint", "type": "vec4"}, {"name": "rt_orig", "type": "vec3"},
                  {"name": "rt_local", "type": "vec3"}, {"name": "rt_info", "type": "ivec4", "flat": True}],
+    "uniforms": ["game_time"],
     "requires": ["vertex_corner", "texture_size", "orientation"],
     "uses": ["quad_corners", "vertex_index", "fragment_position", "fragment_depth"],
     "passes": ["main", "shadow"],
@@ -745,11 +1192,11 @@ def write(root, modelled=None):
     os.makedirs(out, exist_ok=True)
     import armour_models
     vertex = VERTEX.replace("%(tables)s", armour_looks.glsl() + armour_models.glsl(modelled or {"chest": set(), "boots": set(), "legs": set()}))
-    vertex = vertex.replace("%(undyed)d", str(0xA06540))
+    vertex = vertex.replace("%(undyed)d", str(0xA06540)).replace("%(amulet_out)s", repr(float(armour_models.AMULET_OUT)))
     with open(os.path.join(out, "armour.vert.glsl"), "w", encoding="utf-8", newline="\n") as f:
         f.write(vertex)
     with open(os.path.join(out, "armour.frag.glsl"), "w", encoding="utf-8", newline="\n") as f:
-        f.write(FRAGMENT.replace("%(max_cubes)d", str(armour_models.most_cubes())).replace("%(header_cubes)d", str(armour_models.HEADER_CUBES)).replace("%(cube)d", str(armour_models.CUBE)))
+        f.write(FRAGMENT.replace("%(max_cubes)d", str(armour_models.most_cubes())).replace("%(header_cubes)d", str(armour_models.HEADER_CUBES)).replace("%(cube)d", str(armour_models.CUBE)).replace("%(amulet_out)s", repr(float(armour_models.AMULET_OUT))))
     with open(os.path.join(out, "armour.json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump(DEFINITION, f, indent=2)
         f.write("\n")

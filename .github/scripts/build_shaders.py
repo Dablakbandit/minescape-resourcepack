@@ -443,6 +443,10 @@ COUNT_VERTEX_END = """
         } else {
             ivec3 dye = ivec3(round(Color.rgb * 255.0));
             int code = dye.r << 16 | dye.g << 8 | dye.b;
+            if ((code >> 22) == 1) {
+                // a worn chestplate's: its low twelve bits are the gloves worn with it, not a count
+                code = (code & 4096) | 4095;
+            }
             if (code == %(undyed)d || (code >> 22) != 0 || ((code & 4095) == 4095 && ((code >> 12) & 1) == 0)) {
                 // an item without a count or a frame: never dyed, or dyed to say so
                 gl_Position = vec4(-2.0, -2.0, -2.0, 1.0);

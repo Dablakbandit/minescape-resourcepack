@@ -159,14 +159,41 @@ def tile(layer, spec):
     return c.px
 
 
+def gloves_tile(spec):
+    """A gloves look's arms in its colour, as a chestplate's are drawn (armour_looks.gloves)."""
+    look, colour = spec
+    c = Canvas()
+    c.copy(read(look, "chest"), looks.GLOVES_AREA)
+    rims(c, 1)
+    bake(c.px, looks.GLOVES_AREA, colour)
+    return c.px
+
+
+def amulet_tile(spec):
+    """An amulet's look on the front of the leggings' body box (armour_looks.amulets), in its colour where
+    it is grey if it has one, its own colours otherwise."""
+    look, colour = spec
+    c = Canvas()
+    c.copy(read(look, "legs"), looks.AMULET_AREA)
+    bake(c.px, looks.AMULET_AREA, colour)
+    return c.px
+
+
 def sheet(layer):
     order, _ = looks.tiles(layer)
+    # the gloves' tiles after the armour's on layer 1, which draws the arms; the amulets' on layer 2,
+    # whose body box they hang on
+    extras = [gloves_tile(spec) for spec in looks.gloves_tiles()[0]] if layer == 1 else \
+        [amulet_tile(spec) for spec in looks.amulet_tiles()[0]]
     w, h = looks.TILE
-    rows = -(-len(order) // looks.COLUMNS)
+    rows = -(-(len(order) + len(extras)) // looks.COLUMNS)
     out = np.zeros((h * rows, w * looks.COLUMNS, 4), np.uint8)
     for i, paths in enumerate(order):
         x, y = (i % looks.COLUMNS) * w, (i // looks.COLUMNS) * h
         out[y:y + h, x:x + w] = tile(layer, paths)
+    for i, px in enumerate(extras, len(order)):
+        x, y = (i % looks.COLUMNS) * w, (i // looks.COLUMNS) * h
+        out[y:y + h, x:x + w] = px
     out[0, -1] = (255, 0 if layer == 1 else 128, 255, SHEET)
     return Image.fromarray(out), len(order)
 
@@ -248,6 +275,12 @@ def build():
     import armour_stitch
     armour_stitch.write(ROOT, modelled)
     print("stitch: assets/minescape/stitches/armour.*")
+    # an amulet's cubes changed in Blockbench without its flat look drawn again from them
+    import amulet_flat
+    stale = amulet_flat.out_of_date()
+    if stale:
+        print("warning: these amulets' flat looks don't match their models; run .github/scripts/amulet_flat.py: "
+              + ", ".join(stale))
 
 
 if __name__ == "__main__":

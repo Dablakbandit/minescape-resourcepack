@@ -71,8 +71,9 @@ MARKER_RED, MARKER_GREEN, MARKER_BLUE = 0x3D, 0xC1, 0x58
 CENTRED = 4
 
 # The dye, 24 bits: layout << 22 | tile << 13 | selected << 12 | count.
-#   layout   0, an item's; any other is not a count (leather's own colour, 0xA06540, an item never
-#            dyed, is one of them)
+#   layout   0, an item's; 1, a worn chestplate's, its count bits the number of the gloves worn with it
+#            (armour/gloves.json), so a frame and no count; any other is not a count (leather's own
+#            colour, 0xA06540, an item never dyed, is one of them)
 #   tile     an armour piece's look when worn (512 a part), 0 for other items
 #   selected a light blue frame inside the icon, as the player's selected item
 #   count    the stack's count, shortened to four characters at most (the plugin's ItemCount):

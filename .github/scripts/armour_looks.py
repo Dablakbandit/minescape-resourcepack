@@ -140,15 +140,116 @@ MODEL_OVERLAYS = [("armour_models_1_21_2", 42, 45), ("armour_models_1_21_4", 46,
                   ("armour_models_1_21_11", 75, 83), ("armour_models_26_1", 84, None)]
 
 
+# Gloves (armour/gloves.json) are ordinary items, not leather armour: each is keyed by its own number (its
+# custom model data), which the plugin puts in a worn chestplate's dye beside the chestplate's tile, and
+# drawn on the chestplate's arms. The dye has twelve bits for it, so a gloves item numbered 4096 or more
+# can't be drawn. Their looks are tiles of the layer 1 sheet after the armour's, only the arms read.
+GLOVES_NUMBERS = 4096
+GLOVES_AREA = [(40, 16, 56, 32)]
+
+
+def worn_items(kind):
+    """number -> the item worn with armour (gloves, amulets): {look (its file's path), colour (r, g, b), or
+    None to keep the look's own, name}, from armour/<kind>.json, checked."""
+    path = os.path.join(SOURCE, kind + ".json")
+    if not os.path.exists(path):
+        return {}
+    found = {}
+    for entry in json.load(open(path, encoding="utf-8"))["items"]:
+        number = entry["custom_model_data"]
+        where = "%s.json %s" % (kind, entry.get("name", number))
+        if not 1 <= number < GLOVES_NUMBERS:
+            raise ValueError("%s: custom model data is 1 to %d (the dye's twelve bits)" % (where, GLOVES_NUMBERS - 1))
+        if number in found:
+            raise ValueError("%s: custom model data %d is %s's already" % (where, number, found[number]["name"]))
+        look = look_file(kind, entry["look"])
+        if look is None:
+            raise ValueError("%s: no look armour/models/%s/%s.bbmodel" % (where, kind, entry["look"]))
+        colour = None
+        if "colour" in entry:
+            colour = entry["colour"].lstrip("#")
+            if not re.fullmatch(r"[0-9a-fA-F]{6}", colour):
+                raise ValueError("%s: colour %r is not #rrggbb" % (where, entry["colour"]))
+            colour = tuple(int(colour[i:i + 2], 16) for i in (0, 2, 4))
+        found[number] = {"look": look, "colour": colour, "name": entry.get("name", str(number))}
+    return found
+
+
+def gloves():
+    """number -> the gloves item (worn_items), from armour/gloves.json."""
+    return worn_items("gloves")
+
+
+def gloves_tiles():
+    """(the gloves' distinct (look file, colour) in order, each gloves number's sheet tile on layer 1):
+    their tiles follow the armour's."""
+    first = len(tiles(1)[0])
+    order, sheet = [], {}
+    for number, item in sorted(gloves().items()):
+        spec = (item["look"], item["colour"])
+        if spec not in order:
+            order.append(spec)
+        sheet[number] = first + order.index(spec)
+    return order, sheet
+
+
+# Amulets (the NECK slot, armour/amulets.json) likewise: each keyed by its item's number, carried in a
+# worn pair of leggings' dye and drawn on the front of the leggings' body box, which is all their looks'
+# files are read for (AMULET_AREA). Their tiles follow the leggings' on layer 2.
+AMULET_AREA = [(20, 20, 28, 32)]
+
+
+def amulets():
+    """number -> the amulet: {look (its file's path), colour (r, g, b) or None, name}, from
+    armour/amulets.json, checked."""
+    return worn_items("amulets")
+
+
+def amulet_tiles():
+    """(the amulets' distinct (look file, colour) in order, each amulet number's sheet tile on layer 2):
+    their tiles follow the leggings'."""
+    first = len(tiles(2)[0])
+    order, sheet = [], {}
+    for number, item in sorted(amulets().items()):
+        spec = (item["look"], item["colour"])
+        if spec not in order:
+            order.append(spec)
+        sheet[number] = first + order.index(spec)
+    return order, sheet
+
+
+# Capes (the CAPE slot, armour/capes.json) likewise, carried in worn boots' dye: models only (no flat look),
+# traced from the right leg, whose swing turns the cape's swinging part back (armour_models, armour_stitch).
+def capes():
+    """number -> the cape: {look (its file's path), colour (r, g, b) or None, name}, from armour/capes.json,
+    checked."""
+    return worn_items("capes")
+
+
 def glsl():
-    """The tables as GLSL: each item tile's sheet tile, and its shape."""
-    def array(name, values):
-        return "const int %s[%d] = int[](%s);\n" % (name, TILES, ", ".join(str(v) for v in values))
+    """The tables as GLSL: each item tile's sheet tile, and its shape; each gloves and amulet number's
+    sheet tile; the capes' numbers, by their place in the boots' table."""
+    def array(name, values, size=TILES):
+        return "const int %s[%d] = int[](%s);\n" % (name, size, ", ".join(str(v) for v in values))
     chest, legs = items("chest"), items("legs")
+    gloves_order, gloves_sheet = gloves_tiles()
+    numbers = sorted(gloves_sheet) or [0]
+    amulet_order, amulet_sheet = amulet_tiles()
+    amulet_numbers = sorted(amulet_sheet) or [0]
     return (array("MS_TILE_1", tiles(1)[1])
             + array("MS_TILE_2", tiles(2)[1])
             + array("MS_SHAPE_1", [chest[t]["shape"] if t in chest else TORSO_NONE for t in range(TILES)])
             + array("MS_SHAPE_2", [legs[t]["shape"] if t in legs else LEGS for t in range(TILES)])
+            # the gloves, by number (0 none), and their sheet tiles
+            + "const int MS_GLOVES_COUNT = %d;\n" % len(gloves_sheet)
+            + array("MS_GLOVES_NUMBER", numbers, len(numbers))
+            + array("MS_GLOVES_TILE", [gloves_sheet.get(n, 0) for n in numbers], len(numbers))
+            + "const int MS_AMULET_COUNT = %d;\n" % len(amulet_sheet)
+            + array("MS_AMULET_NUMBER", amulet_numbers, len(amulet_numbers))
+            + array("MS_AMULET_TILE", [amulet_sheet.get(n, 0) for n in amulet_numbers], len(amulet_numbers))
+            # the capes, by number, in the boots' table from its column TILES (armour_models.CAPE_COLUMN)
+            + "const int MS_CAPE_COLUMN = %d;\nconst int MS_CAPE_COUNT = %d;\n" % (TILES, len(capes()))
+            + array("MS_CAPE_NUMBER", sorted(capes()) or [0], max(1, len(capes())))
             # the sheets' rows of looks (the traced models' data comes below them)
             + "const int MS_SHEET_ROWS_1 = %d;\nconst int MS_SHEET_ROWS_2 = %d;\n"
-            % (-(-len(tiles(1)[0]) // COLUMNS), -(-len(tiles(2)[0]) // COLUMNS)))
+            % (-(-(len(tiles(1)[0]) + len(gloves_order)) // COLUMNS), -(-(len(tiles(2)[0]) + len(amulet_order)) // COLUMNS)))
