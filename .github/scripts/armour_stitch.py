@@ -436,7 +436,9 @@ bool trace_card(int layer, int column, int amulet, int cape, inout StitchVertex 
     float sphere = stitch_texel_fetch(ivec2(2, row)).r * 255.0 / 4.0;
     vec3 up = stitch_up();
     // an amulet's (kind 6) is drawn nearer the eye (AMULET_PULL); a cape's (kind 7) takes the world's up
-    rt_info = ivec4(cape >= 0 ? 7 : (amulet >= 0 ? 6 : 1), row, cape >= 0 ? pack_unit(up) : face / 2, cubes);
+    // its look's records (armour_models.traced: the table's rows top + 4 and 5), where its faces are
+    rt_info = ivec4(cape >= 0 ? 7 : (amulet >= 0 ? 6 : 1), row, cape >= 0 ? pack_unit(up) : face / 2,
+                    u24(stitch_texel_fetch(ivec2(column, top + 4 + kind))));
     // lit from above: the fragment shades the model itself
     v.normal = up;
 #ifdef STITCH_HAS_QUAD_CORNERS
@@ -754,8 +756,9 @@ const vec3 FACE_TL[6] = vec3[](vec3(0.0, 1.0, 0.0), vec3(1.0, 1.0, 1.0), vec3(0.
 const vec3 FACE_TR[6] = vec3[](vec3(0.0, 1.0, 1.0), vec3(1.0, 1.0, 0.0), vec3(1.0, 0.0, 1.0), vec3(1.0, 1.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(1.0, 1.0, 1.0));
 const vec3 FACE_BL[6] = vec3[](vec3(0.0, 0.0, 0.0), vec3(1.0, 0.0, 1.0), vec3(0.0, 0.0, 0.0), vec3(0.0, 1.0, 1.0), vec3(1.0, 0.0, 0.0), vec3(0.0, 0.0, 1.0));
 
-// The tracer's nearest hit so far: how far along the ray; its cube's texels, face and the point on it
-// (by the cube's own axes, 0 to 1); the face's normal in the part's space.
+// The tracer's nearest hit so far: how far along the ray; its look's record for the cube (its faces'
+// texture positions), the face and the point on it (by the cube's own axes, 0 to 1); the face's normal in
+// the part's space.
 struct Hit {
     float best;
     ivec2 cube;
@@ -781,7 +784,8 @@ vec2 face_texel(ivec2 cube, int face, vec3 q) {
 // The ray against one cube: where it goes in, and where it comes out of it (by the cube's back
 // faces, seen through a clear texel of the front), if nearer than h and drawn there. Its flags and box
 // are read from the part's header row (head); the rest of its texels only once the ray meets the box.
-void trace_cube(ivec2 head, int index, int first, int width, int shift, vec3 origin, vec3 dir, vec3 inv, inout Hit h) {
+// look is the cube's own record in its look's, index on (records from faces, rows down).
+void trace_cube(ivec2 head, int index, int first, int look, int faces, int width, int shift, vec3 origin, vec3 dir, vec3 inv, inout Hit h) {
     vec4 flags = stitch_texel_fetch(head);
     vec3 lo = decode_point(stitch_texel_fetch(head + ivec2(1, 0)));
     vec3 hi = decode_point(stitch_texel_fetch(head + ivec2(2, 0)));
@@ -826,7 +830,9 @@ void trace_cube(ivec2 head, int index, int first, int width, int shift, vec3 ori
             return;
         }
     }
-    int faces = int(round(flags.g * 255.0));
+    int own = (index + look) * CUBE_TEXELS;
+    ivec2 rec = ivec2(own & (width - 1), faces + (own >> shift));
+    int sides = int(round(flags.g * 255.0));
     int cut = int(round(flags.b * 255.0));
     for (int k = 0; k < 2; k++) {
         float at = k == 0 ? enter : leave;
@@ -846,15 +852,15 @@ void trace_cube(ivec2 head, int index, int first, int width, int shift, vec3 ori
             q = vec3(1.0 - q.x, 1.0 - q.y, q.z);
         }
         int face = axis * 2 + side;
-        if (((faces >> face) & 1) == 0) {
+        if (((sides >> face) & 1) == 0) {
             continue;
         }
-        if (((cut >> face) & 1) != 0 && stitch_texel_fetch(ivec2(face_texel(cube, face, q))).a < 0.5 / 255.0) {
+        if (((cut >> face) & 1) != 0 && stitch_texel_fetch(ivec2(face_texel(rec, face, q))).a < 0.5 / 255.0) {
             continue;
         }
         vec3 n = vec3(0.0);
         n[axis] = side == 1 ? 1.0 : -1.0;
-        h = Hit(at, cube, face, q, turned ? transpose(m) * n : vec3(-n.x, -n.y, n.z));
+        h = Hit(at, rec, face, q, turned ? transpose(m) * n : vec3(-n.x, -n.y, n.z));
         return;
     }
 }
@@ -892,11 +898,14 @@ vec4 trace(StitchFragment f, vec3 dpx, vec3 dpy, vec3 dlx, vec3 dly) {
     int first = read24(stitch_texel_fetch(ivec2(size.x - 3, 0)));
     int shift = int(round(log2(float(size.x))));
     int start = read24(stitch_texel_fetch(ivec2(8, row)));
-    int cubes = min(rt_info.w, MAX_CUBES);
+    int cubes = min(int(round(stitch_texel_fetch(ivec2(0, row)).r * 255.0)), MAX_CUBES);
+    // the look's records follow its shape's cubes from the shape's first (the row's texel 12)
+    int look = rt_info.w - read24(stitch_texel_fetch(ivec2(12, row)));
+    int faces = read24(stitch_texel_fetch(ivec2(size.x - 4, 0)));
     Hit h = Hit(1e30, ivec2(0), -1, vec3(0.0), vec3(0.0));
     for (int c = 0; c < MAX_CUBES; c++) {
         if (c < cubes) {
-            trace_cube(ivec2(HEADER_CUBES + 3 * c, row), start + c, first, size.x, shift, origin, dir, inv, h);
+            trace_cube(ivec2(HEADER_CUBES + 3 * c, row), start + c, first, look, faces, size.x, shift, origin, dir, inv, h);
         }
     }
     if (h.face < 0) {
@@ -924,8 +933,9 @@ vec4 trace(StitchFragment f, vec3 dpx, vec3 dpy, vec3 dlx, vec3 dly) {
     return model_texel(stitch_texel_fetch(ivec2(face_texel(h.cube, h.face, h.q))), 0.55 + 0.45 * max(dot(n, eye), 0.0));
 }
 
-// One part's cubes against a ray (trace()'s loop, for a row of its own): its box first.
-void trace_row(int row, vec3 origin, vec3 dir, inout Hit h) {
+// One part's cubes against a ray (trace()'s loop, for a row of its own): its box first. look is where
+// the look's records start (rt_info.w).
+void trace_row(int row, int look, vec3 origin, vec3 dir, inout Hit h) {
     vec3 inv = 1.0 / dir;
     vec3 t0 = (decode_point(stitch_texel_fetch(ivec2(3, row))) - origin) * inv;
     vec3 t1 = (decode_point(stitch_texel_fetch(ivec2(4, row))) - origin) * inv;
@@ -939,9 +949,11 @@ void trace_row(int row, vec3 origin, vec3 dir, inout Hit h) {
     int shift = int(round(log2(float(size.x))));
     int start = read24(stitch_texel_fetch(ivec2(8, row)));
     int cubes = min(int(round(stitch_texel_fetch(ivec2(0, row)).r * 255.0)), MAX_CUBES);
+    int own = look - read24(stitch_texel_fetch(ivec2(12, row)));
+    int faces = read24(stitch_texel_fetch(ivec2(size.x - 4, 0)));
     for (int c = 0; c < MAX_CUBES; c++) {
         if (c < cubes) {
-            trace_cube(ivec2(HEADER_CUBES + 3 * c, row), start + c, first, size.x, shift, origin, dir, inv, h);
+            trace_cube(ivec2(HEADER_CUBES + 3 * c, row), start + c, first, own, faces, size.x, shift, origin, dir, inv, h);
         }
     }
 }
@@ -984,19 +996,22 @@ vec3 turn_z(vec3 p, float a) {
 }
 
 // A hit's texel: on a face with an animated texture (its first texture position's alpha 2,
-// armour_models.ANIMATED), the frame for the game's clock, by the part's row (texels 6 and 7: frames,
-// ticks a frame, how many a row, blended or not; a frame's size), blended into the next as Minecraft's
-// own animations are.
-vec4 animated_texel(Hit h, int row) {
+// armour_models.ANIMATED), the frame for the game's clock, by the look's first record (look, its texels
+// 30 and 31: frames, ticks a frame, how many a row, blended or not; a frame's size), blended into the
+// next as Minecraft's own animations are.
+vec4 animated_texel(Hit h, int look) {
     vec2 at = face_texel(h.cube, h.face, h.q);
     if (int(round(stitch_texel_fetch(h.cube + ivec2(3 + 3 * h.face, 0)).a * 255.0)) != 2) {
         return stitch_texel_fetch(ivec2(at));
     }
-    vec4 info = stitch_texel_fetch(ivec2(6, row));
+    ivec2 size2 = stitch_texture_size();
+    int at0 = look * CUBE_TEXELS;
+    ivec2 rec = ivec2(at0 & (size2.x - 1), read24(stitch_texel_fetch(ivec2(size2.x - 4, 0))) + at0 / size2.x);
+    vec4 info = stitch_texel_fetch(rec + ivec2(30, 0));
     int frames = max(1, int(round(info.r * 255.0)));
     float ticks = max(1.0, info.g * 255.0);
     int grid = max(1, int(round(info.b * 255.0)));
-    int size = read24(stitch_texel_fetch(ivec2(7, row)));
+    int size = read24(stitch_texel_fetch(rec + ivec2(31, 0)));
     vec2 frame = vec2(float(size >> 12), float(size & 4095));
     float now = stitch_game_time * 24000.0 / ticks;
     int k = int(mod(floor(now), float(frames)));
@@ -1059,7 +1074,6 @@ vec4 trace_cape(StitchFragment f, vec3 dpx, vec3 dpy, vec3 dlx, vec3 dly) {
     // about the hinge and rolled, the other way to how they're drawn; each flapping side's turned about
     // the upright through the pivot, the sides opposite
     Hit h = Hit(1e30, ivec2(0), -1, vec3(0.0), vec3(0.0));
-    int hitRow = row;
     int hitKind = 0;
     for (int k = 0; k < 5; k++) {
         if (k < rows) {
@@ -1075,9 +1089,8 @@ vec4 trace_cape(StitchFragment f, vec3 dpx, vec3 dpy, vec3 dlx, vec3 dly) {
                 dk = turn_y(d, -a);
             }
             float before = h.best;
-            trace_row(row + k, ok, dk, h);
+            trace_row(row + k, rt_info.w, ok, dk, h);
             if (h.best < before) {
-                hitRow = row + k;
                 hitKind = kind;
             }
         }
@@ -1100,7 +1113,7 @@ vec4 trace_cape(StitchFragment f, vec3 dpx, vec3 dpy, vec3 dlx, vec3 dly) {
 #ifdef STITCH_HAS_FRAGMENT_DEPTH
     stitch_set_depth(hitPos);
 #endif
-    return model_texel(animated_texel(h, hitRow), 0.55 + 0.45 * max(dot(nrm, eye), 0.0));
+    return model_texel(animated_texel(h, rt_info.w), 0.55 + 0.45 * max(dot(nrm, eye), 0.0));
 }
 
 vec4 stitch_texel(StitchFragment f, vec4 texel) {

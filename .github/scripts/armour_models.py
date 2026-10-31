@@ -458,24 +458,30 @@ def build():
 # Below a sheet's looks (the sheet the armour already draws), from row `top`:
 #     rows top, top + 1     by item tile (x): its chest (or leggings) model's, then its boots model's,
 #                           first header row, 0 none; on the leggings' sheet the second is by amulet,
-#                           its place in armour_looks.amulets() by number
+#                           its place in armour_looks.amulets() by number; capes past the item tiles
 #     rows top + 2, + 3     their colours
-#     header rows           five a model, one a body part (body, right arm, left arm, right leg, left
-#                           leg): its cube count; the sphere round it, centre and radius; its box; at
-#                           x 8 its first cube; from x HEADER_CUBES each cube's first three texels
-#                           (below), so a ray finds the cubes it meets in one row
+#     rows top + 4, + 5     where their looks' records start (below)
+#     header rows           five a shape (looks with the same cubes share one), one a body part (body,
+#                           right arm, left arm, right leg, left leg): its cube count; the sphere round
+#                           it, centre and radius; its box; at x 8 its first cube, at x 12 its shape's;
+#                           from x HEADER_CUBES each cube's first three texels (below), so a ray finds
+#                           the cubes it meets in one row
 #     cubes                 from row `cubes`, CUBE texels each (a cube's never cross a row):
 #                               0       red 255 if it's turned; green its faces, blue those with clear
-#                                       texels, a bit each in FACE_ORDER
+#                                       texels (in any look of its shape), a bit each in FACE_ORDER
 #                               1, 2    its box in the part's space (round a turned cube)
-#                               3 on    each face's texture positions at its top left, top right and
-#                                       bottom left corners, three texels a face in FACE_ORDER
 #                               21 on   a turned cube: the map from the part's space to its own, x ->
 #                                       a x + b with its corner at 0: a's nine numbers in 12 bits
 #                                       two a texel, then b and the cube's size in fixed point
-#     texels                what the faces draw, packed
-# The sheet's (width - 2, 0) holds top, (width - 3, 0) cubes, as 24-bit numbers. OptiFine's own tile for
-# an item (build_armour.cit) carries its models the same way, its tables in column 0 alone.
+#     looks' records        from row `faces`, CUBE texels a cube, each look's in its shape's cube order:
+#                               3 on    each face's texture positions at its top left, top right and
+#                                       bottom left corners, three texels a face in FACE_ORDER
+#                               30, 31  on a look's first, its animated texture's frames, ticks, grid
+#                                       and frame size
+#     texels                what the faces draw, packed: alike pieces once, the tallest first
+# The sheet's (width - 2, 0) holds top, (width - 3, 0) cubes, (width - 4, 0) faces, as 24-bit numbers.
+# OptiFine's own tile for an item (build_armour.cit) carries its models the same way, its tables in column
+# 0 alone.
 
 TRACE_SLOTS = ("body", "right_arm", "left_arm", "right_leg", "left_leg")
 CUBE = 32
@@ -598,70 +604,122 @@ def traced(layer, sheet, entries=None):
     width = sheet.width
     # a cube's texels share a row, found with a shift (the stitch reads them by width)
     assert width & (width - 1) == 0 and width % CUBE == 0, width
-    top = sheet.height
-    header = top + 4
-    cubes_row = header + 5 * len(models)
-    count = 0
     for kind, look, cubes, textures in models:
         for slot in TRACE_SLOTS:
             most = CAPE_ROW_CUBES if kind == "capes" else MAX_CUBES
             if len(cubes.get(slot, [])) > most:
                 raise SystemExit("%s %s %s: %d cubes; a body part's model can have %d" % (kind, look, slot, len(cubes[slot]), most))
-            count += len(cubes.get(slot, []))
-    rows = -(-count * CUBE // width)
-    shelf = Shelf(cubes_row + rows + 1, width)
+
+    def ordered(cubes, slot):
+        # the biggest first: their hits come early, and a ray stops testing cubes it meets beyond one;
+        # alike in size, by where they are, so looks of one shape list their cubes alike
+        return sorted(cubes.get(slot, []), key=lambda cube: (-math.prod(
+            max(p[i] for p in cube["corners"]) - min(p[i] for p in cube["corners"]) for i in range(3)), shape_of_cube(cube)))
+
+    # Looks with the same cubes (a skill cape and its trimmed one, wings in their colours, a robe's
+    # trims) share a shape: its header rows and its cubes' boxes. What differs is each look's own: its
+    # faces' texture positions, a record a cube, read from where the item's table says its look starts.
+    shapes, keys, shape_of = [], [], []
+    for r, (kind, look, cubes, textures) in enumerate(models):
+        key = (kind, shape_key(cubes))
+        if key not in keys:
+            keys.append(key)
+            shapes.append((kind, r))
+        shape_of.append(keys.index(key))
+    top = sheet.height
+    header = top + 6
+    cubes_row = header + 5 * len(shapes)
+    shape_cubes = sum(sum(len(models[r][2].get(slot, [])) for slot in TRACE_SLOTS) for _, r in shapes)
+    look_cubes = sum(sum(len(cubes.get(slot, [])) for slot in TRACE_SLOTS) for _, _, cubes, _ in models)
+    faces_row = cubes_row + -(-shape_cubes * CUBE // width) + 1
+    shelf = Shelf(faces_row + -(-look_cubes * CUBE // width) + 1, width)
     placed = {}
     pieces = []
-
     animations = {}
 
-    def place(r, uvs):
+    def piece_key(r, uvs):
+        """A face's piece of its texture: its key, and how to read its texture positions in the piece."""
         tex = uvs[0][0]
-        anim = models[r][3][tex].info.get("animation")
-        if anim:
-            # an animated texture goes in once, its frames side by side (as many as fit a row, then the
-            # next row); its faces read the first, and a face's texels say it's animated (ANIMATED)
-            frames, fw, fh, ticks, smooth = anim
-            key = (r, tex, "frames")
-            if key not in placed:
-                grid = max(1, min(frames, width // fw))
-                strip = Image.new("RGBA", (grid * fw, -(-frames // grid) * fh), (0, 0, 0, 0))
-                for k in range(frames):
-                    strip.paste(models[r][3][tex].crop((0, k * fh, fw, (k + 1) * fh)), ((k % grid) * fw, (k // grid) * fh))
-                placed[key] = shelf.place(strip.width, strip.height)
-                pieces.append((strip, placed[key]))
-                animations[r] = (frames, ticks, grid, fw, fh, smooth)
-            ax, ay = placed[key]
-            return [(round(u[1] + ax), round(u[2] + ay)) for u in uvs]
+        if models[r][3][tex].info.get("animation"):
+            return (r, tex, "frames"), 0, 0
         xs = [u[1] for u in uvs]
         ys = [u[2] for u in uvs]
         x0, y0 = math.floor(min(xs) + 1e-6), math.floor(min(ys) + 1e-6)
         x1, y1 = math.ceil(max(xs) - 1e-6), math.ceil(max(ys) - 1e-6)
-        key = (r, tex, x0, y0, x1, y1)
-        if key not in placed:
-            w, h = max(1, x1 - x0), max(1, y1 - y0)
-            placed[key] = shelf.place(w, h)
-            pieces.append((models[r][3][tex].crop((x0, y0, x0 + w, y0 + h)), placed[key]))
+        return (r, tex, x0, y0, x1, y1), x0, y0
+
+    # Every face's piece first, so the pieces go in once each: alike pieces (by their texels, from any
+    # model: a skill cape and its trimmed one, wings in their colours) share a place, and they're packed
+    # tallest first, so a shelf row is no taller than its pieces need.
+    images = {}
+    for r, (kind, look, cubes, textures) in enumerate(models):
+        for slot in TRACE_SLOTS:
+            for cube in cubes.get(slot, []):
+                for name in FACE_ORDER:
+                    uvs = cube["faces"].get(name)
+                    if uvs is None:
+                        continue
+                    key, x0, y0 = piece_key(r, uvs)
+                    if key in images:
+                        continue
+                    tex = uvs[0][0]
+                    anim = textures[tex].info.get("animation")
+                    if anim:
+                        # an animated texture goes in once, its frames side by side (as many as fit a row,
+                        # then the next row); its faces read the first, and a face's texels say it's
+                        # animated (ANIMATED)
+                        frames, fw, fh, ticks, smooth = anim
+                        grid = max(1, min(frames, width // fw))
+                        image = Image.new("RGBA", (grid * fw, -(-frames // grid) * fh), (0, 0, 0, 0))
+                        for k in range(frames):
+                            image.paste(textures[tex].crop((0, k * fh, fw, (k + 1) * fh)), ((k % grid) * fw, (k // grid) * fh))
+                        animations[r] = (frames, ticks, grid, fw, fh, smooth)
+                    else:
+                        x1, y1 = key[4], key[5]
+                        w, h = max(1, x1 - x0), max(1, y1 - y0)
+                        image = textures[tex].crop((x0, y0, x0 + w, y0 + h))
+                    images[key] = image
+    alike = {}
+    for key, image in images.items():
+        alike.setdefault((image.size, image.tobytes()), []).append(key)
+    for (size, _), keys in sorted(alike.items(), key=lambda item: (-item[0][0][1], -item[0][0][0])):
+        at = shelf.place(*size)
+        pieces.append((images[keys[0]], at))
+        for key in keys:
+            placed[key] = at
+
+    def place(r, uvs):
+        key, x0, y0 = piece_key(r, uvs)
         ax, ay = placed[key]
         return [(round(u[1] - x0 + ax), round(u[2] - y0 + ay)) for u in uvs]
 
     texel_rows = {}
+
+    def put(record, base, texels):
+        for k, px in texels.items():
+            at = record * CUBE + k
+            texel_rows.setdefault(base + at // width, {})[at % width] = px
+
+    # each shape's header rows and cube records, the see-through faces of all its looks together
     c = 0
-    for r, (kind, look, cubes, textures) in enumerate(models):
-        for s, slot in enumerate(TRACE_SLOTS):
-            row = header + 5 * r + s
+    for si, (kind, r0) in enumerate(shapes):
+        cubes = models[r0][2]
+        sharing = [r for r in range(len(models)) if shape_of[r] == si]
+        first = c
+        for s_, slot in enumerate(TRACE_SLOTS):
+            row = header + 5 * si + s_
             line = texel_rows.setdefault(row, {})
-            # the biggest first: their hits come early, and a ray stops testing cubes it meets beyond one
-            mine = sorted(cubes.get(slot, []), key=lambda cube: -math.prod(
-                max(p[i] for p in cube["corners"]) - min(p[i] for p in cube["corners"]) for i in range(3)))
+            # where the shape's cubes start, for a look's records to follow its order
+            line[12] = u24(first)
+            mine = ordered(cubes, slot)
             if not mine:
                 line[0] = (0, 0, 0, QUIET)
                 continue
+            what = "%s %s" % (models[r0][1], slot)
             pts = [p for cube in mine for p in cube["corners"]]
             lo = [min(p[i] for p in pts) for i in range(3)]
             hi = [max(p[i] for p in pts) for i in range(3)]
             centre = [(lo[i] + hi[i]) / 2 for i in range(3)]
-            what = "%s %s" % (look, slot)
             line[0] = (len(mine), 0, 0, QUIET)
             line[1] = tuple(enc(x, what) for x in centre) + (QUIET,)
             line[2] = (min(255, math.ceil(max(math.dist(centre, p) for p in pts) * 4)), 0, 0, QUIET)
@@ -681,19 +739,13 @@ def traced(layer, sheet, entries=None):
                 chi = [max(p[i] for p in cube["corners"]) for i in range(3)]
                 faces, cut = 0, 0
                 for f, name in enumerate(FACE_ORDER):
-                    uvs = cube["faces"].get(name)
-                    if uvs is None:
+                    if name not in cube["faces"]:
                         continue
                     faces |= 1 << f
-                    if clear(textures[uvs[0][0]], uvs):
-                        cut |= 1 << f
-                    tuvs = place(r, uvs)
-                    for k, corner in enumerate((0, 1, 3)):
-                        u, v = tuvs[corner]
-                        assert 0 <= u < 4096 and 0 <= v < 4096
-                        texels[3 + 3 * f + k] = u24(u << 12 | v)
-                    if models[r][3][uvs[0][0]].info.get("animation"):
-                        texels[3 + 3 * f] = texels[3 + 3 * f][:3] + (ANIMATED,)
+                    for r in sharing:
+                        uvs = ordered(models[r][2], slot)[n]["faces"][name]
+                        if clear(models[r][3][uvs[0][0]], uvs):
+                            cut |= 1 << f
                 # An upright cube's box is kept to a quarter of a pixel, too coarse for an amulet's pieces
                 # (a fifth of a pixel to two pixels across; a thin chain's faces rounded together) and a
                 # cape's layers (a panel a hundredth of a pixel over its backing, which would hide it):
@@ -706,31 +758,53 @@ def traced(layer, sheet, entries=None):
                     texels[2] = tuple(enc_hi(x) for x in chi) + (QUIET,)
                     # the part's space to the cube's own: m is a turn (and the mirror into Minecraft's
                     # space), so its inverse is its transpose
-                    a = [[cube["m"][i][j] for j in range(3)] for i in range(3)]
-                    av = [sum(a[i][j] * cube["v"][j] for j in range(3)) for i in range(3)]
-                    b = [-(av[i] + cube["lo"][i]) for i in range(3)]
-                    flat = [a[i][j] for i in range(3) for j in range(3)] + [0.0]
+                    m = [[cube["m"][i][j] for j in range(3)] for i in range(3)]
+                    mv = [sum(m[i][j] * cube["v"][j] for j in range(3)) for i in range(3)]
+                    off = [-(mv[i] + cube["lo"][i]) for i in range(3)]
+                    flat = [m[i][j] for i in range(3) for j in range(3)] + [0.0]
                     for k in range(5):
                         texels[21 + k] = unit_pair(flat[2 * k], flat[2 * k + 1])
                     for k in range(3):
-                        texels[26 + k] = fixed(b[k])
+                        texels[26 + k] = fixed(off[k])
                         texels[29 + k] = fixed(cube["hi"][k] - cube["lo"][k])
                 else:
                     texels[1] = tuple(enc(x, what) for x in clo) + (QUIET,)
                     texels[2] = tuple(enc(x, what) for x in chi) + (QUIET,)
-                for k, px in texels.items():
-                    at = c * CUBE + k
-                    texel_rows.setdefault(cubes_row + at // width, {})[at % width] = px
+                put(c, cubes_row, texels)
                 # its first three texels again in the part's header row, beside the other cubes'
                 for k in range(3):
                     line[HEADER_CUBES + 3 * n + k] = texels[k]
                 c += 1
-            if r in animations:
-                # its animated texture: frames, ticks a frame and how many a row (blended between frames,
-                # alpha ANIMATED), and a frame's size
-                frames, ticks, grid, fw, fh, smooth = animations[r]
-                line[6] = (frames, min(255, ticks), grid, ANIMATED if smooth else QUIET)
-                line[7] = u24(fw << 12 | fh)
+
+    # each look's records, a cube each in its shape's order: the cube's faces' texture positions (texels
+    # 3 on, three a face, as the shape's record would have them); the look's first record's texels 30 and
+    # 31 its animated texture's, if it has one
+    look_first = []
+    f_ = 0
+    for r, (kind, look, cubes, textures) in enumerate(models):
+        look_first.append(f_)
+        for slot in TRACE_SLOTS:
+            for cube in ordered(cubes, slot):
+                texels = {}
+                for f, name in enumerate(FACE_ORDER):
+                    uvs = cube["faces"].get(name)
+                    if uvs is None:
+                        continue
+                    tuvs = place(r, uvs)
+                    for k, corner in enumerate((0, 1, 3)):
+                        u, v = tuvs[corner]
+                        assert 0 <= u < 4096 and 0 <= v < 4096
+                        texels[3 + 3 * f + k] = u24(u << 12 | v)
+                    if textures[uvs[0][0]].info.get("animation"):
+                        texels[3 + 3 * f] = texels[3 + 3 * f][:3] + (ANIMATED,)
+                if f_ == look_first[r] and r in animations:
+                    # its animated texture: frames, ticks a frame and how many a row (blended between
+                    # frames, alpha ANIMATED), and a frame's size
+                    frames, ticks, grid, fw, fh, smooth = animations[r]
+                    texels[30] = (frames, min(255, ticks), grid, ANIMATED if smooth else QUIET)
+                    texels[31] = u24(fw << 12 | fh)
+                put(f_, faces_row, texels)
+                f_ += 1
     height = shelf.bottom + 1
     if height > 4095:
         raise SystemExit("the layer %d sheet with its traced models needs %d rows; 4095 is the most" % (layer, height))
@@ -750,12 +824,28 @@ def traced(layer, sheet, entries=None):
             i = TABLE_ROW[kind]
             r = next((r for r, m in enumerate(models) if m[0] == kind and m[1] == look_name(item)), None)
             if r is not None:
-                px[x, top + i] = u24(header + 5 * r)
+                px[x, top + i] = u24(header + 5 * shape_of[r])
+                px[x, top + 4 + i] = u24(look_first[r])
             col = colour(item)
             px[x, top + 2 + i] = ((col >> 16) & 255, (col >> 8) & 255, col & 255, QUIET)
     px[width - 2, 0] = u24(top)
     px[width - 3, 0] = u24(cubes_row)
+    px[width - 4, 0] = u24(faces_row)
     return out
+
+
+def shape_of_cube(cube):
+    """A cube's shape, for sorting and comparing: its corners, how it turns, its faces."""
+    r = lambda v: round(v, 3)
+    return (tuple(tuple(r(x) for x in p) for p in cube["corners"]), bool(cube["turned"]),
+            tuple(tuple(r(x) for x in row) for row in cube["m"]), tuple(r(x) for x in cube["v"]),
+            tuple(r(x) for x in cube["lo"]), tuple(r(x) for x in cube["hi"]), tuple(sorted(cube["faces"])))
+
+
+def shape_key(cubes):
+    """A model's shape: every part's cubes, and a cape's hinge, pivot and rows."""
+    key = tuple((slot, tuple(sorted(shape_of_cube(c) for c in cubes.get(slot, [])))) for slot in TRACE_SLOTS)
+    return key + tuple(tuple(cubes[k]) if k in cubes else None for k in ("hinge", "flap_pivot", "rows"))
 
 
 def glsl(sets):
