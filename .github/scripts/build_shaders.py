@@ -232,6 +232,125 @@ void main() {
     vec4 msColor = Color;
     vec2 msUV = UV0;
     vec2 msOffset = msOverhead(msColor, msUV);"""
+# MineScape minimap (MinimapInfo in the plugin): an invisible item frame near the player holds a map whose
+# top row starts with these four colours, and wherever it is in the world this draws it in the top right
+# of the screen, turned with the camera. Maps are their own 128 x 128 texture, whose corners are UV0's.
+# %(camera)s is the camera's right in the world; %(depth)s is the front of the depth buffer.
+MINIMAP_VERTEX = """
+// The colours are the map palette's fire and ice in two brightnesses, nothing a drawn map has in a row.
+const ivec3 MS_MINIMAP_MARK[4] = ivec3[](ivec3(255, 0, 0), ivec3(160, 160, 255), ivec3(180, 0, 0), ivec3(84, 84, 135));
+// Half the map's height on screen and its gap from the corner, in clip space (half the screen is 1),
+// and how far past the map's own 64 pixels the frame round it reaches.
+const float MS_MINIMAP_SIZE = 0.3;
+const float MS_MINIMAP_GAP = 0.03;
+const float MS_MINIMAP_REACH = 72.0 / 64.0;
+// The pixel after the marks is this colour when the map is to stay with north up.
+const ivec3 MS_MINIMAP_NORTH_UP = ivec3(135, 0, 0);
+// The pixel after that says which corner of the screen it goes in, if not the top right.
+const ivec3 MS_MINIMAP_TOP_LEFT = ivec3(180, 0, 0);
+const ivec3 MS_MINIMAP_BOTTOM_LEFT = ivec3(220, 0, 0);
+const ivec3 MS_MINIMAP_BOTTOM_RIGHT = ivec3(255, 0, 0);
+
+bool msIsMinimap() {
+    if (textureSize(Sampler0, 0) != ivec2(128)) {
+        return false;
+    }
+    for (int i = 0; i < 4; i++) {
+        if (ivec3(round(texelFetch(Sampler0, ivec2(i, 0), 0).rgb * 255.0)) != MS_MINIMAP_MARK[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// Which way the camera faces, for the map to be turned by. The frame stays still on the screen.
+float msMinimapYaw() {
+    vec3 right = %(camera)s;
+    return atan(right.z, right.x);
+}
+
+// What the fragment shader is told besides where it is: the yaw, moved up by 8 to turn with the camera
+// and by 24 to stay with north up, so that it is never 0, which is what everything else has.
+float msMinimapTurn() {
+    bool northUp = ivec3(round(texelFetch(Sampler0, ivec2(4, 0), 0).rgb * 255.0)) == MS_MINIMAP_NORTH_UP;
+    return (northUp ? 24.0 : 8.0) + msMinimapYaw();
+}
+
+vec2 msMinimapCorner() {
+    ivec3 chosen = ivec3(round(texelFetch(Sampler0, ivec2(5, 0), 0).rgb * 255.0));
+    return vec2(chosen == MS_MINIMAP_TOP_LEFT || chosen == MS_MINIMAP_BOTTOM_LEFT ? -1.0 : 1.0, chosen == MS_MINIMAP_BOTTOM_LEFT || chosen == MS_MINIMAP_BOTTOM_RIGHT ? -1.0 : 1.0);
+}
+
+// Sized by the screen's height: the projection's two scales give its shape whatever the field of view.
+vec4 msMinimapPosition(vec2 corner) {
+    float half_size = MS_MINIMAP_SIZE * MS_MINIMAP_REACH;
+    float shape = ProjMat[0][0] / ProjMat[1][1];
+    vec2 centre = msMinimapCorner() * vec2(1.0 - (half_size + MS_MINIMAP_GAP) * shape, 1.0 - half_size - MS_MINIMAP_GAP);
+    return vec4(centre + vec2(corner.x, -corner.y) * 2.0 * half_size * vec2(shape, 1.0), %(depth)s, 1.0);
+}
+
+"""
+MINIMAP_POSITION = """
+    msMinimap = vec3(0.0);
+    if (msIsMinimap()) {
+        msMinimap = vec3((UV0 - 0.5) * 144.0, msMinimapTurn());
+        gl_Position = msMinimapPosition(UV0 - 0.5);
+    }"""
+# msMinimap is where on the frame this is, in map pixels from the middle, and msMinimapTurn. Inside the
+# frame the map, and the player: a dot if the map turns so that they always face up, or else an arrow
+# the way they face. Round it hewn stone in the colours of the hud's orbs, lit from the top left as OSRS's
+# is, in pixels as big as the map's. Unmapped ground is black, and neither light nor fog reach any of it.
+MINIMAP_FRAGMENT = """
+    if (msMinimap.z > 0.5) {
+        vec2 msAt = floor(msMinimap.xy) + 0.5;
+        float msRadius = length(msAt);
+        vec4 msPixel;
+        if (msRadius < 60.0) {
+            bool msNorthUp = msMinimap.z > 16.0;
+            float msYaw = msMinimap.z - (msNorthUp ? 24.0 : 8.0);
+            float msCos = cos(msYaw), msSin = sin(msYaw);
+            vec2 msMap = vec2(msMinimap.x, -msMinimap.y);
+            if (!msNorthUp) {
+                msMap = mat2(msCos, -msSin, msSin, msCos) * msMap;
+            }
+            msPixel = texture(Sampler0, vec2(msMap.x, -msMap.y) / 128.0 + 0.5);
+            if (msPixel.a < 0.5) {
+                msPixel = vec4(0.0, 0.0, 0.0, 1.0);
+            }
+            vec2 msFacing = mat2(msCos, msSin, -msSin, msCos) * vec2(msAt.x, -msAt.y);
+            if (msNorthUp ? msFacing.y > -2.5 && msFacing.y < 3.5 && abs(msFacing.x) < (3.5 - msFacing.y) * 0.5 : msRadius < 1.6) {
+                msPixel = vec4(1.0);
+            }
+        } else {
+            // Twelve blocks of uneven width, each standing out as far as it happens to.
+            float msTurn = atan(msAt.y, msAt.x) / 6.28318 + 0.5;
+            float msAlong = msTurn * 12.0 + 0.25 * sin(msTurn * 31.4159);
+            float msBlock = floor(msAlong);
+            float msOuter = 69.0 + floor(fract(sin(mod(msBlock, 12.0) * 91.7 + 3.1) * 4375.85) * 3.0);
+            if (msRadius > msOuter) {
+                discard;
+            }
+            float msLit = dot(msAt / msRadius, vec2(-0.7071, -0.7071));
+            float msGrain = fract(sin(dot(floor(msAt / 2.0), vec2(12.9898, 78.233))) * 43758.5453);
+            vec3 msStone = msGrain < 0.2 ? vec3(0.365, 0.329, 0.290) : msGrain < 0.8 ? vec3(0.298, 0.263, 0.220) : vec3(0.243, 0.204, 0.141);
+            if (msRadius > msOuter - 1.0) {
+                msStone = vec3(0.075, 0.067, 0.055);
+            } else if (msRadius < 61.0) {
+                msStone = vec3(0.075, 0.067, 0.055);
+            } else if (fract(msAlong) < 0.04) {
+                msStone = vec3(0.125, 0.129, 0.125);
+            } else if (msRadius > msOuter - 2.5) {
+                msStone = msLit > 0.25 ? vec3(0.545, 0.506, 0.427) : msLit < -0.25 ? vec3(0.176, 0.173, 0.161) : msStone;
+            } else if (msRadius < 62.5) {
+                msStone = msLit < -0.25 ? vec3(0.494, 0.455, 0.380) : msLit > 0.25 ? vec3(0.176, 0.173, 0.161) : msStone;
+            }
+            msPixel = vec4(msStone, 1.0);
+        }
+%(write)s
+        return;
+    }"""
+# The front of the depth buffer: from 26.2 depth runs the other way, far at -1 and near at 1.
+MINIMAP_REVERSED_DEPTH_FROM = 88
 MAIN = "void main() {"
 POSITION = "gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);"
 LIFT = """vec3 position = Position;
@@ -367,8 +486,9 @@ def patch(files, form):
     """The shader with the slot text lift and overhead effects, or None if its anchors are not there."""
     vsh_name = next(n for n in files if n.endswith(".vsh"))
     json_name = vsh_name[:-4] + ".json"
-    vsh = files[vsh_name]
-    if vsh.count(MAIN) != 1 or vsh.count(POSITION) != 1:
+    fsh_name = vsh_name[:-4] + ".fsh"
+    vsh, fsh = files[vsh_name], files.get(fsh_name, "")
+    if vsh.count(MAIN) != 1 or vsh.count(POSITION) != 1 or fsh.count(MAIN) != 1:
         return None
     patched = dict(files)
     head, body = vsh.split(MAIN, 1)
@@ -386,7 +506,19 @@ def patch(files, form):
         directive = "#include" if "#include" in vsh else "#moj_import"
         include = "" if "globals.glsl" in vsh else directive + " <minecraft:globals.glsl>\n"
         clock = include + "#define MS_CLOCK GameTime\n\n"
-    patched[vsh_name] = with_draw_parameters(head + clock + FUNCTIONS + body.replace(POSITION, LIFT, 1), form)
+    location = varying_location(vsh, fsh)
+    layout = "" if location is None else "layout(location = %d) " % location
+    camera = "IViewRotMat * vec3(1.0, 0.0, 0.0)" if "IViewRotMat" in vsh else "transpose(mat3(ModelViewMat)) * vec3(1.0, 0.0, 0.0)"
+    depth = "0.9999" if form >= MINIMAP_REVERSED_DEPTH_FROM else "-0.9999"
+    minimap = layout + "out vec3 msMinimap;\n" + MINIMAP_VERTEX % {"camera": camera, "depth": depth}
+    moved = body.replace(POSITION, LIFT + MINIMAP_POSITION, 1)
+    # after Sampler0, which the functions start by declaring
+    sampler = "uniform sampler2D Sampler0;\n"
+    patched[vsh_name] = with_draw_parameters(head + clock + FUNCTIONS.replace(sampler, sampler + minimap, 1) + moved, form)
+    head, body = fsh.split(MAIN, 1)
+    # 26.3 draws some text in two passes, and its alpha-only one writes no colour
+    write = "#ifdef OIT_ALPHA_ONLY\n        executeAlphaOnlyPhase(gl_FragCoord.z, msPixel.a);\n#else\n        fragColor = msPixel;\n#endif" if "OIT_ALPHA_ONLY" in fsh else "        fragColor = msPixel;"
+    patched[fsh_name] = head + layout + "in vec3 msMinimap;\n\n" + MAIN + MINIMAP_FRAGMENT % {"write": write} + body
     return patched
 
 
