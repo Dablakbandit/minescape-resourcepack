@@ -88,7 +88,11 @@ def items(piece):
         shape = entry.get("shape", SHAPES[piece][0])
         if shape not in SHAPES[piece]:
             raise ValueError("%s: shape %r is none of %s" % (where, shape, ", ".join(SHAPES[piece])))
+        icon_colour = entry.get("icon_colour", entry["colour"]).lstrip("#")
+        if not re.fullmatch(r"[0-9a-fA-F]{6}", icon_colour):
+            raise ValueError("%s: icon_colour %r is not #rrggbb" % (where, entry["icon_colour"]))
         found[tile] = {"look": look, "colour": tuple(int(colour[i:i + 2], 16) for i in (0, 2, 4)),
+                       "icon_colour": tuple(int(icon_colour[i:i + 2], 16) for i in (0, 2, 4)),
                        "shape": SHAPES[piece].index(shape), "icon": entry["icon"], "name": entry.get("name", str(tile)),
                        "custom_model_data": entry["custom_model_data"]}
     return found

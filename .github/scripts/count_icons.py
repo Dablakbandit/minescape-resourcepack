@@ -427,7 +427,7 @@ def armour_icon(piece, item):
         if not source or not os.path.exists(source):
             raise SystemExit("armour/%s.json %s: no texture %s for its icon's %s" % (piece, item["name"], value, name))
         image = Image.open(source).convert("RGBA")
-        r, g, b = item["colour"]
+        r, g, b = item["icon_colour"]
         pixels = [(round(pr * r / 255), round(pg * g / 255), round(pb * b / 255), pa) for pr, pg, pb, pa in image.getdata()]
         image.putdata(pixels)
         out = "item/custom/count/armour/%s/%d_%s" % (piece, item["custom_model_data"], name)

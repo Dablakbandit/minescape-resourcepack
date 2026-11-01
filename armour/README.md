@@ -85,6 +85,7 @@ Each item is one line in its piece's file:
 | `look`              | The look's model in `models/<piece>/`, without `.bbmodel`; or `plain`.                        |
 | `colour`            | `#rrggbb`: the dye for the look's greys and for the icon.                                     |
 | `icon`              | The inventory icon's item model (see 3).                                                      |
+| `icon_colour`       | Optional `#rrggbb`: paints the icon in place of `colour`. `#ffffff` keeps a full-colour icon as painted while the look is still dyed. |
 | `shape`             | How it sits on the body (legs and chest only, see below). Leave it out for `legs` / `none`.   |
 
 Shapes:
