@@ -309,7 +309,10 @@ MINIMAP_POSITION = """
         gl_Position = msMinimapPosition(UV0 - 0.5);
     }"""
 # msMinimap is where on the frame this is, in map pixels from the middle, and msMinimapTurn. Inside the
-# frame the map, and the player: a square white dot that stays square however the map turns. Round it a
+# frame the map, its markers and the player: a square white dot that stays square however the map turns.
+# A marker is one pixel of the map in a colour the ground never takes (MinimapColours), found from the
+# seven by seven round where this is and drawn upright, as OSRS's are: round, lit from the top left and
+# with a shadow to the bottom right, wherever the map has turned it to. Round it all a
 # thin band of stone with a dark line either side, as OSRS's, in the colours of the hud's orbs, lit from
 # the top left, in pixels as big as the map's. Unmapped ground is black, and neither light nor fog reach any of it.
 MINIMAP_FRAGMENT = """
@@ -327,6 +330,43 @@ MINIMAP_FRAGMENT = """
             }
             msPixel = texture(Sampler0, vec2(msMap.x, -msMap.y) / 128.0 + 0.5);
             if (msPixel.a < 0.5) {
+                msPixel = vec4(0.0, 0.0, 0.0, 1.0);
+            }
+            mat2 msTurned = mat2(msCos, -msSin, msSin, msCos);
+            ivec2 msHome = ivec2(floor(vec2(msMap.x, -msMap.y) + 64.0));
+            vec3 msDot = vec3(-1.0);
+            bool msShadow = false;
+            for (int msV = -3; msV <= 3; msV++) {
+                for (int msU = -3; msU <= 3; msU++) {
+                    ivec2 msTexel = msHome + ivec2(msU, msV);
+                    ivec3 msMark = ivec3(round(texelFetch(Sampler0, msTexel, 0).rgb * 255.0));
+                    vec3 msColour = msMark == ivec3(180, 0, 0) ? vec3(1.0, 1.0, 1.0)
+                        : msMark == ivec3(220, 0, 0) ? vec3(1.0, 0.0, 0.0)
+                        : msMark == ivec3(255, 0, 0) ? vec3(1.0, 1.0, 0.0)
+                        : msMark == ivec3(135, 0, 0) ? vec3(0.0, 1.0, 0.0)
+                        : msMark == ivec3(112, 112, 180) ? vec3(1.0, 0.5, 0.0)
+                        : msMark == ivec3(138, 138, 220) ? vec3(0.2, 0.45, 1.0)
+                        : vec3(-1.0);
+                    if (msColour.r < 0.0) {
+                        continue;
+                    }
+                    vec2 msSpot = vec2(msTexel) + 0.5 - 64.0;
+                    vec2 msOnScreen = vec2(msSpot.x, -msSpot.y);
+                    if (!msNorthUp) {
+                        msOnScreen = msOnScreen * msTurned;
+                    }
+                    ivec2 msFrom = ivec2(round(msAt - floor(vec2(msOnScreen.x, -msOnScreen.y)) - 0.5));
+                    float msRound = abs(float(msFrom.x) + 0.5) + abs(float(msFrom.y) + 0.5);
+                    if (msRound < 3.0) {
+                        msDot = msColour * (msFrom.x + msFrom.y >= 1 ? 0.75 : 1.0);
+                    } else if (msRound == 3.0 && msFrom.x + msFrom.y >= 1) {
+                        msShadow = true;
+                    }
+                }
+            }
+            if (msDot.r >= 0.0) {
+                msPixel = vec4(msDot, 1.0);
+            } else if (msShadow) {
                 msPixel = vec4(0.0, 0.0, 0.0, 1.0);
             }
             if (abs(msAt.x) < 2.0 && abs(msAt.y) < 2.0) {
