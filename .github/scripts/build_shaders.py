@@ -239,17 +239,24 @@ void main() {
 MINIMAP_VERTEX = """
 // The colours are the map palette's fire and ice in two brightnesses, nothing a drawn map has in a row.
 const ivec3 MS_MINIMAP_MARK[4] = ivec3[](ivec3(255, 0, 0), ivec3(160, 160, 255), ivec3(180, 0, 0), ivec3(84, 84, 135));
-// Half the map's height on screen and its gap from the corner, in clip space (half the screen is 1),
-// and how far past the map's own 64 pixels the frame round it reaches.
+// Half the map's height on screen, as a player chooses it, and its gap from the corner, in clip space
+// (half the screen is 1), and how far past the map's own 64 pixels the frame round it reaches.
 const float MS_MINIMAP_SIZE = 0.3;
+const float MS_MINIMAP_SMALL = 0.2;
+const float MS_MINIMAP_LARGE = 0.4;
+const float MS_MINIMAP_EXTRA_LARGE = 0.5;
 const float MS_MINIMAP_GAP = 0.03;
-const float MS_MINIMAP_REACH = 72.0 / 64.0;
+const float MS_MINIMAP_REACH = 66.0 / 64.0;
 // The pixel after the marks is this colour when the map is to stay with north up.
 const ivec3 MS_MINIMAP_NORTH_UP = ivec3(135, 0, 0);
 // The pixel after that says which corner of the screen it goes in, if not the top right.
 const ivec3 MS_MINIMAP_TOP_LEFT = ivec3(180, 0, 0);
 const ivec3 MS_MINIMAP_BOTTOM_LEFT = ivec3(220, 0, 0);
 const ivec3 MS_MINIMAP_BOTTOM_RIGHT = ivec3(255, 0, 0);
+// And the pixel after that its size, if not the usual one, in the same three colours.
+const ivec3 MS_MINIMAP_CHOSE_SMALL = ivec3(180, 0, 0);
+const ivec3 MS_MINIMAP_CHOSE_LARGE = ivec3(220, 0, 0);
+const ivec3 MS_MINIMAP_CHOSE_EXTRA_LARGE = ivec3(255, 0, 0);
 
 bool msIsMinimap() {
     if (textureSize(Sampler0, 0) != ivec2(128)) {
@@ -281,9 +288,14 @@ vec2 msMinimapCorner() {
     return vec2(chosen == MS_MINIMAP_TOP_LEFT || chosen == MS_MINIMAP_BOTTOM_LEFT ? -1.0 : 1.0, chosen == MS_MINIMAP_BOTTOM_LEFT || chosen == MS_MINIMAP_BOTTOM_RIGHT ? -1.0 : 1.0);
 }
 
+float msMinimapSize() {
+    ivec3 chosen = ivec3(round(texelFetch(Sampler0, ivec2(6, 0), 0).rgb * 255.0));
+    return chosen == MS_MINIMAP_CHOSE_SMALL ? MS_MINIMAP_SMALL : chosen == MS_MINIMAP_CHOSE_LARGE ? MS_MINIMAP_LARGE : chosen == MS_MINIMAP_CHOSE_EXTRA_LARGE ? MS_MINIMAP_EXTRA_LARGE : MS_MINIMAP_SIZE;
+}
+
 // Sized by the screen's height: the projection's two scales give its shape whatever the field of view.
 vec4 msMinimapPosition(vec2 corner) {
-    float half_size = MS_MINIMAP_SIZE * MS_MINIMAP_REACH;
+    float half_size = msMinimapSize() * MS_MINIMAP_REACH;
     float shape = ProjMat[0][0] / ProjMat[1][1];
     vec2 centre = msMinimapCorner() * vec2(1.0 - (half_size + MS_MINIMAP_GAP) * shape, 1.0 - half_size - MS_MINIMAP_GAP);
     return vec4(centre + vec2(corner.x, -corner.y) * 2.0 * half_size * vec2(shape, 1.0), %(depth)s, 1.0);
@@ -293,13 +305,13 @@ vec4 msMinimapPosition(vec2 corner) {
 MINIMAP_POSITION = """
     msMinimap = vec3(0.0);
     if (msIsMinimap()) {
-        msMinimap = vec3((UV0 - 0.5) * 144.0, msMinimapTurn());
+        msMinimap = vec3((UV0 - 0.5) * 132.0, msMinimapTurn());
         gl_Position = msMinimapPosition(UV0 - 0.5);
     }"""
 # msMinimap is where on the frame this is, in map pixels from the middle, and msMinimapTurn. Inside the
-# frame the map, and the player: a dot if the map turns so that they always face up, or else an arrow
-# the way they face. Round it hewn stone in the colours of the hud's orbs, lit from the top left as OSRS's
-# is, in pixels as big as the map's. Unmapped ground is black, and neither light nor fog reach any of it.
+# frame the map, and the player: a square white dot that stays square however the map turns. Round it a
+# thin band of stone with a dark line either side, as OSRS's, in the colours of the hud's orbs, lit from
+# the top left, in pixels as big as the map's. Unmapped ground is black, and neither light nor fog reach any of it.
 MINIMAP_FRAGMENT = """
     if (msMinimap.z > 0.5) {
         vec2 msAt = floor(msMinimap.xy) + 0.5;
@@ -317,31 +329,23 @@ MINIMAP_FRAGMENT = """
             if (msPixel.a < 0.5) {
                 msPixel = vec4(0.0, 0.0, 0.0, 1.0);
             }
-            vec2 msFacing = mat2(msCos, msSin, -msSin, msCos) * vec2(msAt.x, -msAt.y);
-            if (msNorthUp ? msFacing.y > -2.5 && msFacing.y < 3.5 && abs(msFacing.x) < (3.5 - msFacing.y) * 0.5 : msRadius < 1.6) {
+            if (abs(msAt.x) < 2.0 && abs(msAt.y) < 2.0) {
                 msPixel = vec4(1.0);
             }
         } else {
-            // Twelve blocks of uneven width, each standing out as far as it happens to.
-            float msTurn = atan(msAt.y, msAt.x) / 6.28318 + 0.5;
-            float msAlong = msTurn * 12.0 + 0.25 * sin(msTurn * 31.4159);
-            float msBlock = floor(msAlong);
-            float msOuter = 69.0 + floor(fract(sin(mod(msBlock, 12.0) * 91.7 + 3.1) * 4375.85) * 3.0);
-            if (msRadius > msOuter) {
+            if (msRadius > 65.0) {
                 discard;
             }
             float msLit = dot(msAt / msRadius, vec2(-0.7071, -0.7071));
             float msGrain = fract(sin(dot(floor(msAt / 2.0), vec2(12.9898, 78.233))) * 43758.5453);
             vec3 msStone = msGrain < 0.2 ? vec3(0.365, 0.329, 0.290) : msGrain < 0.8 ? vec3(0.298, 0.263, 0.220) : vec3(0.243, 0.204, 0.141);
-            if (msRadius > msOuter - 1.0) {
+            if (msRadius > 64.0 || msRadius < 61.0) {
                 msStone = vec3(0.075, 0.067, 0.055);
-            } else if (msRadius < 61.0) {
-                msStone = vec3(0.075, 0.067, 0.055);
-            } else if (fract(msAlong) < 0.04) {
+            } else if (fract((atan(msAt.y, msAt.x) / 6.28318 + 0.5) * 16.0) < 0.03) {
                 msStone = vec3(0.125, 0.129, 0.125);
-            } else if (msRadius > msOuter - 2.5) {
+            } else if (msRadius > 63.0) {
                 msStone = msLit > 0.25 ? vec3(0.545, 0.506, 0.427) : msLit < -0.25 ? vec3(0.176, 0.173, 0.161) : msStone;
-            } else if (msRadius < 62.5) {
+            } else if (msRadius < 62.0) {
                 msStone = msLit < -0.25 ? vec3(0.494, 0.455, 0.380) : msLit > 0.25 ? vec3(0.176, 0.173, 0.161) : msStone;
             }
             msPixel = vec4(msStone, 1.0);
