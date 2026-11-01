@@ -161,7 +161,7 @@ def process_input():
         model_file = f"assets/ms/models/{model.replace('ms:', '')}.json"
         parent = modify_left_hand(model_file)
         neck = list_files('run/neck.txt')
-        if parent is not None and parent not in clone and parent != 'item/handheld':
+        if parent is not None and parent not in clone and parent.startswith('ms:'):
             clone.add(parent)
             model_file = f"assets/ms/models/{parent.replace('ms:', '')}.json"
             modify_left_hand(model_file)
@@ -186,7 +186,7 @@ def process_input():
         # Example usage:
         model_file = f"assets/ms/models/{model.replace('ms:', '')}.json"
         parent = modify_cape(model_file)
-        if parent is not None and parent not in clone and parent != 'item/handheld':
+        if parent is not None and parent not in clone and parent.startswith('ms:'):
             clone.add(parent)
             model_file = f"assets/ms/models/{parent.replace('ms:', '')}.json"
             modify_cape(model_file)
