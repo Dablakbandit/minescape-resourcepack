@@ -253,10 +253,21 @@ const ivec3 MS_MINIMAP_NORTH_UP = ivec3(135, 0, 0);
 const ivec3 MS_MINIMAP_TOP_LEFT = ivec3(180, 0, 0);
 const ivec3 MS_MINIMAP_BOTTOM_LEFT = ivec3(220, 0, 0);
 const ivec3 MS_MINIMAP_BOTTOM_RIGHT = ivec3(255, 0, 0);
+// Or that it goes along the bottom beside the hotbar, half of which is 91 GUI pixels wide, this many from it.
+const ivec3 MS_MINIMAP_LEFT_OF_HOTBAR = ivec3(135, 0, 0);
+const ivec3 MS_MINIMAP_RIGHT_OF_HOTBAR = ivec3(112, 112, 180);
+const float MS_MINIMAP_HOTBAR = 91.0;
+const float MS_MINIMAP_HOTBAR_GAP = 2.0;
 // And the pixel after that its size, if not the usual one, in the same three colours.
 const ivec3 MS_MINIMAP_CHOSE_SMALL = ivec3(180, 0, 0);
 const ivec3 MS_MINIMAP_CHOSE_LARGE = ivec3(220, 0, 0);
 const ivec3 MS_MINIMAP_CHOSE_EXTRA_LARGE = ivec3(255, 0, 0);
+// Then how far it's moved right, and then up, in GUI pixels: each 128 more, in four base 4 digits, the
+// first the largest, a digit being the fire colour of its brightness (these reds, 0 to 3). An older
+// server sends none, which is not moved.
+const int MS_MINIMAP_OFFSET_X = 7;
+const int MS_MINIMAP_OFFSET_Y = 11;
+const int MS_MINIMAP_DIGIT[4] = int[](180, 220, 255, 135);
 
 bool msIsMinimap() {
     if (textureSize(Sampler0, 0) != ivec2(128)) {
@@ -293,11 +304,38 @@ float msMinimapSize() {
     return chosen == MS_MINIMAP_CHOSE_SMALL ? MS_MINIMAP_SMALL : chosen == MS_MINIMAP_CHOSE_LARGE ? MS_MINIMAP_LARGE : chosen == MS_MINIMAP_CHOSE_EXTRA_LARGE ? MS_MINIMAP_EXTRA_LARGE : MS_MINIMAP_SIZE;
 }
 
+float msMinimapOffset(int from) {
+    int value = 0;
+    for (int i = 0; i < 4; i++) {
+        vec4 texel = texelFetch(Sampler0, ivec2(from + i, 0), 0);
+        int red = int(round(texel.r * 255.0));
+        int digit = red == MS_MINIMAP_DIGIT[0] ? 0 : red == MS_MINIMAP_DIGIT[1] ? 1 : red == MS_MINIMAP_DIGIT[2] ? 2 : red == MS_MINIMAP_DIGIT[3] ? 3 : -1;
+        if (digit < 0 || texel.a < 0.5 || texel.g > 0.0) {
+            return 0.0;
+        }
+        value = value * 4 + digit;
+    }
+    return float(value - 128);
+}
+
 // Sized by the screen's height: the projection's two scales give its shape whatever the field of view.
+// GUI pixels are the screen's at Minecraft's automatic GUI scale, which is all a shader can work out,
+// from the screen's size in pixels where the game gives it (SCREEN_SIZE in build_shaders.py).
 vec4 msMinimapPosition(vec2 corner) {
     float half_size = msMinimapSize() * MS_MINIMAP_REACH;
     float shape = ProjMat[0][0] / ProjMat[1][1];
-    vec2 centre = msMinimapCorner() * vec2(1.0 - (half_size + MS_MINIMAP_GAP) * shape, 1.0 - half_size - MS_MINIMAP_GAP);
+    vec2 screen = %(screen)s;
+    float gui = max(1.0, min(floor(screen.x / 320.0), floor(screen.y / 240.0)));
+    vec2 pixel = 2.0 * gui / screen;
+    ivec3 chosen = ivec3(round(texelFetch(Sampler0, ivec2(5, 0), 0).rgb * 255.0));
+    vec2 centre;
+    if (chosen == MS_MINIMAP_LEFT_OF_HOTBAR || chosen == MS_MINIMAP_RIGHT_OF_HOTBAR) {
+        float side = chosen == MS_MINIMAP_LEFT_OF_HOTBAR ? -1.0 : 1.0;
+        centre = vec2(side * ((MS_MINIMAP_HOTBAR + MS_MINIMAP_HOTBAR_GAP) * pixel.x + half_size * shape), -1.0 + half_size + MS_MINIMAP_GAP);
+    } else {
+        centre = msMinimapCorner() * vec2(1.0 - (half_size + MS_MINIMAP_GAP) * shape, 1.0 - half_size - MS_MINIMAP_GAP);
+    }
+    centre += vec2(msMinimapOffset(MS_MINIMAP_OFFSET_X), msMinimapOffset(MS_MINIMAP_OFFSET_Y)) * pixel;
     return vec4(centre + vec2(corner.x, -corner.y) * 2.0 * half_size * vec2(shape, 1.0), %(depth)s, 1.0);
 }
 
@@ -414,6 +452,11 @@ LIFT = """vec3 position = Position;
 # Vulkan pipeline rejects a shader using a block it does not bind.
 GLOBALS_CLOCK_FROM = 88
 GAME_TIME = {"name": "GameTime", "type": "float", "count": 1, "values": [0.0]}
+# The screen's size in pixels, for the minimap's GUI pixels: the same two places give it, as the game sets
+# ScreenSize on every shader that declares it; the values are only what it starts as. 1.21.5 to 26.1 give
+# it to no text shader, so there the screen is taken to be 1080 high, as wide as the projection's shape.
+SCREEN_SIZE = {"name": "ScreenSize", "type": "float", "count": 2, "values": [1920.0, 1080.0]}
+SCREEN_GUESS = "vec2(1080.0 * ProjMat[1][1] / ProjMat[0][0], 1080.0)"
 
 # Armour is built by Stitch (the armour stitch, armour_stitch.py, woven by the Stitch action in the
 # workflow), not here.
@@ -539,21 +582,25 @@ def patch(files, form):
     body = re.sub(r"\bColor\b", "msColor", body)
     body = re.sub(r"\bUV0\b", "msUV", body)
     clock = ""
+    screen = SCREEN_GUESS
     if json_name in files:
         program = json.loads(files[json_name])
-        if not any(u["name"] == GAME_TIME["name"] for u in program.get("uniforms", [])):
-            program.setdefault("uniforms", []).append(GAME_TIME)
+        for uniform in (GAME_TIME, SCREEN_SIZE):
+            if not any(u["name"] == uniform["name"] for u in program.get("uniforms", [])):
+                program.setdefault("uniforms", []).append(uniform)
         patched[json_name] = json.dumps(program, indent=4) + "\n"
-        clock = "uniform float GameTime;\n#define MS_CLOCK GameTime\n\n"
+        clock = "uniform float GameTime;\nuniform vec2 ScreenSize;\n#define MS_CLOCK GameTime\n\n"
+        screen = "ScreenSize"
     elif form >= GLOBALS_CLOCK_FROM:
         directive = "#include" if "#include" in vsh else "#moj_import"
         include = "" if "globals.glsl" in vsh else directive + " <minecraft:globals.glsl>\n"
         clock = include + "#define MS_CLOCK GameTime\n\n"
+        screen = "ScreenSize"
     location = varying_location(vsh, fsh)
     layout = "" if location is None else "layout(location = %d) " % location
     camera = "IViewRotMat * vec3(1.0, 0.0, 0.0)" if "IViewRotMat" in vsh else "transpose(mat3(ModelViewMat)) * vec3(1.0, 0.0, 0.0)"
     depth = "0.9999" if form >= MINIMAP_REVERSED_DEPTH_FROM else "-0.9999"
-    minimap = layout + "out vec3 msMinimap;\n" + MINIMAP_VERTEX % {"camera": camera, "depth": depth}
+    minimap = layout + "out vec3 msMinimap;\n" + MINIMAP_VERTEX % {"camera": camera, "depth": depth, "screen": screen}
     moved = body.replace(POSITION, LIFT + MINIMAP_POSITION, 1)
     # after Sampler0, which the functions start by declaring
     sampler = "uniform sampler2D Sampler0;\n"
