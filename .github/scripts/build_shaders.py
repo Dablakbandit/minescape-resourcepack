@@ -426,7 +426,7 @@ MINIMAP_FRAGMENT = """
                 msStone = msLit < -0.25 ? vec3(0.494, 0.455, 0.380) : msLit > 0.25 ? vec3(0.176, 0.173, 0.161) : msStone;
             }
             // N, E, S and W on the ring, upright, where those ways lie on the map: five by five letters, a
-            // bit a pixel from the top left, light with a shadow below and right
+            // bit a pixel from the top left, light (N red) with a shadow below and right
             for (int msK = 0; msK < 4; msK++) {
                 vec2 msWay = msK == 0 ? vec2(0.0, 1.0) : msK == 1 ? vec2(1.0, 0.0) : msK == 2 ? vec2(0.0, -1.0) : vec2(-1.0, 0.0);
                 if (!msNorthUp) {
@@ -437,7 +437,7 @@ MINIMAP_FRAGMENT = """
                 for (int msShade = 0; msShade < 2; msShade++) {
                     ivec2 msQ = ivec2(msCell) - ivec2(msShade == 0 ? 0 : 1);
                     if (msQ.x >= 0 && msQ.x < 5 && msQ.y >= 0 && msQ.y < 5 && ((msGlyph >> (24 - msQ.y * 5 - msQ.x)) & 1) != 0) {
-                        msStone = msShade == 0 ? vec3(0.941, 0.910, 0.784) : min(msStone, vec3(0.075, 0.067, 0.055));
+                        msStone = msShade == 1 ? min(msStone, vec3(0.075, 0.067, 0.055)) : msK == 0 ? vec3(0.906, 0.157, 0.118) : vec3(0.941, 0.910, 0.784);
                         break;
                     }
                 }
