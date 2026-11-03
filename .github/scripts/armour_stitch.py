@@ -126,11 +126,21 @@ void torso(int shape, vec2 uv, inout StitchVertex v) {
 }
 
 // The item's tile from its dye, or 0 (the plain look) for leather MineScape doesn't define. Layout 1 is
-// worn armour's, with the gloves or amulet worn beside it in place of a count.
+// worn armour's, with the gloves or amulet worn beside it in place of a count; layout 2 the same, its
+// wearer crouching (worn boots carry it for their cape).
 int item_tile(vec4 color) {
     ivec3 c = ivec3(round(color.rgb * 255.0));
     int dye = c.r << 16 | c.g << 8 | c.b;
-    return dye != UNDYED && (dye >> 22) <= 1 ? (dye >> 13) & 511 : 0;
+    return dye != UNDYED && (dye >> 22) <= 2 ? (dye >> 13) & 511 : 0;
+}
+
+// The dye's layout as worn armour's: 1 worn, 2 worn and crouching, 0 anything else (leather never dyed,
+// 0xA06540, reads as 2 but is none).
+int worn_layout(vec4 color) {
+    ivec3 c = ivec3(round(color.rgb * 255.0));
+    int dye = c.r << 16 | c.g << 8 | c.b;
+    int kind = dye >> 22;
+    return dye != UNDYED && (kind == 1 || kind == 2) ? kind : 0;
 }
 
 // What worn armour's dye carries (its low twelve bits, the item's number, in layout 1): a chestplate's
@@ -139,7 +149,7 @@ int item_tile(vec4 color) {
 int worn_index(int layer, vec4 color) {
     ivec3 c = ivec3(round(color.rgb * 255.0));
     int dye = c.r << 16 | c.g << 8 | c.b;
-    if ((dye >> 22) != 1) {
+    if (worn_layout(color) == 0) {
         return -1;
     }
     int number = dye & 4095;
@@ -170,7 +180,7 @@ int worn_tile(int layer, vec4 color) {
 int cape_index(vec4 color) {
     ivec3 c = ivec3(round(color.rgb * 255.0));
     int dye = c.r << 16 | c.g << 8 | c.b;
-    if ((dye >> 22) != 1) {
+    if (worn_layout(color) == 0) {
         return -1;
     }
     int number = dye & 4095;
@@ -350,6 +360,14 @@ int u24(vec4 t) {
 
 
 #if defined(STITCH_HAS_FRAGMENT_POSITION) && defined(STITCH_HAS_FRAGMENT_DEPTH) && defined(STITCH_HAS_VERTEX_INDEX)
+// How far, in pixels, a crouching wearer's cape can lie from where it would standing: the body's pivot and
+// the legs' move CAPE_CROUCH_SHIFT apart, and the lean (half a radian) turns each point of it by up to
+// CAPE_CROUCH_TURN of its distance from the body's pivot, which is the leg's pivot's (CAPE_LEG_DEPTH) further
+// than from the leg's. As little as covers it: a bigger card is drawn nearer the eye.
+const float CAPE_CROUCH_SHIFT = 5.2;
+const float CAPE_CROUCH_TURN = 0.5;
+const float CAPE_LEG_DEPTH = 12.2;
+
 // amulet >= 0: that amulet's model (the leggings' second table, by its place in MS_AMULET_NUMBER) on the
 // leggings' body's top face alone, which sits inside the torso and is never seen; any other face is left.
 // cape >= 0 likewise: that cape's model (the boots' table past MS_CAPE_COLUMN) on the right leg's top face,
@@ -417,6 +435,8 @@ bool trace_card(int layer, int column, int amulet, int cape, inout StitchVertex 
         return false;
     }
     tint = vec4(stitch_texel_fetch(ivec2(column, top + 2 + kind)).rgb, 1.0);
+    // a crouching wearer's (the boots' dye, layout 2): its cape is traced on the leaning body
+    bool crouching = cape >= 0 && worn_layout(v.color) == 2;
     v.color = vec4(1.0, 1.0, 1.0, v.color.a);
     // a cape's rows from the model's first (its fixed ones, then its swinging ones)
     int row = cape >= 0 ? model : model + part - 1;
@@ -435,9 +455,10 @@ bool trace_card(int layer, int column, int amulet, int cape, inout StitchVertex 
     vec3 centre = (round(stitch_texel_fetch(ivec2(1, row)).rgb * 255.0) - 128.0) / 4.0;
     float sphere = stitch_texel_fetch(ivec2(2, row)).r * 255.0 / 4.0;
     vec3 up = stitch_up();
-    // an amulet's (kind 6) is drawn nearer the eye (AMULET_PULL); a cape's (kind 7) takes the world's up
-    // its look's records (armour_models.traced: the table's rows top + 4 and 5), where its faces are
-    rt_info = ivec4(cape >= 0 ? 7 : (amulet >= 0 ? 6 : 1), row, cape >= 0 ? pack_unit(up) : face / 2,
+    // an amulet's (kind 6) is drawn nearer the eye (AMULET_PULL); a cape's (kind 7) takes the world's up,
+    // and bit 30 if its wearer is crouching; its look's records (armour_models.traced: the table's rows
+    // top + 4 and 5), where its faces are
+    rt_info = ivec4(cape >= 0 ? 7 : (amulet >= 0 ? 6 : 1), row, cape >= 0 ? pack_unit(up) | (crouching ? 1 << 30 : 0) : face / 2,
                     u24(stitch_texel_fetch(ivec2(column, top + 4 + kind))));
     // lit from above: the fragment shades the model itself
     v.normal = up;
@@ -522,7 +543,9 @@ bool trace_card(int layer, int column, int amulet, int cape, inout StitchVertex 
                 far = max(far, length(about) + length(c - about) + span);
             }
         }
-        reach = length(local) + far;
+        // crouching, it leans with the body, away from where the leg would hold it
+        float lean = crouching ? CAPE_CROUCH_SHIFT + CAPE_CROUCH_TURN * (far + CAPE_LEG_DEPTH) : 0.0;
+        reach = length(local) + far + lean;
     }
     float radius = reach * PIXEL;
     vec3 at = v.position;
@@ -974,6 +997,14 @@ const float CAPE_FLAP = 0.25;
 const float CAPE_FLAP_WALK = 0.35;
 const float CAPE_FLAP_SECONDS = 1.6;
 
+// Minecraft's crouch (HumanoidModel): the body leans forward about x by CROUCH_LEAN from its pivot, put
+// down CROUCH_BODY, and the legs' pivots go back to CROUCH_LEG (the right leg's), from STANDING_LEG, in
+// the model's pixels (y down, front -z). Older releases put the legs 0.2 lower, which is left out.
+const float CROUCH_LEAN = 0.5;
+const vec3 CROUCH_BODY = vec3(0.0, 3.2, 0.0);
+const vec3 CROUCH_LEG = vec3(-1.9, 12.0, 4.0);
+const vec3 STANDING_LEG = vec3(-1.9, 12.0, 0.0);
+
 // p turned about x by a, y towards z
 vec3 turn_x(vec3 p, float a) {
     float c = cos(a);
@@ -1043,7 +1074,8 @@ vec4 trace_cape(StitchFragment f, vec3 dpx, vec3 dpy, vec3 dlx, vec3 dly) {
     mat3 mi = transpose(m) / (s * s);
     vec3 origin = mi * (-t);
     vec3 dir = mi * f.position;
-    int n = rt_info.z;
+    int n = rt_info.z & 0x3FFFFFFF;
+    bool crouching = (rt_info.z & (1 << 30)) != 0;
     vec3 up = vec3(float((n >> 20) & 1023), float((n >> 10) & 1023), float(n & 1023)) / 1023.0 * 2.0 - 1.0;
     vec3 x = normalize(m[0]);
     vec3 down = -up + dot(up, x) * x;
@@ -1056,6 +1088,12 @@ vec4 trace_cape(StitchFragment f, vec3 dpx, vec3 dpy, vec3 dlx, vec3 dly) {
     // the ray in the body's frame, about the leg's pivot (its space's origin)
     vec3 o = turn_x(origin, swing);
     vec3 d = turn_x(dir, swing);
+    if (crouching) {
+        // the body leant forward about its own pivot and the legs moved back (CROUCH_*): the ray into the
+        // body's frame, then about where the leg's pivot stands upright, where the cape is modelled
+        o = turn_x(o + CROUCH_LEG - CROUCH_BODY, -CROUCH_LEAN) - STANDING_LEG;
+        d = turn_x(d, -CROUCH_LEAN);
+    }
     int row = rt_info.y;
     vec4 split = stitch_texel_fetch(ivec2(9, row));
     int fixedRows = int(round(split.r * 255.0));
@@ -1103,6 +1141,9 @@ vec4 trace_cape(StitchFragment f, vec3 dpx, vec3 dpy, vec3 dlx, vec3 dly) {
         nb = turn_z(turn_x(nb, back), sway);
     } else if (hitKind >= 2) {
         nb = turn_y(nb, hitKind == 2 ? flap : -flap);
+    }
+    if (crouching) {
+        nb = turn_x(nb, CROUCH_LEAN);
     }
     vec3 nrm = normalize(m * turn_x(nb, -swing));
     vec3 hitPos = m * (origin + dir * h.best) + t;
