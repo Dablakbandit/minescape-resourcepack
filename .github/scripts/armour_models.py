@@ -148,6 +148,9 @@ def load(path, piece):
             image.info["animation"] = (frames, image.width, frame, int(t.get("frame_time", 1)), bool(t.get("frame_interpolate")))
         textures.append((image, uw, uh * frames))
     cubes = {e["uuid"]: e for e in model["elements"] if e.get("type", "cube") == "cube"}
+    # Blockbench 5 keeps a group's name, origin and rotation in "groups", and only its uuid and children
+    # in the outliner; 4 kept them all in the outliner
+    groups_by_uuid = {g["uuid"]: g for g in model.get("groups", []) if "uuid" in g}
     faces = {part: [] for part in SLOT}
     whole = {part: [] for part in SLOT}
     parts = CAPE_GROUPS if piece == "cape" else {name: name for name in SLOT}
@@ -166,6 +169,8 @@ def load(path, piece):
             faces[part].extend(cube_faces(cube, groups, space, textures))
             whole[part].append(cube_of(cube, groups, space, textures))
             return
+        if "name" not in node and node.get("uuid") in groups_by_uuid:
+            node = dict(groups_by_uuid[node["uuid"]], children=node.get("children", []))
         if node.get("export") is False:
             return
         name = node.get("name", "")
