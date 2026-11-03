@@ -358,10 +358,10 @@ MINIMAP_FRAGMENT = """
         vec2 msAt = floor(msMinimap.xy) + 0.5;
         float msRadius = length(msAt);
         vec4 msPixel;
+        bool msNorthUp = msMinimap.z > 16.0;
+        float msYaw = msMinimap.z - (msNorthUp ? 24.0 : 8.0);
+        float msCos = cos(msYaw), msSin = sin(msYaw);
         if (msRadius < 60.0) {
-            bool msNorthUp = msMinimap.z > 16.0;
-            float msYaw = msMinimap.z - (msNorthUp ? 24.0 : 8.0);
-            float msCos = cos(msYaw), msSin = sin(msYaw);
             vec2 msMap = vec2(msMinimap.x, -msMinimap.y);
             if (!msNorthUp) {
                 msMap = mat2(msCos, -msSin, msSin, msCos) * msMap;
@@ -424,6 +424,23 @@ MINIMAP_FRAGMENT = """
                 msStone = msLit > 0.25 ? vec3(0.545, 0.506, 0.427) : msLit < -0.25 ? vec3(0.176, 0.173, 0.161) : msStone;
             } else if (msRadius < 62.0) {
                 msStone = msLit < -0.25 ? vec3(0.494, 0.455, 0.380) : msLit > 0.25 ? vec3(0.176, 0.173, 0.161) : msStone;
+            }
+            // N, E, S and W on the ring, upright, where those ways lie on the map: five by five letters, a
+            // bit a pixel from the top left, light with a shadow below and right
+            for (int msK = 0; msK < 4; msK++) {
+                vec2 msWay = msK == 0 ? vec2(0.0, 1.0) : msK == 1 ? vec2(1.0, 0.0) : msK == 2 ? vec2(0.0, -1.0) : vec2(-1.0, 0.0);
+                if (!msNorthUp) {
+                    msWay = vec2(msCos * msWay.x - msSin * msWay.y, msSin * msWay.x + msCos * msWay.y);
+                }
+                int msGlyph = msK == 0 ? 18667121 : msK == 1 ? 32010782 : msK == 2 ? 16267326 : 18405233;
+                vec2 msCell = floor(msMinimap.xy - vec2(msWay.x, -msWay.y) * 62.5 + 2.5);
+                for (int msShade = 0; msShade < 2; msShade++) {
+                    ivec2 msQ = ivec2(msCell) - ivec2(msShade == 0 ? 0 : 1);
+                    if (msQ.x >= 0 && msQ.x < 5 && msQ.y >= 0 && msQ.y < 5 && ((msGlyph >> (24 - msQ.y * 5 - msQ.x)) & 1) != 0) {
+                        msStone = msShade == 0 ? vec3(0.941, 0.910, 0.784) : min(msStone, vec3(0.075, 0.067, 0.055));
+                        break;
+                    }
+                }
             }
             msPixel = vec4(msStone, 1.0);
         }
