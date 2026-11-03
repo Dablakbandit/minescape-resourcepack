@@ -616,7 +616,9 @@ def release_shader(version, names=NAMES, cache_suffix=""):
     cached = os.path.join(CACHE, version + cache_suffix + ".json")
     if os.path.exists(cached):
         data = json.load(open(cached, encoding="utf-8"))
-        return data["format"], data["files"]
+        # read again when the target's names changed since (the fills once took position_color too)
+        if all(n.rsplit(".", 1)[0] in names for n in data["files"]):
+            return data["format"], data["files"]
     meta = json.loads(fetch(VERSIONS[version]))["downloads"]["client"]
     try:
         jar = zipfile.ZipFile(io.BufferedReader(RemoteFile(meta["url"], meta["size"]), RemoteFile.BLOCK))
@@ -1085,6 +1087,9 @@ def main():
         for group, following in zip(groups, groups[1:]):
             group["last"] = max(group["last"], following["first"] - 1)
 
+        # The base folder takes the oldest release that has these shaders: for the fills that's 1.20's
+        # rendertype_gui, which 1.20 and 1.20.1, reading no overlays, would otherwise never get.
+        oldest = next((i for i, group in enumerate(groups) if group["files"]), None)
         for i, group in enumerate(groups):
             if not group["files"]:
                 # the release has none of these shaders (one drawn by another from then on)
@@ -1094,7 +1099,7 @@ def main():
             if patched is None:
                 print("WARNING: nothing for %s - its shader no longer has the anchor lines" % span)
                 continue
-            if i == 0 and not no_base:
+            if i == oldest and not no_base:
                 write(patched, base, names)
                 print("base folder:", span)
                 continue
