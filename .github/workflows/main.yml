@@ -84,6 +84,12 @@ jobs:
         with:
           pack: .
 
+      - name: Font sizes
+        # How far each of the pack's fonts moves the pen for each character, for the plugin to measure
+        # text with; the full pack's, which the low one's fonts are the same as.
+        if: matrix.set == 'full'
+        run: python .github/scripts/font_sizes.py run/fonts.json
+
       - name: Archive dev
         if: matrix.set == 'full'
         uses: thedoctor0/zip-release@master
@@ -150,13 +156,17 @@ jobs:
           exclusions: ${{ env.EXCLUDE }}
 
       - name: Upload to the run's draft release
-        # the zips with their SHA1s, side by side; the full pack's job also brings run/noted.txt
+        # the zips with their SHA1s, side by side; the full pack's job also brings run/noted.txt, and the
+        # font sizes with theirs
         run: |
           for file in *.zip; do
             sha1sum "$file" | cut -d ' ' -f 1 > "$file.sha1"
           done
           files=(*.zip *.zip.sha1)
-          if [ "${{ matrix.set }}" = full ]; then files+=(run/noted.txt); fi
+          if [ "${{ matrix.set }}" = full ]; then
+            sha1sum run/fonts.json | cut -d ' ' -f 1 > run/fonts.json.sha1
+            files+=(run/noted.txt run/fonts.json run/fonts.json.sha1)
+          fi
           # the full pack's job made the draft as it began; wait for it no more than five minutes
           for i in $(seq 60); do gh release view "$DRAFT" >/dev/null 2>&1 && break; sleep 5; done
           printf '%s\n' "${files[@]}" | xargs -P 8 -I{} gh release upload "$DRAFT" {}
@@ -173,7 +183,7 @@ jobs:
 
       - name: Fetch the zips for the public release
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.public_release == 'true'
-        run: gh release download patreon -p 'patreon*.zip' -p '20*.zip' -p '21*.zip'
+        run: gh release download patreon -p 'patreon*.zip' -p '20*.zip' -p '21*.zip' -p 'fonts.json*'
 
       - name: Rename files for public release
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.public_release == 'true'
@@ -197,7 +207,7 @@ jobs:
         run: |
           gh release delete resourcepack --yes || echo 'No existing release found with tag resourcepack'
           gh release create resourcepack --title Resourcepack --notes '' --latest
-          ls resourcepack*.zip resourcepack*.zip.sha1 | xargs -P 8 -I{} gh release upload resourcepack {}
+          ls resourcepack*.zip resourcepack*.zip.sha1 fonts.json fonts.json.sha1 | xargs -P 8 -I{} gh release upload resourcepack {}
 
       - name: Update pack on server
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.public_release == 'true'

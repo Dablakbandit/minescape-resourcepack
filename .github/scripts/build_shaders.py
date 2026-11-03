@@ -462,7 +462,56 @@ LIFT = """vec3 position = Position;
     }
     vec4 view = ModelViewMat * vec4(position, 1.0);
     view.xy += msOffset;
+    view.xy += msSidebar(msColor, view.xy);
     gl_Position = ProjMat * view;"""
+# MineScape's sidebar (the plugin's SidebarText): its title and lines are coloured with a mark in their
+# low bits, red's low four 9 (never its high four, where the plugin keeps the colour), and a setting in
+# green's and blue's, the bits from green's up: 1 to put it on the left, then how far up it goes in two
+# pixel steps, 64 more. In a screen, those are moved there, and their colour comes back as it was (each
+# low four as its high four, as every legacy colour's are). The plugin draws each line's background as
+# its first glyph, so Minecraft's own boxes go (FILL_VERTEX_END), and the red score numbers at the
+# screen's right edge, which it can't move, are left out. The plugin makes every line measure 0 and the
+# title MS_SIDEBAR_WIDTH, so Minecraft's frame is always that wide, its left edge the screen's width less
+# it and 3, and lays the panel out in it at its real width itself: the shader only moves the frame.
+SIDEBAR_VERTEX = """
+const float MS_SIDEBAR_WIDTH = %(width)d.0;
+// how far from the screen's right edge the score numbers' glyphs can start
+const float MS_SIDEBAR_NUMBERS = 24.0;
+
+vec2 msSidebar(inout vec4 color, vec2 at) {
+    if (ProjMat[2][3] != 0.0) {
+        return vec2(0.0);
+    }
+    ivec3 c = ivec3(round(color.rgb * 255.0));
+    float width = 2.0 / ProjMat[0][0];
+    if (c == ivec3(255, 85, 85) && at.x > width - MS_SIDEBAR_NUMBERS) {
+        return vec2(0.0, 100000.0);
+    }
+    if ((c.r & 15) != 9 || (c.r >> 4) == 9) {
+        return vec2(0.0);
+    }
+    int setting = (c.g & 15) | ((c.b & 15) << 4);
+    color.rgb = vec3(ivec3((c.r & 240) | (c.r >> 4), (c.g & 240) | (c.g >> 4), (c.b & 240) | (c.b >> 4))) / 255.0;
+    float up = float((setting >> 1) - 64) * 2.0;
+    return vec2((setting & 1) != 0 ? MS_SIDEBAR_WIDTH + 6.0 - width : 0.0, -up);
+}
+"""
+SIDEBAR_WIDTH = 150
+# The fill shader Minecraft draws a screen's boxes with: position_color to 1.19.4, rendertype_gui to
+# 1.21.1, gui after. Its sidebar boxes are black at 0.3 and 0.4 alpha (Options.getBackgroundColor), in
+# the right half of the screen; position_color draws in the world too, which a screen's flat projection
+# tells apart. position_color is a target of its own, in every release: the base folder's is 1.18.2's,
+# which a newer release must never meet, so each has its own copy in an overlay.
+FILL_NAMES = ("gui", "rendertype_gui")
+POSITION_COLOR_NAMES = ("position_color",)
+FILL_VERTEX_END = """
+    // MineScape's sidebar draws its own boxes with its text (SIDEBAR_VERTEX): Minecraft's go
+    if (ProjMat[2][3] == 0.0 && gl_Position.x > 0.0) {
+        ivec4 msFill = ivec4(round(Color * 255.0));
+        if (msFill.rgb == ivec3(0) && (msFill.a == 76 || msFill.a == 102)) {
+            gl_Position = vec4(-2.0, -2.0, -2.0, 1.0);
+        }
+    }"""
 # The game clock the overhead effects animate by: up to 1.21.4 a GameTime uniform the program json
 # declares; from 26.2 (pack format 88) the Globals block, which the text pipelines bind from then on.
 # 1.21.5 to 26.1 give text shaders neither (their pipelines, decompiled, bind no clock), and a
@@ -618,6 +667,7 @@ def patch(files, form):
     camera = "IViewRotMat * vec3(1.0, 0.0, 0.0)" if "IViewRotMat" in vsh else "transpose(mat3(ModelViewMat)) * vec3(1.0, 0.0, 0.0)"
     depth = "0.9999" if form >= MINIMAP_REVERSED_DEPTH_FROM else "-0.9999"
     minimap = layout + "out vec3 msMinimap;\n" + MINIMAP_VERTEX % {"camera": camera, "depth": depth, "screen": screen}
+    minimap += SIDEBAR_VERTEX % {"width": SIDEBAR_WIDTH}
     moved = body.replace(POSITION, LIFT + MINIMAP_POSITION, 1)
     # after Sampler0, which the functions start by declaring
     sampler = "uniform sampler2D Sampler0;\n"
@@ -879,11 +929,30 @@ def patch_count(files, form):
     return patched
 
 
+def patch_fill(files, form):
+    """The screen's fill shader without Minecraft's sidebar boxes, or None if its anchors are not there."""
+    vsh_name = next(n for n in files if n.endswith(".vsh"))
+    vsh = files[vsh_name]
+    if vsh.count(MAIN) != 1 or vsh.count(POSITION) != 1 or not re.search(r"\bin vec4 Color\s*;", vsh):
+        return None
+    patched = dict(files)
+    patched[vsh_name] = vsh.replace(POSITION, POSITION + FILL_VERTEX_END, 1)
+    return patched
+
+
+def patch_position_color(files, form):
+    """position_color as patch_fill has it, or the release's own unchanged where its anchors are not
+    there: a copy either way, so the base folder's never reaches a release it isn't for."""
+    return patch_fill(files, form) or dict(files)
+
+
 TARGETS = [
     # (name, shader names, the files besides the vertex shader, patch, overlay directory prefix)
     ("text", NAMES, (".fsh", ".json"), patch, "shader_"),
     ("count", COUNT_NAMES, (".fsh", ".json"), patch_count, "shader_count_"),
     ("count_cull", COUNT_CULL_NAMES, (".fsh", ".json"), patch_count, "shader_count_cull_"),
+    ("fill", FILL_NAMES, (".fsh", ".json"), patch_fill, "shader_fill_"),
+    ("position_color", POSITION_COLOR_NAMES, (".fsh", ".json"), patch_position_color, "shader_position_color_"),
 ]
 
 
