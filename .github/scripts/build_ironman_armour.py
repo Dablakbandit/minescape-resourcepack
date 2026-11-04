@@ -6,7 +6,7 @@ vambraces' look (armour/gloves.json). Helms are the iron full helm's model with 
 Icons are OSRS's sprites (icons-items-complete.json, osrsbox ids). Run again, it changes nothing it already did.
 leather_horse_armor.json is edited in its committed form: run count_icons.py --restore first if it has been rewritten.
 """
-import base64, io, json, os, subprocess, sys
+import base64, io, json, os, sys
 from PIL import Image
 
 PACK = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), '..', '..')
@@ -19,11 +19,11 @@ MODES = {
     'ironman': dict(helm=(4250, 12810), body=(10156, 12811), legs=(10160, 12812), colour='#8a8a8a', legs_colour='#767676', helm_colour='#4e4e4e', trim=False),
     'ultimate_ironman': dict(helm=(4251, 12813), body=(10157, 12814), legs=(10161, 12815), colour='#d4d4d4', legs_colour='#c4c4c4', helm_colour='#bcbcbc', trim=False),
     'hardcore_ironman': dict(helm=(4252, 20792), body=(10158, 20794), legs=(10162, 20796), colour='#7a1f1f', legs_colour='#6a1b1b', helm_colour='#661a1a', trim=True),
-    'group_ironman': dict(helm=(4253, 26156), body=(10159, 26158), legs=(10163, 26166), bracers=(4256, 26168), colour='#3e4c6b', legs_colour='#3a465f',
+    'group_ironman': dict(helm=(4253, 26156), body=(10159, 26158), legs=(10163, 26166), bracers=(4256, 26168, 4093), colour='#3e4c6b', legs_colour='#3a465f',
                           helm_colour='#3a4560', bracers_colour='#3d6fb0', trim=True),
-    'hardcore_group_ironman': dict(helm=(4254, 26170), body=(10160, 26172), legs=(10164, 26180), bracers=(4257, 26182), colour='#5e2a2a', legs_colour='#552626',
+    'hardcore_group_ironman': dict(helm=(4254, 26170), body=(10160, 26172), legs=(10164, 26180), bracers=(4257, 26182, 4094), colour='#5e2a2a', legs_colour='#552626',
                                    helm_colour='#552626', bracers_colour='#a83a3a', trim=True),
-    'unranked_group_ironman': dict(helm=(4255, 27042), body=(10161, 27048), legs=(10165, 27044), bracers=(4258, 27046), colour='#3b5a48', legs_colour='#36503f',
+    'unranked_group_ironman': dict(helm=(4255, 27042), body=(10161, 27048), legs=(10165, 27044), bracers=(4258, 27046, 4095), colour='#3b5a48', legs_colour='#36503f',
                                    helm_colour='#354c3f', bracers_colour='#3a9a6a', trim=True),
 }
 # what OSRS names each piece (the unranked group pieces end "(unranked)")
@@ -103,14 +103,13 @@ for mode, m in MODES.items():
     if 'bracers' in m:
         sprite(m['bracers'][1], bracers)
         write(os.path.join(PACK, 'assets/ms/models/armor/ironman', bracers + '.json'), '{"parent":"item/generated","textures":{"layer0":"item/ms/armor/ironman/' + bracers + '"}}\n')
-        # numbered past the dye's twelve bits: assign_worn_numbers.py gives them numbers to be worn as
-        gloves.append({'custom_model_data': m['bracers'][0], 'name': bracers, 'look': '2_vambraces', 'colour': m['bracers_colour']})
+        # numbered past the dye's twelve bits, so worn as numbers of their own (the plugin's WornNumbers.GLOVES)
+        gloves.append({'custom_model_data': m['bracers'][0], 'worn': m['bracers'][2], 'name': bracers, 'look': '2_vambraces', 'colour': m['bracers_colour']})
         overrides.append((m['bracers'][0], 'ms:armor/ironman/' + bracers))
 
 add_entries(os.path.join(PACK, 'armour/chest.json'), chest)
 add_entries(os.path.join(PACK, 'armour/legs.json'), legs)
 add_entries(os.path.join(PACK, 'armour/gloves.json'), gloves)
-subprocess.run([sys.executable, os.path.join(os.path.dirname(__file__), 'assign_worn_numbers.py'), PACK], check=True)
 
 # the horse armour overrides, after the last one, in the file's own layout
 path = os.path.join(PACK, 'assets/minecraft/models/item/leather_horse_armor.json')

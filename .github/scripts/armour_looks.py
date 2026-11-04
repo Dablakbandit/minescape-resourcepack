@@ -147,8 +147,8 @@ MODEL_OVERLAYS = [("armour_models_1_21_2", 42, 45), ("armour_models_1_21_4", 46,
 # Gloves (armour/gloves.json) are ordinary items, not leather armour: each is keyed by the number it's worn
 # as, which the plugin puts in a worn chestplate's dye beside the chestplate's tile, and drawn on the
 # chestplate's arms. The dye has twelve bits for it: an item numbered up to 4095 is worn as its own number
-# (its custom model data); one above is given a free one to be worn as ("worn", assign_worn_numbers.py),
-# which the plugin learns from these tables (its tools/generate_worn_numbers.py). Amulets and capes alike.
+# (its custom model data); one above is given a number its table doesn't use to be worn as ("worn"), the same
+# in the plugin's WornNumbers, and it stays. Amulets and capes alike.
 # Their looks are tiles of the layer 1 sheet after the armour's, only the arms read.
 GLOVES_NUMBERS = 4096
 GLOVES_AREA = [(40, 16, 56, 32)]
@@ -164,7 +164,7 @@ def worn_items(kind):
     for entry in json.load(open(path, encoding="utf-8"))["items"]:
         where = "%s.json %s" % (kind, entry.get("name", entry["custom_model_data"]))
         if entry["custom_model_data"] >= GLOVES_NUMBERS and "worn" not in entry:
-            raise ValueError("%s: custom model data %d is past the dye's twelve bits: run assign_worn_numbers.py to give it a number to be worn as"
+            raise ValueError("%s: custom model data %d is past the dye's twelve bits: give it a \"worn\" number its table doesn't use, and the same in the plugin's WornNumbers"
                              % (where, entry["custom_model_data"]))
         number = entry.get("worn", entry["custom_model_data"])
         if not 1 <= number < GLOVES_NUMBERS:
