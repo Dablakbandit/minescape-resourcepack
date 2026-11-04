@@ -6,7 +6,7 @@ vambraces' look (armour/gloves.json). Helms are the iron full helm's model with 
 Icons are OSRS's sprites (icons-items-complete.json, osrsbox ids). Run again, it changes nothing it already did.
 leather_horse_armor.json is edited in its committed form: run count_icons.py --restore first if it has been rewritten.
 """
-import base64, io, json, os, sys
+import base64, io, json, os, subprocess, sys
 from PIL import Image
 
 PACK = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), '..', '..')
@@ -26,8 +26,6 @@ MODES = {
     'unranked_group_ironman': dict(helm=(4255, 27042), body=(10161, 27048), legs=(10165, 27044), bracers=(4258, 27046), colour='#3b5a48', legs_colour='#36503f',
                                    helm_colour='#354c3f', bracers_colour='#3a9a6a', trim=True),
 }
-# the plugin's ItemCount.WORN_STAND_INS: bracers numbered above the dye's twelve bits, and the number each is worn as
-WORN_STAND_INS = {4256: 4093, 4257: 4094, 4258: 4095}
 # what OSRS names each piece (the unranked group pieces end "(unranked)")
 NAMES = {'helm': 'helm', 'body': 'platebody', 'legs': 'platelegs', 'bracers': 'bracers'}
 
@@ -105,13 +103,14 @@ for mode, m in MODES.items():
     if 'bracers' in m:
         sprite(m['bracers'][1], bracers)
         write(os.path.join(PACK, 'assets/ms/models/armor/ironman', bracers + '.json'), '{"parent":"item/generated","textures":{"layer0":"item/ms/armor/ironman/' + bracers + '"}}\n')
-        # worn gloves go out as twelve bits, so bracers above 4095 are known here by the stand-in the plugin sends them as
-        gloves.append({'custom_model_data': WORN_STAND_INS[m['bracers'][0]], 'name': bracers, 'look': '2_vambraces', 'colour': m['bracers_colour']})
+        # numbered past the dye's twelve bits: assign_worn_numbers.py gives them numbers to be worn as
+        gloves.append({'custom_model_data': m['bracers'][0], 'name': bracers, 'look': '2_vambraces', 'colour': m['bracers_colour']})
         overrides.append((m['bracers'][0], 'ms:armor/ironman/' + bracers))
 
 add_entries(os.path.join(PACK, 'armour/chest.json'), chest)
 add_entries(os.path.join(PACK, 'armour/legs.json'), legs)
 add_entries(os.path.join(PACK, 'armour/gloves.json'), gloves)
+subprocess.run([sys.executable, os.path.join(os.path.dirname(__file__), 'assign_worn_numbers.py'), PACK], check=True)
 
 # the horse armour overrides, after the last one, in the file's own layout
 path = os.path.join(PACK, 'assets/minecraft/models/item/leather_horse_armor.json')
