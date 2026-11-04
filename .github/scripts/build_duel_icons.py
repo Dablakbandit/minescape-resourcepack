@@ -130,19 +130,29 @@ for name in SLOT_NAMES:
     names.append(('slot_' + name, compose(plain, sprite, False)))
     names.append(('slot_' + name + '_off', compose(plain, sprite, True)))
 
+# every icon so far is the duel's; after them come Group Ironman's modes, each its OSRS helm (bone 421-423)
+names = [('duel', name, im) for name, im in names]
+for name, item in [('group_ironman', 26156), ('hardcore_group_ironman', 26170), ('unranked_group_ironman', 27042)]:
+    sprite = fit(Image.open(io.BytesIO(base64.b64decode(icons[str(item)]))).convert('RGBA'))
+    names.append(('group_ironman', name, compose(plain, sprite, False)))
+
 bone_path = os.path.join(PACK, 'assets/minecraft/models/item/bone.json')
 raw = open(bone_path, 'rb').read().decode('utf-8')
 nl = '\r\n' if '\r\n' in raw else '\n'
-for i, (name, im) in enumerate(names):
-    im.save(os.path.join(OUT_TEX, name + '.png'))
-    with open(os.path.join(OUT_MODEL, name + '.json'), 'w', newline='\n') as f:
-        f.write('{\n\t"parent": "item/generated",\n\t"textures": {\n\t\t"layer0": "item/ms/interface/duel/' + name + '"\n\t}\n}\n')
+for i, (folder, name, im) in enumerate(names):
+    tex_dir = os.path.join(PACK, 'assets/minecraft/textures/item/ms/interface', folder)
+    model_dir = os.path.join(PACK, 'assets/ms/models/interface', folder)
+    os.makedirs(tex_dir, exist_ok=True)
+    os.makedirs(model_dir, exist_ok=True)
+    im.save(os.path.join(tex_dir, name + '.png'))
+    with open(os.path.join(model_dir, name + '.json'), 'w', newline='\n') as f:
+        f.write('{\n\t"parent": "item/generated",\n\t"textures": {\n\t\t"layer0": "item/ms/interface/' + folder + '/' + name + '"\n\t}\n}\n')
     cmd = BONE_START + i
     old = '{"predicate": {"custom_model_data":' + str(cmd) + '},"model":"item/empty"}'
-    new = '{"predicate": {"custom_model_data":' + str(cmd) + '},"model":"ms:interface/duel/' + name + '"}'
+    new = '{"predicate": {"custom_model_data":' + str(cmd) + '},"model":"ms:interface/' + folder + '/' + name + '"}'
     if new not in raw:
         assert raw.count(old) == 1, cmd
         raw = raw.replace(old, new)
 open(bone_path, 'wb').write(raw.encode('utf-8'))
-for i, (name, _) in enumerate(names):
-    print(BONE_START + i, name)
+for i, (folder, name, _) in enumerate(names):
+    print(BONE_START + i, folder + '/' + name)
