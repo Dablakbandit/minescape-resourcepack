@@ -232,13 +232,18 @@ void main() {
     vec4 msColor = Color;
     vec2 msUV = UV0;
     vec2 msOffset = msOverhead(msColor, msUV);"""
-# MineScape minimap (MinimapInfo in the plugin): an invisible item frame near the player holds a map whose
-# top row starts with these four colours, and wherever it is in the world this draws it in the top right
+# MineScape minimap (MinimapInfo in the plugin): invisible item frames near the player hold maps whose top
+# row starts with these four colours, and wherever they are in the world this draws them in the top right
 # of the screen, turned with the camera. Maps are their own 128 x 128 texture, whose corners are UV0's.
-# %(camera)s is the camera's right in the world; %(depth)s is the front of the depth buffer.
+# There are three (PlayerMinimap's layers), each drawn a little nearer than the one before: the ground and
+# the ring, OSRS's icons, then the dots, the hint arrow and the player, so the dots stay over the icons.
+# %(camera)s is the camera's right in the world; %(depth)s is the front of the depth buffer, and %(nearer)s
+# the way nearer is from it.
 MINIMAP_VERTEX = """
-// The colours are the map palette's fire and ice in two brightnesses, nothing a drawn map has in a row.
+// The colours are the map palette's fire and ice in two brightnesses, nothing a drawn map has in a row; the
+// third's red says which layer: the ground, the icons or the dots.
 const ivec3 MS_MINIMAP_MARK[4] = ivec3[](ivec3(255, 0, 0), ivec3(160, 160, 255), ivec3(180, 0, 0), ivec3(84, 84, 135));
+const int MS_MINIMAP_LAYER[3] = int[](180, 220, 135);
 // Half the map's height on screen, as a player chooses it, and its gap from the corner, in clip space
 // (half the screen is 1), and how far past the map's own 64 pixels the frame round it reaches.
 const float MS_MINIMAP_SIZE = 0.3;
@@ -269,16 +274,23 @@ const int MS_MINIMAP_OFFSET_X = 7;
 const int MS_MINIMAP_OFFSET_Y = 11;
 const int MS_MINIMAP_DIGIT[4] = int[](180, 220, 255, 135);
 
-bool msIsMinimap() {
+// Which of the minimap's maps this is, or -1 for none.
+int msMinimapLayer() {
     if (textureSize(Sampler0, 0) != ivec2(128)) {
-        return false;
+        return -1;
     }
     for (int i = 0; i < 4; i++) {
-        if (ivec3(round(texelFetch(Sampler0, ivec2(i, 0), 0).rgb * 255.0)) != MS_MINIMAP_MARK[i]) {
-            return false;
+        if (i != 2 && ivec3(round(texelFetch(Sampler0, ivec2(i, 0), 0).rgb * 255.0)) != MS_MINIMAP_MARK[i]) {
+            return -1;
         }
     }
-    return true;
+    ivec3 third = ivec3(round(texelFetch(Sampler0, ivec2(2, 0), 0).rgb * 255.0));
+    for (int layer = 0; layer < 3; layer++) {
+        if (third == ivec3(MS_MINIMAP_LAYER[layer], 0, 0)) {
+            return layer;
+        }
+    }
+    return -1;
 }
 
 // Which way the camera faces, for the map to be turned by. The frame stays still on the screen.
@@ -321,7 +333,7 @@ float msMinimapOffset(int from) {
 // Sized by the screen's height: the projection's two scales give its shape whatever the field of view.
 // GUI pixels are the screen's at Minecraft's automatic GUI scale, which is all a shader can work out,
 // from the screen's size in pixels where the game gives it (SCREEN_SIZE in build_shaders.py).
-vec4 msMinimapPosition(vec2 corner) {
+vec4 msMinimapPosition(vec2 corner, float layer) {
     float half_size = msMinimapSize() * MS_MINIMAP_REACH;
     float shape = ProjMat[0][0] / ProjMat[1][1];
     vec2 screen = %(screen)s;
@@ -336,41 +348,111 @@ vec4 msMinimapPosition(vec2 corner) {
         centre = msMinimapCorner() * vec2(1.0 - (half_size + MS_MINIMAP_GAP) * shape, 1.0 - half_size - MS_MINIMAP_GAP);
     }
     centre += vec2(msMinimapOffset(MS_MINIMAP_OFFSET_X), msMinimapOffset(MS_MINIMAP_OFFSET_Y)) * pixel;
-    return vec4(centre + vec2(corner.x, -corner.y) * 2.0 * half_size * vec2(shape, 1.0), %(depth)s, 1.0);
+    return vec4(centre + vec2(corner.x, -corner.y) * 2.0 * half_size * vec2(shape, 1.0), %(depth)s %(nearer)s 0.00002 * layer, 1.0);
+}
+
+// One of the icons on the icons' map (PlayerMinimap's ICON_LIST): from the second row, eleven of the same
+// digits each, its sprite's slot, then its pixel across and down, 7 bits each. One more than that, or 0
+// where there is none.
+uint msMinimapIcon(int index) {
+    uint value = 0u;
+    for (int i = 0; i < 11; i++) {
+        int at = 128 + index * 11 + i;
+        vec4 texel = texelFetch(Sampler0, ivec2(at %% 128, at / 128), 0);
+        int red = int(round(texel.r * 255.0));
+        int digit = red == MS_MINIMAP_DIGIT[0] ? 0 : red == MS_MINIMAP_DIGIT[1] ? 1 : red == MS_MINIMAP_DIGIT[2] ? 2 : red == MS_MINIMAP_DIGIT[3] ? 3 : -1;
+        if (digit < 0 || texel.a < 0.5 || texel.g > 0.0) {
+            return 0u;
+        }
+        value = value * 4u + uint(digit);
+    }
+    return value + 1u;
 }
 
 """
 MINIMAP_POSITION = """
     msMinimap = vec3(0.0);
-    if (msIsMinimap()) {
-        msMinimap = vec3((UV0 - 0.5) * 132.0, msMinimapTurn());
-        gl_Position = msMinimapPosition(UV0 - 0.5);
+    msIcons0 = msIcons1 = msIcons2 = msIcons3 = msIcons4 = msIcons5 = uvec4(0u);
+    int msLayer = msMinimapLayer();
+    if (msLayer >= 0) {
+        msMinimap = vec3((UV0 - 0.5) * 132.0, msMinimapTurn() + 32.0 * float(msLayer));
+        gl_Position = msMinimapPosition(UV0 - 0.5, float(msLayer));
+        if (msLayer == 1) {
+            msIcons0 = uvec4(msMinimapIcon(0), msMinimapIcon(1), msMinimapIcon(2), msMinimapIcon(3));
+            msIcons1 = uvec4(msMinimapIcon(4), msMinimapIcon(5), msMinimapIcon(6), msMinimapIcon(7));
+            msIcons2 = uvec4(msMinimapIcon(8), msMinimapIcon(9), msMinimapIcon(10), msMinimapIcon(11));
+            msIcons3 = uvec4(msMinimapIcon(12), msMinimapIcon(13), msMinimapIcon(14), msMinimapIcon(15));
+            msIcons4 = uvec4(msMinimapIcon(16), msMinimapIcon(17), msMinimapIcon(18), msMinimapIcon(19));
+            msIcons5 = uvec4(msMinimapIcon(20), msMinimapIcon(21), msMinimapIcon(22), msMinimapIcon(23));
+        }
     }"""
-# msMinimap is where on the frame this is, in map pixels from the middle, and msMinimapTurn. Inside the
-# frame the map, its markers and the player: a square white dot that stays square however the map turns.
-# A marker is one pixel of the map in a colour the ground never takes (MinimapColours), found from the
-# five by five round where this is and drawn upright, as OSRS's are: round, lit from the top left and
-# with a shadow to the bottom right, wherever the map has turned it to, in half pixels to be round at that size. Round it all a
-# thin band of stone with a dark line either side, as OSRS's, in the colours of the hud's orbs, lit from
-# the top left, in pixels as big as the map's. Unmapped ground is black, and neither light nor fog reach any of it.
+# The icons the icons' map's vertices hand its fragments, four a varying.
+MINIMAP_ICON_VARYINGS = 6
+# msMinimap is where on the frame this is, in map pixels from the middle, and msMinimapTurn moved up 32 a layer.
+# The ground's map: the ground inside the ring, unmapped ground black, and round it a thin band of stone with a
+# dark line either side, as OSRS's, in the colours of the hud's orbs, lit from the top left, in pixels as big as
+# the map's. The icons' map: OSRS's icons (msIcons, from its top rows), each a sprite from its map with a black
+# edge round it, upright however the map turns, inside the ring. The dots' map: markers and the player, a square
+# white dot that stays square however the map turns. A marker is one pixel of the map in a colour the ground
+# never takes (MinimapColours), found from the five by five round where this is and drawn upright, as OSRS's
+# are: round, lit from the top left and with a shadow to the bottom right, wherever the map has turned it to, in
+# half pixels to be round at that size. Over them OSRS's yellow hint arrow, where the top row says
+# (msMinimapNumber), on where the player is led or at the ring pointing to it. The icons' and the dots' maps leave
+# the rest to the map under them, and neither light nor fog reach any of it.
 MINIMAP_FRAGMENT = """
     if (msMinimap.z > 0.5) {
+        int msLayer = msMinimap.z > 64.0 ? 2 : msMinimap.z > 32.0 ? 1 : 0;
+        float msTurn = msMinimap.z - 32.0 * float(msLayer);
         vec2 msAt = floor(msMinimap.xy) + 0.5;
         float msRadius = length(msAt);
-        vec4 msPixel;
-        bool msNorthUp = msMinimap.z > 16.0;
-        float msYaw = msMinimap.z - (msNorthUp ? 24.0 : 8.0);
+        vec4 msPixel = vec4(-1.0);
+        bool msNorthUp = msTurn > 16.0;
+        float msYaw = msTurn - (msNorthUp ? 24.0 : 8.0);
         float msCos = cos(msYaw), msSin = sin(msYaw);
-        if (msRadius < 60.0) {
-            vec2 msMap = vec2(msMinimap.x, -msMinimap.y);
-            if (!msNorthUp) {
-                msMap = mat2(msCos, -msSin, msSin, msCos) * msMap;
+        mat2 msTurned = mat2(msCos, -msSin, msSin, msCos);
+        vec2 msMap = vec2(msMinimap.x, -msMinimap.y);
+        if (!msNorthUp) {
+            msMap = msTurned * msMap;
+        }
+        if (msLayer > 0 && msRadius >= 60.0) {
+            discard;
+        }
+        if (msLayer == 1) {
+            // nearest first, and so on top: 15 of the sprite's pixels across, each three quarters of the map's;
+            // the black edge's outermost pixels drawn here, the rest from the sprite's slot, 13 by 13, nine a
+            // row from the fifth row down
+            uvec4 msList[6] = uvec4[](msIcons0, msIcons1, msIcons2, msIcons3, msIcons4, msIcons5);
+            for (int msI = 0; msI < 24 && msPixel.a < 0.0; msI++) {
+                uint msEntry = msList[msI / 4][msI %% 4];
+                if (msEntry == 0u) {
+                    break;
+                }
+                int msValue = int(msEntry - 1u);
+                int msSlot = msValue >> 14;
+                vec2 msSpot = vec2(float((msValue >> 7) & 127), float(msValue & 127)) + 0.5 - 64.0;
+                vec2 msOnScreen = vec2(msSpot.x, -msSpot.y);
+                if (!msNorthUp) {
+                    msOnScreen = msOnScreen * msTurned;
+                }
+                ivec2 msP = ivec2(floor((msMinimap.xy - vec2(msOnScreen.x, -msOnScreen.y)) / 0.75 + 7.5));
+                if (msP.x < 0 || msP.y < 0 || msP.x > 14 || msP.y > 14) {
+                    continue;
+                }
+                vec4 msTexel;
+                if (msP.x == 0 || msP.y == 0 || msP.x == 14 || msP.y == 14) {
+                    int msAlong = msP.x == 0 || msP.x == 14 ? msP.y : msP.x;
+                    msTexel = msAlong >= 5 && msAlong <= 9 ? vec4(0.0, 0.0, 0.0, 1.0) : vec4(0.0);
+                } else {
+                    msTexel = texelFetch(Sampler0, ivec2(msSlot %% 9 * 13 + msP.x - 1, 4 + msSlot / 9 * 13 + msP.y - 1), 0);
+                }
+                if (msTexel.a > 0.5) {
+                    msPixel = vec4(msTexel.rgb, 1.0);
+                }
             }
-            msPixel = texture(Sampler0, vec2(msMap.x, -msMap.y) / 128.0 + 0.5);
-            if (msPixel.a < 0.5) {
-                msPixel = vec4(0.0, 0.0, 0.0, 1.0);
+            if (msPixel.a < 0.0) {
+                discard;
             }
-            mat2 msTurned = mat2(msCos, -msSin, msSin, msCos);
+        } else if (msLayer == 2) {
             ivec2 msHome = ivec2(floor(vec2(msMap.x, -msMap.y) + 64.0));
             vec3 msDot = vec3(-1.0);
             bool msShadow = false;
@@ -406,8 +488,45 @@ MINIMAP_FRAGMENT = """
             } else if (msShadow) {
                 msPixel = vec4(0.0, 0.0, 0.0, 1.0);
             }
+            // The hint arrow over where the player is being led (PlayerMinimap's HINT): a pixel across and down,
+            // across 128 more when the place is past the map. Over it, the arrow points down on to it, upright as
+            // the dots are; past the map it stands at the ring pointing the way it lies. Yellow, its right side
+            // darker, edged black, in half pixels as the dots are; the server blinks it.
+            int msHintU = msMinimapNumber(15), msHintV = msMinimapNumber(19);
+            if (msHintU >= 0 && msHintV >= 0) {
+                bool msAway = msHintU >= 128;
+                vec2 msSpot = vec2(float(msAway ? msHintU - 128 : msHintU), float(msHintV)) + 0.5 - 64.0;
+                vec2 msOnScreen = vec2(msSpot.x, -msSpot.y);
+                if (!msNorthUp) {
+                    msOnScreen = msOnScreen * msTurned;
+                }
+                vec2 msWhere = vec2(msOnScreen.x, -msOnScreen.y);
+                vec2 msAhead = msAway ? normalize(msWhere) : vec2(0.0, 1.0);
+                vec2 msTip = msAway ? msAhead * 58.5 : msWhere;
+                vec2 msQ = (floor(msMinimap.xy * 2.0) + 0.5) / 2.0 - msTip;
+                // how far behind the tip, and to one side, + being the screen's right when it points down
+                float msBack = -dot(msQ, msAhead);
+                float msSide = dot(msQ, vec2(msAhead.y, -msAhead.x));
+                float msWide = abs(msSide);
+                // a narrow head 6 wide and 5 deep, then a tail 2 wide to 8.5 behind the tip; the black edge
+                // round it lies along the head's sides, so its point stays sharp
+                float msOver = (msWide - 0.6 * msBack) / 1.166;
+                if (msBack >= 0.0 && (msBack <= 5.0 && msOver <= 0.0 || msBack <= 8.5 && msWide <= 1.0)) {
+                    msPixel = vec4(msSide > 0.0 ? vec3(0.8, 0.7, 0.0) : vec3(1.0, 1.0, 0.0), 1.0);
+                } else if (msBack <= 5.75 && msOver <= 0.75 || msBack >= 0.0 && msBack <= 9.25 && msWide <= 1.75) {
+                    msPixel = vec4(0.0, 0.0, 0.0, 1.0);
+                }
+            }
             if (abs(msAt.x) < 2.0 && abs(msAt.y) < 2.0) {
                 msPixel = vec4(1.0);
+            }
+            if (msPixel.a < 0.0) {
+                discard;
+            }
+        } else if (msRadius < 60.0) {
+            msPixel = texture(Sampler0, vec2(msMap.x, -msMap.y) / 128.0 + 0.5);
+            if (msPixel.a < 0.5) {
+                msPixel = vec4(0.0, 0.0, 0.0, 1.0);
             }
         } else {
             if (msRadius > 65.0) {
@@ -447,6 +566,24 @@ MINIMAP_FRAGMENT = """
 %(write)s
         return;
     }"""
+# Before the fragment shader's main: a number from the map's top row (PlayerMinimap's writeDigits), four
+# base 4 digits from that pixel, the first the largest, each the fire colour of its brightness; -1 where
+# there are none, as from an older server.
+MINIMAP_FRAGMENT_FUNCTIONS = """int msMinimapNumber(int from) {
+    int value = 0;
+    for (int i = 0; i < 4; i++) {
+        vec4 texel = texelFetch(Sampler0, ivec2(from + i, 0), 0);
+        int red = int(round(texel.r * 255.0));
+        int digit = red == 180 ? 0 : red == 220 ? 1 : red == 255 ? 2 : red == 135 ? 3 : -1;
+        if (digit < 0 || texel.a < 0.5 || texel.g > 0.0) {
+            return -1;
+        }
+        value = value * 4 + digit;
+    }
+    return value;
+}
+
+"""
 # The front of the depth buffer: from 26.2 depth runs the other way, far at -1 and near at 1.
 MINIMAP_REVERSED_DEPTH_FROM = 88
 MAIN = "void main() {"
@@ -667,8 +804,10 @@ def patch(files, form):
     location = varying_location(vsh, fsh)
     layout = "" if location is None else "layout(location = %d) " % location
     camera = "IViewRotMat * vec3(1.0, 0.0, 0.0)" if "IViewRotMat" in vsh else "transpose(mat3(ModelViewMat)) * vec3(1.0, 0.0, 0.0)"
-    depth = "0.9999" if form >= MINIMAP_REVERSED_DEPTH_FROM else "-0.9999"
-    minimap = layout + "out vec3 msMinimap;\n" + MINIMAP_VERTEX % {"camera": camera, "depth": depth, "screen": screen}
+    depth, nearer = ("0.9999", "+") if form >= MINIMAP_REVERSED_DEPTH_FROM else ("-0.9999", "-")
+    icons = ["" if location is None else "layout(location = %d) " % (location + 1 + i) for i in range(MINIMAP_ICON_VARYINGS)]
+    minimap = layout + "out vec3 msMinimap;\n" + "".join(at + "flat out uvec4 msIcons%d;\n" % i for i, at in enumerate(icons))
+    minimap += MINIMAP_VERTEX % {"camera": camera, "depth": depth, "nearer": nearer, "screen": screen}
     minimap += SIDEBAR_VERTEX % {"width": SIDEBAR_WIDTH}
     moved = body.replace(POSITION, LIFT + MINIMAP_POSITION, 1)
     # after Sampler0, which the functions start by declaring
@@ -677,7 +816,8 @@ def patch(files, form):
     head, body = fsh.split(MAIN, 1)
     # 26.3 draws some text in two passes, and its alpha-only one writes no colour
     write = "#ifdef OIT_ALPHA_ONLY\n        executeAlphaOnlyPhase(gl_FragCoord.z, msPixel.a);\n#else\n        fragColor = msPixel;\n#endif" if "OIT_ALPHA_ONLY" in fsh else "        fragColor = msPixel;"
-    patched[fsh_name] = head + layout + "in vec3 msMinimap;\n\n" + MAIN + MINIMAP_FRAGMENT % {"write": write} + body
+    inputs = "".join(at + "flat in uvec4 msIcons%d;\n" % i for i, at in enumerate(icons))
+    patched[fsh_name] = head + layout + "in vec3 msMinimap;\n" + inputs + "\n" + MINIMAP_FRAGMENT_FUNCTIONS + MAIN + MINIMAP_FRAGMENT % {"write": write} + body
     return patched
 
 
