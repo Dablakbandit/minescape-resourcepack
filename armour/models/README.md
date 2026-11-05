@@ -6,7 +6,7 @@ Each armour look is one Blockbench model, named after the look:
 armour/models/chest/<look>.bbmodel     e.g. chest/80_platebody_normal.bbmodel
 armour/models/legs/<look>.bbmodel      e.g. legs/72_plateskirt_normal.bbmodel
 armour/models/boots/<look>.bbmodel     e.g. boots/64_armour_boots.bbmodel
-armour/models/gloves/<look>.bbmodel    e.g. gloves/1_gloves.bbmodel, gloves/2_vambraces.bbmodel
+armour/models/gloves/<look>.bbmodel    e.g. gloves/gloves.bbmodel
 armour/models/amulets/<look>.bbmodel   e.g. amulets/16_gold_amulet_gem.bbmodel
 armour/models/capes/<look>.bbmodel     e.g. capes/3_firecape.bbmodel
 ```
@@ -33,6 +33,17 @@ big.
 | `amulets/gem_necklace` | the gold necklace (20 items) | brass, silver |
 | `amulets/flat_amulet` | the onyx necklace (no cubes) | each other's flat look, `<look>.png`: the god stoles, the unblessed and holy symbols, the amulet of power (t), the scarf |
 | `amulets/36_glarials_amulet` | Glarial's amulet | none: the gnome amulet looks the same |
+| `capes/basic_cape` | the red cape | the other colours, the Castle Wars cloaks, graceful, spotted and spottier |
+| `capes/wings` | the wings | their colours |
+| `capes/jester_cape` | the jester cape | black, orange |
+| `capes/team_cape_<pattern>` | one team colour (circle, outline, x, claw, box, cross, dashed, horizontal, boxattop, scarab) | the pattern's other colours |
+| `chest/apron` | the apron | the builder's shirt |
+| `chest/dhide_body`, `legs/dhide_chaps` | the d'hide body and chaps | the (g) and (t) |
+| `chest/mystic_robe_top`, `legs/mystic_robe_bottom` | blue | dusk, light, dark |
+| `boots/boots` | the boots | the mime boots |
+| `boots/decorative_boots` | gold | red, white |
+| `boots/bark_boots` | splitbark | swampbark, bloodbark |
+| `gloves/gloves` | the gloves | the vambraces and bracelets (their flat looks) |
 
 To change a swapped look, paint its image. It has the model's layout, so you can paint it over an export
 of the model's texture, or load it into the model in Blockbench to see it on the cubes (save the image,
@@ -48,7 +59,7 @@ python .github/scripts/merge_models.py amulets/gem_necklace 27_gold_necklace_gem
 
 The first look's textures become the model's, the others' that differ are written as images, the items
 in `armour/<piece>.json` are changed to wear the model with them, and the looks' own models are removed.
-It checks each look draws as it did. Looks whose textures are laid out differently are laid out again
+It checks each look draws as it did; cubes stacked in one place are matched in the outliner's order. Looks whose textures are laid out differently are laid out again
 as one, a face's texels only ever scaled up by a whole number.
 
 Gloves, amulets and capes (`armour/gloves.json`, `armour/amulets.json`, `armour/capes.json`; how to

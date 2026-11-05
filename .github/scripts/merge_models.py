@@ -9,7 +9,8 @@ wear the model with those images in place of its textures:
     python .github/scripts/merge_models.py capes/skill_cape 9_agility 10_agility_trimmed ...
 
 The looks are models of their own (<look>.bbmodel) with the same cubes: the same groups and pivots, the
-same places, sizes and turns, the same faces textured. An image swapped in keeps the model's layout (where
+same places, sizes and turns, the same faces textured (cubes in one place matched in the outliner's
+order). An image swapped in keeps the model's layout (where
 its faces are on the texture), so looks whose details are laid out differently are laid out again as one:
 a face keeps its texels where the first look whose layout has room for every look's puts them; when no
 look's has, every face gets its own place in a new layout, as many texels as the most any look gives it.
@@ -42,10 +43,11 @@ def rounded(v):
 
 def cubes(model):
     """The model's cubes outside the reference player, by where they are: {key: element}, the key its groups
-    (name, pivot, turn) and its own place, size, turn and inflation."""
+    (name, pivot, turn), its own place, size, turn and inflation, and which of the cubes in that one place
+    it is (in the outliner's order)."""
     elements = {e["uuid"]: e for e in model["elements"]}
     groups = {g["uuid"]: g for g in model.get("groups", []) if "uuid" in g}
-    out = {}
+    out, seen = {}, {}
 
     def walk(children, at):
         for child in children:
@@ -55,9 +57,8 @@ def cubes(model):
                     continue
                 key = (at, rounded(e["from"]), rounded(e["to"]), rounded(e.get("origin", (0, 0, 0))),
                        rounded(e.get("rotation", (0, 0, 0))), round(float(e.get("inflate", 0)), 4))
-                if key in out:
-                    raise SystemExit("two cubes of %s are in one place (%s)" % (model.get("name"), e.get("name")))
-                out[key] = e
+                seen[key] = seen.get(key, -1) + 1
+                out[key + (seen[key],)] = e
                 continue
             group = dict(groups.get(child.get("uuid"), {}), **child) if "name" not in child else child
             if group.get("name", "").startswith("player (reference)"):
@@ -280,8 +281,11 @@ def merge(target, names):
                      width=baked[first.name].width, height=baked[first.name].height)
         elif first.role[i] == "flat":
             t["name"] = name + ".png"
+    # (the reference player's cubes, never exported, left as they are)
     keys = {e["uuid"]: k for k, e in cubes(model).items()}
     for e in model["elements"]:
+        if e["uuid"] not in keys:
+            continue
         for face, spec in (e.get("faces") or {}).items():
             if spec and spec.get("texture") is not None and first.role.get(spec["texture"]) == "details":
                 spec["uv"] = list(uvs[keys[e["uuid"]], face])

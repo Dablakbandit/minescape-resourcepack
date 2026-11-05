@@ -143,7 +143,7 @@ chestplate or leggings worn, the plugin sends the bare ones (`bare_arms`, `bare_
 One line an item, keyed by the item's own number:
 
 ```json
-{"custom_model_data": 3814, "name": "graceful_gloves", "look": "1_gloves", "colour": "#6b7d5c"}
+{"custom_model_data": 3814, "name": "graceful_gloves", "look": "gloves", "colour": "#6b7d5c"}
 {"custom_model_data": 1046, "name": "dragonstone_amulet", "look": "16_gold_amulet_gem", "colour": "#823abe"}
 ```
 
@@ -155,8 +155,8 @@ One line an item, keyed by the item's own number:
 | `textures`          | Optional: images of the item's own in place of its model's textures (section 1's `textures`). |
 | `colour`            | Optional `#rrggbb`: dyes the look's exact greys. Without it they stay grey.          |
 
-Many items share a look, each in its own colour: the gloves share `1_gloves` and the vambraces
-`2_vambraces`. Amulets and necklaces that differ only in their gem share one look by their setting
+Many items share a look, each in its own colour: the gloves share `gloves`, which the vambraces
+and bracelets wear with their own flat looks in its `textures`. Amulets and necklaces that differ only in their gem share one look by their setting
 (`16_gold_amulet_gem`, `40_silver_amulet_gem`, `27_gold_necklace_gem`, ...): its gold or silver is
 painted as it is (alpha 254), its gem in exact greys, and each item's `colour` is its gem's, so the
 sapphire, ruby, emerald and dragonstone amulets are one model. A new gem in an existing setting is
@@ -186,7 +186,7 @@ paint it elsewhere and load it back into the same texture, then save the project
 texture stored inside the `.bbmodel`. Gloves draw over the chestplate's arms, its models too.
 Blockbench shows the greys undyed: each item's `colour` dyes them in game.
 
-![1_gloves.bbmodel in Blockbench: the look boxes on the reference player's arms, the outliner and the textures](readme/gloves_blockbench.png)
+![gloves.bbmodel in Blockbench: the look boxes on the reference player's arms, the outliner and the textures](readme/gloves_blockbench.png)
 
 ### Amulets
 
@@ -228,7 +228,7 @@ inventory's preview, where it's drawn over the chestplate too.
 
 1. **Look:** reuse one, or copy a similar look's `.bbmodel` in `models/gloves/` or `models/amulets/`
    to `<next number>_<name>.bbmodel`, and rename its two textures to match (`<look>.png`,
-   `<look>_details.png`). A new setting for the gem amulet or necklace is its own images on that model
+   `<look>_details.png`). A new glove look, or a new setting for the gem amulet or necklace, is its own images on that model
    instead, in its `textures` ([models/README.md](models/README.md)).
 2. **Edit it** in Blockbench: gloves, paint `<look>.png`; an amulet, its cubes and
    `<look>_details.png`, then `python .github/scripts/amulet_flat.py <look>`.
@@ -256,7 +256,9 @@ look.
 
 Each look is `armour/models/capes/<number>_<name>.bbmodel`, made cube for cube from the cape's item
 model (`ms:capes/...`) and placed where that model used to hang. The skill capes all wear
-`skill_cape.bbmodel`, each with its own `skill_cape/<look>_details.png` in its `textures`
+`skill_cape.bbmodel`, each with its own `skill_cape/<look>_details.png` in its `textures`; likewise the
+basic capes wear `basic_cape`, the wings `wings`, the jester capes `jester_cape` and the team capes one
+model a pattern (`team_cape_circle`, `team_cape_x`, ...)
 ([models/README.md](models/README.md)). Open it in Blockbench: the outliner
 has a **`cape`** folder with up to three groups, and the locked **player (reference)** to build round.
 
