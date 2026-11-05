@@ -83,6 +83,7 @@ Each item is one line in its piece's file:
 | `custom_model_data` | The item's number: 10000 + 1 to 511, unique within the file. The server uses the same number. |
 | `name`              | A label for people (the item's name in the plugin). Not used by the game.                     |
 | `look`              | The look's model in `models/<piece>/`, without `.bbmodel`; or `plain`.                        |
+| `textures`          | Optional: images of the item's own in place of its model's textures, `{"<texture in the model>": "<image from models/<piece>/>"}` (see [models/README.md](models/README.md)). |
 | `colour`            | `#rrggbb`: the dye for the look's greys and for the icon.                                     |
 | `icon`              | The inventory icon's item model (see 3).                                                      |
 | `icon_colour`       | Optional `#rrggbb`: paints the icon in place of `colour`. `#ffffff` keeps a full-colour icon as painted while the look is still dyed. |
@@ -151,6 +152,7 @@ One line an item, keyed by the item's own number:
 | `custom_model_data` | The item's own number in the plugin (its `leather_horse_armor` model), 1 to 4095.    |
 | `name`              | A label for people. Not used by the game.                                           |
 | `look`              | The look's model, in `models/gloves/` or `models/amulets/`, without `.bbmodel`.      |
+| `textures`          | Optional: images of the item's own in place of its model's textures (section 1's `textures`). |
 | `colour`            | Optional `#rrggbb`: dyes the look's exact greys. Without it they stay grey.          |
 
 Many items share a look, each in its own colour: the gloves share `1_gloves` and the vambraces
@@ -226,7 +228,8 @@ inventory's preview, where it's drawn over the chestplate too.
 
 1. **Look:** reuse one, or copy a similar look's `.bbmodel` in `models/gloves/` or `models/amulets/`
    to `<next number>_<name>.bbmodel`, and rename its two textures to match (`<look>.png`,
-   `<look>_details.png`).
+   `<look>_details.png`). A new setting for the gem amulet or necklace is its own images on that model
+   instead, in its `textures` ([models/README.md](models/README.md)).
 2. **Edit it** in Blockbench: gloves, paint `<look>.png`; an amulet, its cubes and
    `<look>_details.png`, then `python .github/scripts/amulet_flat.py <look>`.
 3. **Entry:** a line in `gloves.json` or `amulets.json` with the item's own number from the plugin.
@@ -252,7 +255,9 @@ look.
 ### The model
 
 Each look is `armour/models/capes/<number>_<name>.bbmodel`, made cube for cube from the cape's item
-model (`ms:capes/...`) and placed where that model used to hang. Open it in Blockbench: the outliner
+model (`ms:capes/...`) and placed where that model used to hang. The skill capes all wear
+`skill_cape.bbmodel`, each with its own `skill_cape/<look>_details.png` in its `textures`
+([models/README.md](models/README.md)). Open it in Blockbench: the outliner
 has a **`cape`** folder with up to three groups, and the locked **player (reference)** to build round.
 
 | Group | Its pivot | In game |
@@ -286,7 +291,8 @@ How far each part moves is a constant in `.github/scripts/armour_stitch.py`: `CA
 
 1. **Look:** reuse one, or copy a similar cape's `.bbmodel` to `<next number>_<name>.bbmodel` and
    rename its textures to match (`<look>.png`, `<look>_details.png`, and `<look>_animated.png` if it
-   has one).
+   has one). A new skill cape is an image in `models/capes/skill_cape/` and a line wearing
+   `skill_cape` with it in its `textures`.
 2. **Edit it** in Blockbench: its cubes in `shoulders`, `swing` or `flap`, each group's pivot where
    that part turns.
 3. **Entry:** a line in `capes.json` with the item's own number from the plugin.

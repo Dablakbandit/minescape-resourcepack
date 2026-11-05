@@ -2,8 +2,9 @@
 
 armour/chest.json, armour/legs.json and armour/boots.json at the pack's root define every armour item
 of that piece: its custom model data (10000 + its tile, 1 to 511), the look it wears (a Blockbench model
-armour/models/<piece>/<name>.bbmodel, whose texture <name>.png is the flat look, or plain), the colour
-that look is dyed where it is grey, its inventory icon (count_icons.py colours it the same) and its
+armour/models/<piece>/<name>.bbmodel, whose texture <name>.png is the flat look, or plain), any of that
+model's textures it swaps for an image of its own ("textures", replaced()), the colour that look is dyed
+where it is grey, its inventory icon (count_icons.py colours it the same) and its
 shape. build_armour.py bakes each item's look in its colour into a tile of the armour sheets, and the
 tables here tell the shader which sheet tile each item's tile is, and its shape; items that look the
 same share a sheet tile.
@@ -47,19 +48,61 @@ def plain_file(part):
     return os.path.join(SOURCE, "plain", part + ".png")
 
 
-def look_file(part, name):
-    """The flat look <name>.png embedded in armour/models/<part>/<name>.bbmodel, written out to a file
-    (rewritten only when it changed); None if there is no such model."""
+def replaced(part, entry, where):
+    """The textures an item swaps in its look's model for images of its own: {a texture's name in the
+    model: the image's path}, from its "textures" ({"<look>_details.png": "<folder>/<image>.png"}, the
+    images' paths from armour/models/<part>/), checked. The images keep the model's layout (its faces'
+    places on the texture), each as big as the texture it takes the place of."""
+    found = {}
+    for name, image in sorted((entry.get("textures") or {}).items()):
+        path = os.path.join(MODELS, part, *image.split("/"))
+        if not image.endswith(".png") or not os.path.isfile(path):
+            raise ValueError("%s: no image armour/models/%s/%s for its %s" % (where, part, image, name))
+        found[name] = path
+    return found
+
+
+def swapped_look(look, textures):
+    """The name of a look with textures swapped (replaced()): <look>@<its images' names>."""
+    if not textures:
+        return look
+    return look + "@" + "+".join(sorted({os.path.splitext(os.path.basename(p))[0] for p in textures.values()}))
+
+
+def swapped(part):
+    """{name: (its model's path, its textures)} for every look with textures swapped that
+    armour/<part>.json's items wear (swapped_look)."""
+    path = os.path.join(SOURCE, part + ".json")
+    found = {}
+    for entry in json.load(open(path, encoding="utf-8"))["items"] if os.path.exists(path) else []:
+        if entry.get("textures"):
+            where = "%s.json %s" % (part, entry.get("name", entry.get("custom_model_data")))
+            textures = replaced(part, entry, where)
+            found[swapped_look(entry["look"], textures)] = (os.path.join(MODELS, part, entry["look"] + ".bbmodel"), textures)
+    return found
+
+
+def look_file(part, name, textures=None):
+    """The flat look <name>.png embedded in armour/models/<part>/<name>.bbmodel, or its image if textures
+    (replaced()) swaps it, written out to a file named for the look (swapped_look; rewritten only when
+    it changed); None if there is no such model."""
     model = os.path.join(MODELS, part, name + ".bbmodel")
     if not os.path.exists(model):
         return None
-    textures = json.load(open(model, encoding="utf-8")).get("textures", [])
-    texture = next((t for t in textures if t.get("name") == name + ".png"), None)
-    source = (texture or {}).get("source", "")
-    if not source.startswith("data:image/png;base64,"):
-        raise ValueError("armour/models/%s/%s.bbmodel has no embedded texture %s.png, its flat look" % (part, name, name))
-    data = base64.b64decode(source.split(",", 1)[1])
-    path = os.path.join(EXTRACTED, part, name + ".png")
+    textures = textures or {}
+    model_textures = json.load(open(model, encoding="utf-8")).get("textures", [])
+    for swap in textures:
+        if not any(t.get("name") == swap for t in model_textures):
+            raise ValueError("armour/models/%s/%s.bbmodel has no texture %s to swap" % (part, name, swap))
+    if name + ".png" in textures:
+        data = open(textures[name + ".png"], "rb").read()
+    else:
+        texture = next((t for t in model_textures if t.get("name") == name + ".png"), None)
+        source = (texture or {}).get("source", "")
+        if not source.startswith("data:image/png;base64,"):
+            raise ValueError("armour/models/%s/%s.bbmodel has no embedded texture %s.png, its flat look" % (part, name, name))
+        data = base64.b64decode(source.split(",", 1)[1])
+    path = os.path.join(EXTRACTED, part, swapped_look(name, textures) + ".png")
     if not os.path.exists(path) or open(path, "rb").read() != data:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "wb") as f:
@@ -79,7 +122,7 @@ def items(piece):
             raise ValueError("%s: custom model data is %d to %d" % (where, CUSTOM_MODEL_DATA + 1, CUSTOM_MODEL_DATA + TILES - 1))
         if tile in found:
             raise ValueError("%s: custom model data %d is %s's already" % (where, entry["custom_model_data"], found[tile]["name"]))
-        look = plain_file(piece) if entry["look"] == "plain" else look_file(piece, entry["look"])
+        look = plain_file(piece) if entry["look"] == "plain" else look_file(piece, entry["look"], replaced(piece, entry, where))
         if look is None:
             raise ValueError("%s: no look armour/models/%s/%s.bbmodel" % (where, piece, entry["look"]))
         colour = entry["colour"].lstrip("#")
@@ -171,7 +214,7 @@ def worn_items(kind):
             raise ValueError("%s: worn as %d, but that is 1 to %d (the dye's twelve bits)" % (where, number, GLOVES_NUMBERS - 1))
         if number in found:
             raise ValueError("%s: worn as %d, which is %s's already" % (where, number, found[number]["name"]))
-        look = look_file(kind, entry["look"])
+        look = look_file(kind, entry["look"], replaced(kind, entry, where))
         if look is None:
             raise ValueError("%s: no look armour/models/%s/%s.bbmodel" % (where, kind, entry["look"]))
         colour = None

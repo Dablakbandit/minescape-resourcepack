@@ -125,19 +125,27 @@ def codes(image):
     return Image.fromarray(out)
 
 
-def load(path, piece):
+def load(path, piece, swaps=None):
     """The piece's faces by body part, as (corners in the part's own space, (texture, x, y) a corner); its
-    cubes by body part (cube()); and its textures in colour codes. A cape's (CAPE_GROUPS) fill the part
-    rows in turn, fixed then swinging, and its cubes carry its hinge and how many rows each takes
-    (whole["hinge"], whole["rows"])."""
+    cubes by body part (cube()); and its textures in colour codes, any named in swaps ({name: an image's
+    path}, armour_looks.replaced) from that image. A cape's (CAPE_GROUPS) fill the part rows in turn,
+    fixed then swinging, and its cubes carry its hinge and how many rows each takes (whole["hinge"],
+    whole["rows"])."""
     model = json.load(open(path, encoding="utf-8"))
     res = model.get("resolution", {"width": 16, "height": 16})
+    swaps = swaps or {}
     textures = []
     for t in model.get("textures", []):
         source = t.get("source", "")
         if not source.startswith("data:image/png;base64,"):
             raise SystemExit("%s: texture %s isn't embedded in the project" % (path, t.get("name")))
         image = Image.open(io.BytesIO(base64.b64decode(source.split(",", 1)[1])))
+        if t.get("name") in swaps:
+            own = Image.open(swaps[t["name"]])
+            if own.size != image.size:
+                raise SystemExit("%s is %dx%d, but %s's %s, which it takes the place of, is %dx%d" % (
+                    swaps[t["name"]], own.width, own.height, path, t["name"], image.width, image.height))
+            image = own
         uw, uh = t.get("uv_width", res["width"]), t.get("uv_height", res["height"])
         # Blockbench's animated texture: its frames one under another, each as tall as its uv size makes
         # it; faces map onto the first (the tracer steps through the rest, armour_stitch.trace_cape)
@@ -314,11 +322,13 @@ class Shelf:
 # --- building ------------------------------------------------------------------------------------------
 
 def models_of(kind):
-    """{look: path} for the piece's looks that have a model."""
+    """{look: (path, swaps)} for the piece's looks that have a model: each model's own, then those its
+    items wear with textures swapped (armour_looks.swapped)."""
     folder = os.path.join(MODELS, kind)
     if not os.path.isdir(folder):
         return {}
-    return {f[:-8]: os.path.join(folder, f) for f in sorted(os.listdir(folder)) if f.endswith(".bbmodel")}
+    own = {f[:-8]: (os.path.join(folder, f), {}) for f in sorted(os.listdir(folder)) if f.endswith(".bbmodel")}
+    return dict(own, **dict(sorted(looks.swapped(kind).items())))
 
 
 def look_name(item):
@@ -424,8 +434,8 @@ def build():
     for layer, kinds, folder in ((1, ("chest", "boots"), "humanoid"), (2, ("legs",), "humanoid_leggings")):
         models = []
         for kind in kinds:
-            for look, path in models_of(kind).items():
-                faces, _, textures = load(path, PIECE[kind])
+            for look, (path, swaps) in models_of(kind).items():
+                faces, _, textures = load(path, PIECE[kind], swaps)
                 models.append((kind, look, faces, textures))
                 # the layers this look needs: six faces of each of its body parts a layer
                 layers_of[(kind, look)] = max([0] + [math.ceil(len(q) / 6) for q in faces.values()])
@@ -534,10 +544,10 @@ def most_cubes():
 def models_for(kinds):
     out = []
     for kind in kinds:
-        for look, path in models_of(kind).items():
-            if path not in _loaded:
-                _loaded[path] = load(path, PIECE[kind])
-            _, cubes, textures = _loaded[path]
+        for look, (path, swaps) in models_of(kind).items():
+            if look not in _loaded.setdefault(kind, {}):
+                _loaded[kind][look] = load(path, PIECE[kind], swaps)
+            _, cubes, textures = _loaded[kind][look]
             if kind == "amulets":
                 cubes = {slot: [seated(cube) for cube in part] for slot, part in cubes.items()}
             out.append((kind, look, cubes, textures))

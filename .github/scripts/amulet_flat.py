@@ -3,10 +3,12 @@
 can't be drawn (the inventory's preview, clients without the tracer). Each texel is the model's nearest
 surface seen from the front, of what lies in front of the body's middle (z below 0 in the body's own
 space): the chain behind the neck, which the body hides, isn't painted over the chest. Run it after
-changing an amulet's cubes or their colours in Blockbench; the rest of the texture is kept.
+changing an amulet's cubes or their colours in Blockbench; the rest of the texture is kept. An amulet
+that wears a model with its textures swapped (its "textures" in amulets.json) is drawn from its own
+images, and its flat look written into its own image for <look>.png.
 
     python .github/scripts/amulet_flat.py                 every amulet with a model
-    python .github/scripts/amulet_flat.py 16_gold_amulet_gem ...
+    python .github/scripts/amulet_flat.py gem_amulet ...  these models, and the amulets wearing them swapped
     python .github/scripts/amulet_flat.py --check         which flat looks don't match their models
 
 An amulet with no cubes (a flat look only) is left as painted.
@@ -15,6 +17,7 @@ import base64, glob, io, json, os, sys
 
 from PIL import Image
 
+import armour_looks
 import armour_models
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
@@ -40,10 +43,11 @@ def hit(corners, x, y):
     return c0[2] + a * e1[2] + b * e2[2], a, b
 
 
-def front(path):
-    """The body's front as the model shows it (the AREA, SCALE texels a pixel), or None with no cubes.
-    From the front, the body's x runs to the right as the face's u does (u = 24 + x)."""
-    faces, _, textures = armour_models.load(path, "amulet")
+def front(path, swaps=None):
+    """The body's front as the model shows it (the AREA, SCALE texels a pixel), its textures swapped for
+    any images in swaps (armour_looks.replaced), or None with no cubes. From the front, the body's x runs
+    to the right as the face's u does (u = 24 + x)."""
+    faces, _, textures = armour_models.load(path, "amulet", swaps)
     polys = faces.get("body", [])
     if not polys:
         return None
@@ -109,6 +113,26 @@ def redraw(names, check=False):
         t["source"] = "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
         with open(path, "w", encoding="utf-8", newline="\n") as fh:
             json.dump(model, fh, indent="\t")
+        drawn += 1
+    # the amulets wearing a model with its textures swapped: their flat looks in their own images
+    for name, (path, swaps) in sorted(armour_looks.swapped("amulets").items()):
+        look = os.path.basename(path)[:-len(".bbmodel")]
+        if names and look not in names and name not in names:
+            continue
+        new = front(path, swaps)
+        if new is None:
+            continue
+        own = swaps.get(look + ".png")
+        image = Image.open(own).convert("RGBA") if own else flat_texture(json.load(open(path, encoding="utf-8")), look)[1]
+        if image.crop(box).tobytes() == new.tobytes():
+            continue
+        if check:
+            stale.append(name)
+            continue
+        if own is None:
+            raise SystemExit("%s: its swapped textures change its flat look; give it its own %s.png in its \"textures\"" % (name, look))
+        image.paste(new, box[:2])
+        image.save(own)
         drawn += 1
     return stale if check else drawn
 

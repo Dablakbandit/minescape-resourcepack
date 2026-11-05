@@ -11,6 +11,46 @@ armour/models/amulets/<look>.bbmodel   e.g. amulets/16_gold_amulet_gem.bbmodel
 armour/models/capes/<look>.bbmodel     e.g. capes/3_firecape.bbmodel
 ```
 
+## One model, its textures swapped
+
+Items whose looks have the same cubes can wear one model, each with its own images in place of the
+model's textures. The item's line says which, by the texture's name in the model:
+
+```json
+{"custom_model_data": 661, "name": "attack", "look": "skill_cape", "textures": {"skill_cape_details.png": "skill_cape/11_attack_details.png"}}
+```
+
+The image's path is from the piece's folder (`armour/models/capes/` here). The build draws the item from
+the model's cubes with the image in that texture's place; swap the flat look (`<model>.png`) and the
+sheets get the item's own flat look too. An item with no `textures` wears the model as it is. An image is
+laid out as the texture it takes the place of (the model's faces read the same places on it), and is as
+big.
+
+| Model | Its own textures | Images swapped in (in the folder named after it) |
+|---|---|---|
+| `capes/skill_cape` | the agility cape | every other skill cape and trimmed one: `<look>_details.png` |
+| `amulets/gem_amulet` | the gold amulet (17 items) | accuracy, bronze, eternal glory, silver: `<look>.png`, `<look>_details.png` |
+| `amulets/gem_necklace` | the gold necklace (20 items) | brass, silver |
+| `amulets/flat_amulet` | the onyx necklace (no cubes) | each other's flat look, `<look>.png`: the god stoles, the unblessed and holy symbols, the amulet of power (t), the scarf |
+| `amulets/36_glarials_amulet` | Glarial's amulet | none: the gnome amulet looks the same |
+
+To change a swapped look, paint its image. It has the model's layout, so you can paint it over an export
+of the model's texture, or load it into the model in Blockbench to see it on the cubes (save the image,
+not the model with it loaded). Change the cubes and every item wearing the model has them. For an amulet,
+after changing its cubes or an image, `python .github/scripts/amulet_flat.py gem_amulet` draws the flat
+looks again, the swapped ones into their own images.
+
+To put more looks of one shape onto one model:
+
+```
+python .github/scripts/merge_models.py amulets/gem_necklace 27_gold_necklace_gem 23_brass_necklace_gem 29_silver_necklace_gem
+```
+
+The first look's textures become the model's, the others' that differ are written as images, the items
+in `armour/<piece>.json` are changed to wear the model with them, and the looks' own models are removed.
+It checks each look draws as it did. Looks whose textures are laid out differently are laid out again
+as one, a face's texels only ever scaled up by a whole number.
+
 Gloves, amulets and capes (`armour/gloves.json`, `armour/amulets.json`, `armour/capes.json`; how to
 make and update them, with pictures, in [../README.md](../README.md) sections 4a and 4b) are looks too.
 A cape's model has a **cape** folder of `shoulders`, `swing` and `flap` groups (section 4b). Gloves and
