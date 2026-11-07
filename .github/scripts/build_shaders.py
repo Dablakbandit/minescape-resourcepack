@@ -600,6 +600,7 @@ LIFT = """vec3 position = Position;
     vec4 view = ModelViewMat * vec4(position, 1.0);
     view.xy += msOffset;
     view.xy += msSidebar(msColor, view.xy);
+    view.xy += msOrbs(msColor, view.xy);
     gl_Position = ProjMat * view;"""
 # MineScape's sidebar (the plugin's SidebarText): its title and lines are coloured with a mark in their
 # low bits, red's low four 9 (never its high four, where the plugin keeps the colour), and a setting in
@@ -634,6 +635,133 @@ vec2 msSidebar(inout vec4 color, vec2 at) {
 }
 """
 SIDEBAR_WIDTH = 150
+# MineScape's orbs beside the minimap (the plugin's HudOrbs): with the setting on, the action bar hud's
+# compass and its hitpoints, prayer, run and special attack orbs, each with its number, go round the
+# minimap's ring as OSRS has them, on its side away from the screen's edge. The plugin sets each one in a
+# slot of its own along the action bar, MS_ORBS_SLOT apart from the line's middle (the line measures 0),
+# the minimap's offset across already in it, and colours every glyph with what the shader needs to find
+# the minimap: in the top six bits of each channel, a mark (110), the minimap's position (MinimapCorner's
+# order), its size (MinimapSize's), the colour the glyph is drawn in (white, green, yellow, red), and
+# how far up it's been moved, 128 more; the low two bits are 11, so red's low four are never the sidebar's
+# 9. A shadow, a quarter as bright, has those same bits at the bottom of each channel and its top two clear,
+# so it moves with its glyph. The ring is found as MINIMAP_VERTEX finds it, in GUI pixels.
+ORBS_VERTEX = """
+const float MS_ORBS_SLOT = 512.0;
+// the action bar's line: its top this far above the screen's bottom
+const float MS_ORBS_ROW = 72.0;
+// a glyph's middle below the line's top (the hud font sets every one of them on it)
+const float MS_ORBS_MIDDLE = 33.0;
+// After OSRS's, its pixels as ours at an orb's size (27 to 16), drawn a little tighter: round the ring on an
+// arc, an orb's middle 8 out from it, so it rests on it, the compass's 11; the orbs (hitpoints, prayer, run,
+// special) evenly spaced along it, each middle MS_ORBS_APART from the next, a pixel between them, and the
+// compass MS_ORBS_COMPASS_APART above the first, just clear; the orbs' middle at MS_ORBS_MIDDLE_ANGLE down
+// from level, as OSRS's are. The arc bends no tighter than MS_ORBS_FLATTEST: round a smaller ring it keeps
+// that curve, touching the ring level with its middle, so the last orbs don't wrap under the map.
+const float MS_ORBS_OUT = 8.0;
+const float MS_ORBS_COMPASS_OUT = 11.0;
+const float MS_ORBS_APART = 17.0;
+const float MS_ORBS_COMPASS_APART = 20.0;
+const float MS_ORBS_MIDDLE_ANGLE = 20.0;
+const float MS_ORBS_FLATTEST = 52.0;
+// how far the compass's and the last orb's middles keep from the screen's top and bottom: in a corner the
+// arc moves down or up as a whole just as far as that needs
+const float MS_ORBS_KEEP = 12.0;
+// beside the hotbar, where there may be no room beside the map: a row over it, the compass at its end away
+// from the hotbar, then each orb with its number on that same side, a tab's and an orb's width apart (HudOrbs);
+// where each one's middle is from that end, the row's width, and how far above the ring the orbs' middles are
+const float MS_ORBS_ROW_AT[5] = float[](11.0, 56.0, 97.0, 138.0, 179.0);
+const float MS_ORBS_ROW_WIDTH = 187.0;
+const float MS_ORBS_ROW_UP = 12.0;
+// the least from an orb's middle to the screen's edge, in GUI pixels
+const float MS_ORBS_EDGE = 9.0;
+// white for the orbs, then OSRS's colours for a number, full to empty
+const vec3 MS_ORBS_COLOUR[4] = vec3[](vec3(255.0), vec3(0.0, 255.0, 0.0), vec3(255.0, 255.0, 0.0), vec3(255.0, 0.0, 0.0));
+
+vec2 msOrbs(inout vec4 color, vec2 at) {
+    if (ProjMat[2][3] != 0.0) {
+        return vec2(0.0);
+    }
+    float width = 2.0 / ProjMat[0][0];
+    float height = -2.0 / ProjMat[1][1];
+    float row = height - MS_ORBS_ROW;
+    if (at.y < row - 8.0 || at.y > row + 64.0) {
+        return vec2(0.0);
+    }
+    ivec3 c = ivec3(round(color.rgb * 255.0));
+    ivec3 info;
+    bool shadow = false;
+    if ((c.r & 3) == 3 && (c.g & 3) == 3 && (c.b & 3) == 3) {
+        info = c >> 2;
+    } else if (c.r < 64 && c.g < 64 && c.b < 64) {
+        info = c;
+        shadow = true;
+    } else {
+        return vec2(0.0);
+    }
+    if ((info.r >> 3) != 6) {
+        return vec2(0.0);
+    }
+    int corner = info.r & 7;
+    int size = info.g >> 4;
+    int colour = (info.g >> 2) & 3;
+    float up = float(((info.g & 3) << 6 | info.b) - 128);
+    int slot = int(round((at.x - width / 2.0) / MS_ORBS_SLOT));
+    if (slot < 0 || slot > 4) {
+        return vec2(0.0);
+    }
+    color.rgb = (shadow ? floor(MS_ORBS_COLOUR[colour] / 4.0) : MS_ORBS_COLOUR[colour]) / 255.0;
+
+    // the ring, in GUI pixels, where MINIMAP_VERTEX puts it: half the screen's height is 1 there
+    float halfSize = (size == 0 ? MS_MINIMAP_SMALL : size == 2 ? MS_MINIMAP_LARGE : size == 3 ? MS_MINIMAP_EXTRA_LARGE : MS_MINIMAP_SIZE) * MS_MINIMAP_REACH;
+    float radius = halfSize * height / 2.0;
+    float edge = (halfSize + MS_MINIMAP_GAP) * height / 2.0;
+    // the map's own GUI pixels are at Minecraft's automatic scale, which may not be the one chosen
+    vec2 screen = %(screen)s;
+    float gui = max(1.0, min(floor(screen.x / 320.0), floor(screen.y / 240.0)));
+    float pixel = gui * height / screen.y;
+    vec2 centre;
+    float side;
+    bool bottom = corner >= 2;
+    if (corner >= 4) {
+        side = corner == 4 ? -1.0 : 1.0;
+        centre = vec2(width / 2.0 + side * ((MS_MINIMAP_HOTBAR + MS_MINIMAP_HOTBAR_GAP) * pixel + radius), height - edge);
+    } else {
+        side = corner == 0 || corner == 3 ? 1.0 : -1.0;
+        centre = vec2(side > 0.0 ? edge : width - edge, bottom ? height - edge : edge);
+    }
+    centre.y -= up * pixel;
+
+    // Round the ring: in a corner, down its side away from the edge; beside the hotbar, over its top.
+    vec2 middle;
+    if (corner >= 4) {
+        // the row's end away from the hotbar, kept on the screen
+        float end = clamp(centre.x + side * MS_ORBS_ROW_WIDTH / 2.0, side > 0.0 ? MS_ORBS_ROW_WIDTH + 4.0 : 4.0, side > 0.0 ? width - 4.0 : width - MS_ORBS_ROW_WIDTH - 4.0);
+        middle = vec2(end - side * MS_ORBS_ROW_AT[slot], centre.y - radius - MS_ORBS_ROW_UP);
+    } else {
+        float bend = max(radius + MS_ORBS_OUT, MS_ORBS_FLATTEST);
+        float compassBend = bend + MS_ORBS_COMPASS_OUT - MS_ORBS_OUT;
+        // the arc's middle, so that it touches the ring level with the map's
+        vec2 hub = centre - vec2(side * (bend - radius - MS_ORBS_OUT), 0.0);
+        float step = 2.0 * asin(MS_ORBS_APART / 2.0 / bend);
+        float compassStep = 2.0 * asin(MS_ORBS_COMPASS_APART / 2.0 / bend);
+        float first = radians(MS_ORBS_MIDDLE_ANGLE) - 1.5 * step;
+        float angle = slot == 0 ? first - compassStep : first + float(slot - 1) * step;
+        middle = hub + (slot == 0 ? compassBend : bend) * vec2(side * cos(angle), sin(angle));
+        // moved down as a whole as far as keeps the compass below the screen's top, or up as far as keeps the
+        // last orb above its bottom: moved, not turned, so the spacing stays even and the tabs clear
+        float top = hub.y + compassBend * sin(first - compassStep), bottom = hub.y + bend * sin(first + 3.0 * step);
+        float shift = max(0.0, MS_ORBS_KEEP - top);
+        shift -= max(0.0, bottom + shift - height + MS_ORBS_KEEP);
+        middle.y += shift;
+    }
+    middle = clamp(middle, vec2(MS_ORBS_EDGE), vec2(width, height) - MS_ORBS_EDGE);
+    // the glyph's place in its slot, the minimap's offset across with it
+    vec2 inSlot = at - vec2(width / 2.0 + float(slot) * MS_ORBS_SLOT, row + MS_ORBS_MIDDLE);
+    return middle + inSlot - at;
+}
+"""
+# The screen's size in GUI drawing, where the game gives no ScreenSize: 1080 high, as wide as the GUI's shape.
+ORBS_SCREEN_GUESS = "vec2(-1080.0 * ProjMat[1][1] / ProjMat[0][0], 1080.0)"
 # The fill shader Minecraft draws a screen's boxes with: position_color to 1.19.4, rendertype_gui to
 # 1.21.1, gui after. Its sidebar boxes are black at 0.3 and 0.4 alpha (Options.getBackgroundColor), in
 # the right half of the screen; position_color draws in the world too, which a screen's flat projection
@@ -809,6 +937,7 @@ def patch(files, form):
     minimap = layout + "out vec3 msMinimap;\n" + "".join(at + "flat out uvec4 msIcons%d;\n" % i for i, at in enumerate(icons))
     minimap += MINIMAP_VERTEX % {"camera": camera, "depth": depth, "nearer": nearer, "screen": screen}
     minimap += SIDEBAR_VERTEX % {"width": SIDEBAR_WIDTH}
+    minimap += ORBS_VERTEX % {"screen": ORBS_SCREEN_GUESS if screen == SCREEN_GUESS else screen}
     moved = body.replace(POSITION, LIFT + MINIMAP_POSITION, 1)
     # after Sampler0, which the functions start by declaring
     sampler = "uniform sampler2D Sampler0;\n"
