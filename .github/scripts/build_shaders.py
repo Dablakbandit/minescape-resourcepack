@@ -661,6 +661,10 @@ const float MS_ORBS_OUT = 8.0;
 const float MS_ORBS_COMPASS_OUT = 11.0;
 const float MS_ORBS_APART = 17.0;
 const float MS_ORBS_COMPASS_APART = 20.0;
+// OSRS's own steps round its ring, in degrees, orb to orb and compass to first: round a ring big enough the
+// orbs spread out as OSRS's do, and round a smaller one they close up to MS_ORBS_APART, never meeting
+const float MS_ORBS_OSRS_STEP = 22.0;
+const float MS_ORBS_OSRS_COMPASS_STEP = 25.0;
 const float MS_ORBS_MIDDLE_ANGLE = 20.0;
 const float MS_ORBS_FLATTEST = 52.0;
 // how far the compass's and the last orb's middles keep from the screen's top and bottom: in a corner the
@@ -742,8 +746,8 @@ vec2 msOrbs(inout vec4 color, vec2 at) {
         float compassBend = bend + MS_ORBS_COMPASS_OUT - MS_ORBS_OUT;
         // the arc's middle, so that it touches the ring level with the map's
         vec2 hub = centre - vec2(side * (bend - radius - MS_ORBS_OUT), 0.0);
-        float step = 2.0 * asin(MS_ORBS_APART / 2.0 / bend);
-        float compassStep = 2.0 * asin(MS_ORBS_COMPASS_APART / 2.0 / bend);
+        float step = max(2.0 * asin(MS_ORBS_APART / 2.0 / bend), radians(MS_ORBS_OSRS_STEP));
+        float compassStep = max(2.0 * asin(MS_ORBS_COMPASS_APART / 2.0 / bend), radians(MS_ORBS_OSRS_COMPASS_STEP));
         float first = radians(MS_ORBS_MIDDLE_ANGLE) - 1.5 * step;
         float angle = slot == 0 ? first - compassStep : first + float(slot - 1) * step;
         middle = hub + (slot == 0 ? compassBend : bend) * vec2(side * cos(angle), sin(angle));
