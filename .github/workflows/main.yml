@@ -77,9 +77,10 @@ jobs:
         # shader change after it.
         run: python .github/scripts/build_shaders.py
 
-      - name: Armour shaders, by Stitch
+      - name: Armour and minimap shaders, by Stitch
         # The armour stitch (armour_stitch.py, written by build_armour.py) woven into Minecraft's armour
-        # shaders for every release from 1.18.2, as overlays; the base folder holds 1.18.2's.
+        # shaders, and the minimap stitch into the text shader build_shaders.py wrote, for every release
+        # from 1.18.2, as overlays; the base folder holds 1.18.2's.
         uses: AshleyThew/stitch@v0
         with:
           pack: .

@@ -1,0 +1,29 @@
+{
+  "format": 1,
+  "targets": [
+    "text_world"
+  ],
+  "vertex": "minescape:stitches/minimap.vert.glsl",
+  "fragment": "minescape:stitches/minimap.frag.glsl",
+  "varyings": [
+    {
+      "name": "msMinimap",
+      "type": "vec3"
+    }
+  ],
+  "uniforms": [
+    "screen_size"
+  ],
+  "requires": [
+    "texture_size"
+  ],
+  "uses": [
+    "screen_position",
+    "view_rotation",
+    "final_color"
+  ],
+  "passes": [
+    "main",
+    "shadow"
+  ]
+}
