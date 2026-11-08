@@ -645,8 +645,24 @@ SIDEBAR_WIDTH = 150
 # how far up it's been moved, 128 more; the low two bits are 11, so red's low four are never the sidebar's
 # 9. A shadow, a quarter as bright, has those same bits at the bottom of each channel and its top two clear,
 # so it moves with its glyph. The ring is found as MINIMAP_VERTEX finds it, in GUI pixels.
+# XP drops (the plugin's HudXpDrops) ride the same line with the mark 101: each drop is a line of skill icons
+# and its amount, in a slot of its own from MS_DROPS_FIRST on, the slot past that how many client ticks it has
+# risen; the colour's two bits are whether the orbs are round the map. In a top corner they go beside the map,
+# on its side away from the screen's edge, past the orbs when they're there, and rise MS_DROPS_RISE to the
+# map's top, as OSRS's rise to its XP counter; in a bottom corner the same, but up from the map's top, clear
+# of the hotbar; beside the hotbar, over the map from its side by the hotbar, above the orbs' row if there. The server sends the line each client
+# tick while one is rising, so they move on every client, those whose text shaders have no clock too.
 ORBS_VERTEX = """
 const float MS_ORBS_SLOT = 512.0;
+// XP drops: the first one's slot and how many client ticks one rises for; how far it rises; how far its top
+// is below the map's; how far from the ring it goes, and from the ring when the orbs are between
+const int MS_DROPS_FIRST = 8;
+const int MS_DROPS_LIFE = 48;
+const float MS_DROPS_RISE = 60.0;
+const float MS_DROPS_BELOW_TOP = 4.0;
+const float MS_DROPS_GAP = 8.0;
+const float MS_DROPS_PAST_ORBS = 50.0;
+const float MS_DROPS_OVER_ORBS = 26.0;
 // the action bar's line: its top this far above the screen's bottom
 const float MS_ORBS_ROW = 72.0;
 // a glyph's middle below the line's top (the hud font sets every one of them on it)
@@ -702,18 +718,22 @@ vec2 msOrbs(inout vec4 color, vec2 at) {
     } else {
         return vec2(0.0);
     }
-    if ((info.r >> 3) != 6) {
+    int mark = info.r >> 3;
+    if (mark != 6 && mark != 5) {
         return vec2(0.0);
     }
+    bool drop = mark == 5;
     int corner = info.r & 7;
     int size = info.g >> 4;
     int colour = (info.g >> 2) & 3;
     float up = float(((info.g & 3) << 6 | info.b) - 128);
     int slot = int(round((at.x - width / 2.0) / MS_ORBS_SLOT));
-    if (slot < 0 || slot > 4) {
+    if (drop ? slot < MS_DROPS_FIRST || slot >= MS_DROPS_FIRST + MS_DROPS_LIFE : slot < 0 || slot > 4) {
         return vec2(0.0);
     }
-    color.rgb = (shadow ? floor(MS_ORBS_COLOUR[colour] / 4.0) : MS_ORBS_COLOUR[colour]) / 255.0;
+    // a drop is white, its two bits not a colour
+    vec3 drawn = MS_ORBS_COLOUR[drop ? 0 : colour];
+    color.rgb = (shadow ? floor(drawn / 4.0) : drawn) / 255.0;
 
     // the ring, in GUI pixels, where MINIMAP_VERTEX puts it: half the screen's height is 1 there
     float halfSize = (size == 0 ? MS_MINIMAP_SMALL : size == 2 ? MS_MINIMAP_LARGE : size == 3 ? MS_MINIMAP_EXTRA_LARGE : MS_MINIMAP_SIZE) * MS_MINIMAP_REACH;
@@ -734,6 +754,28 @@ vec2 msOrbs(inout vec4 color, vec2 at) {
         centre = vec2(side > 0.0 ? edge : width - edge, bottom ? height - edge : edge);
     }
     centre.y -= up * pixel;
+    // the glyph's place in its slot, the minimap's offset across with it
+    vec2 inSlot = at - vec2(width / 2.0 + float(slot) * MS_ORBS_SLOT, row + MS_ORBS_MIDDLE);
+
+    if (drop) {
+        float away = corner == 0 || corner == 3 || corner == 5 ? 1.0 : -1.0;
+        bool orbs = (colour & 1) != 0;
+        float top = centre.y - radius;
+        float x, end;
+        if (corner >= 4) {
+            x = centre.x - away * radius;
+            end = top - (orbs ? MS_DROPS_OVER_ORBS : MS_DROPS_GAP) - MS_DROPS_RISE;
+        } else {
+            x = centre.x + away * (radius + (orbs ? MS_DROPS_PAST_ORBS : MS_DROPS_GAP));
+            end = bottom ? top - MS_DROPS_RISE : top + MS_DROPS_BELOW_TOP;
+        }
+        x = clamp(x, MS_ORBS_EDGE, width - MS_ORBS_EDGE);
+        // MS_DROPS_RISE up to its end, moved as a whole to stay on the screen
+        float shift = max(0.0, MS_ORBS_KEEP - end);
+        shift -= max(0.0, end + MS_DROPS_RISE + shift - height + MS_ORBS_KEEP);
+        float risen = MS_DROPS_RISE * float(slot - MS_DROPS_FIRST) / float(MS_DROPS_LIFE - 1);
+        return vec2(x, end + shift + MS_DROPS_RISE - risen) + inSlot - at;
+    }
 
     // Round the ring: in a corner, down its side away from the edge; beside the hotbar, over its top.
     vec2 middle;
@@ -759,8 +801,6 @@ vec2 msOrbs(inout vec4 color, vec2 at) {
         middle.y += shift;
     }
     middle = clamp(middle, vec2(MS_ORBS_EDGE), vec2(width, height) - MS_ORBS_EDGE);
-    // the glyph's place in its slot, the minimap's offset across with it
-    vec2 inSlot = at - vec2(width / 2.0 + float(slot) * MS_ORBS_SLOT, row + MS_ORBS_MIDDLE);
     return middle + inSlot - at;
 }
 """
