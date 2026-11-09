@@ -16,6 +16,9 @@ and adds it to leather_chestplate.json, leather_leggings.json or leather_boots.j
 overrides; build_armour.py bakes how it looks worn. Its dye is any item's, with its tile. The models the items had before stay where they were, so anything still on its old
 material (an item frame, a chest in the world) looks as it did.
 
+Animated mobs (mobs/animated.json, built by build_mobs.py) are leather horse armour too, from 100001: their
+overrides follow the items' as they are, with no count face, since their dye is the clip they play.
+
 The count: the dye's 24 bits are colour << 22 | suffix << 20 | decimal << 19 | number (DYE below), the
 count shortened the OSRS way by the plugin (ItemCount). An undyed item's own colour, 0xA06540, means no
 count. Every item model gets one more face, the count face, along the icon's top, textured with
@@ -60,6 +63,8 @@ ITEM = "leather_horse_armor"
 NOTED = "feather"
 SOURCE = os.path.join(MODELS, ITEM + ".json")
 SOURCES = os.path.join(CACHE, "count_sources.json")
+# The animated mobs' entry in SOURCES (build_mobs.py): leather horse armour too, by custom model data
+MOBS = "animated_mobs"
 # Leather armour, each piece on its own material, defined in armour/<piece>.json (armour_looks.py)
 ARMOUR = {"chest": "leather_chestplate", "legs": "leather_leggings", "boots": "leather_boots"}
 
@@ -467,6 +472,17 @@ def copies(numbers, name, parents, failed):
     return overrides, flat, centred
 
 
+def animated_mobs():
+    """The animated mobs' models by custom model data (mobs/animated.json); the models are build_mobs.py's."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import build_mobs
+    mobs = build_mobs.overrides()
+    for ref in mobs.values():
+        if not os.path.exists(model_path(ref)):
+            raise SystemExit("%s isn't built: run build_mobs.py first" % ref)
+    return mobs
+
+
 def build():
     shutil.rmtree(COUNT_MODELS, ignore_errors=True)
     shutil.rmtree(os.path.dirname(texture_path("item/custom/count/armour/x")), ignore_errors=True)
@@ -483,8 +499,12 @@ def build():
         if number > 0:
             numbers[-number] = ref
     overrides, flat, centred = copies(numbers, ITEM, parents, failed)
+    # the animated mobs (build_mobs.py), above every item's number: their own models, no count, the dye theirs
+    mobs = animated_mobs()
+    overrides += [{"predicate": {"custom_model_data": n}, "model": ref} for n, ref in sorted(mobs.items())]
     write_json(os.path.join(MODELS, ITEM + ".json"), dict(item, overrides=overrides))
     sources[ITEM] = {str(n): r for n, r in numbers.items()}
+    sources[MOBS] = {str(n): r for n, r in mobs.items()}
     print("%s: %d items and %d noted, %d as flat copies with a count, %d 3D with a centred count"
           % (ITEM, sum(1 for n in numbers if n > 0), sum(1 for n in numbers if n < 0), flat, centred))
 
@@ -512,6 +532,7 @@ def items():
     shape; anywhere else the model alone. Leather armour's fall back to the upgrader's definition, its
     models from before."""
     sources = read_json(SOURCES)
+    mobs = sources.pop(MOBS, {})
     for material, numbers in sources.items():
         entries = []
         for number, ref in sorted(numbers.items(), key=lambda e: int(e[0])):
@@ -522,6 +543,11 @@ def items():
                 "type": "minecraft:select", "property": "minecraft:display_context",
                 "cases": [{"when": "gui", "model": {"type": "minecraft:composite", "models": [icon, count]}}],
                 "fallback": icon}})
+        if material == ITEM:
+            # an animated mob's model alone, its dye handed to it as the clip it plays (build_mobs.py)
+            for number, ref in sorted(mobs.items(), key=lambda e: int(e[0])):
+                entries.append({"threshold": int(number), "model": {"type": "minecraft:model", "model": ref,
+                                                                    "tints": [{"type": "minecraft:dye", "default": -1}]}})
         path = os.path.join(ITEMS, material + ".json")
         if material == ITEM:
             fallback = {"type": "minecraft:model", "model": "minecraft:item/" + ITEM,

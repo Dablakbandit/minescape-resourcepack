@@ -1,0 +1,7 @@
+{
+    "_about": "Animated mobs: each an item on an armour stand's head, leather horse armour with this custom model data (from 100001, above every item's), its model a Blockbench model in mobs/models/ whose animations the item shader plays (build_mobs.py bakes them into the model's texture, the mobs stitch plays them). The item's dye names the clip, by the ids here, and when it started; the plugin's mob type (entity_info) wears the same custom model data and names the same clip ids, with each clip's length in ticks, which build_mobs.py prints. Clips are by the model's animation names; end is how a clip ends where the model's own loop setting isn't what the mob wants (loop, once: back to rest, hold: its last frame). scale is the model's size on the stand's head (at most 4).",
+    "mobs": [
+        {"custom_model_data": 100001, "name": "mithril_dragon", "model": "mithril_dragon.bbmodel", "scale": 3,
+         "clips": {"walking": 1, "idle": 2, "periodic_idle": {"id": 3, "end": "once"}, "melee": 4, "defend": 5, "dragonfire": 6, "magic": 7, "ranged": 8}}
+    ]
+}

@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # what no zip takes from the pack folder
-      EXCLUDE: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/* armour/*'
+      EXCLUDE: '*.git* README.md *.schema* *.zip *.py run/* .vscode/* /cache/* cache/* armour/* mobs/*'
       # the low pack's zips end _low
       SUFFIX: ${{ matrix.set == 'low' && '_low' || '' }}
     steps:
@@ -48,6 +48,11 @@ jobs:
         run: |
           pip install pillow numpy
           python .github/scripts/build_armour.py
+
+      - name: Build animated mobs
+        # mobs/animated.json's Blockbench models as item models whose texture carries their animations, which
+        # the mobs stitch plays; count_icons.py lists them on leather horse armour.
+        run: python .github/scripts/build_mobs.py
 
       - name: Cache Minecraft shaders
         # Each release's text shader, read once from its client jar; a new release adds to it.
@@ -77,10 +82,10 @@ jobs:
         # shader change after it.
         run: python .github/scripts/build_shaders.py
 
-      - name: Armour and minimap shaders, by Stitch
+      - name: Armour, minimap and mob shaders, by Stitch
         # The armour stitch (armour_stitch.py, written by build_armour.py) woven into Minecraft's armour
-        # shaders, and the minimap stitch into the text shader build_shaders.py wrote, for every release
-        # from 1.18.2, as overlays; the base folder holds 1.18.2's.
+        # shaders, the minimap stitch into the text shader build_shaders.py wrote, and the mobs stitch into
+        # the item shaders it wrote, for every release from 1.18.2, as overlays; the base folder holds 1.18.2's.
         uses: AshleyThew/stitch@v0
         with:
           pack: .

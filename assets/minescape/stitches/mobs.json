@@ -1,0 +1,21 @@
+{
+  "format": 1,
+  "targets": [
+    "item_world"
+  ],
+  "vertex": "minescape:stitches/mobs.vert.glsl",
+  "uniforms": [
+    "game_time"
+  ],
+  "requires": [
+    "texture_size",
+    "vertex_corner"
+  ],
+  "uses": [
+    "quad_corners"
+  ],
+  "passes": [
+    "main",
+    "shadow"
+  ]
+}
