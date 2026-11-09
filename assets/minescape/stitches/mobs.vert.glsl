@@ -14,6 +14,10 @@ const int KEY_TEXELS = 5;
 const int LOOP = 1;
 const int ONCE = 2;
 const int NO_CLIP = 31;
+// how far in from its face's edges a mob's uv sits, in texels, and how far off that a vertex may be (some versions
+// pull a model's uvs a little towards each face's middle)
+const float INSET = 0.125;
+const float INSET_SLACK = 0.05;
 
 ivec4 texel(ivec2 p) {
     return ivec4(round(stitch_texel_fetch(p) * 255.0));
@@ -159,7 +163,18 @@ void stitch_vertex(inout StitchVertex v) {
     int face;
     int size;
     ivec2 origin;
-    if (!quad || !faceOf(uvs, atlas, face, size, origin)) {
+    if (!quad) {
+        // no corners to find the sprite from (a device without subgroup shuffles): it stands still, but a mob's
+        // vertex still knows it is one by its uv, an eighth of a texel in from its face's edges, and its dye mustn't
+        // tint it
+        vec2 f = fract(v.uv * vec2(atlas));
+        vec2 in_by = min(f, 1.0 - f);
+        if (all(lessThan(abs(in_by - INSET), vec2(INSET_SLACK)))) {
+            v.color = vec4(1.0, 1.0, 1.0, v.color.a);
+        }
+        return;
+    }
+    if (!faceOf(uvs, atlas, face, size, origin)) {
         return;
     }
     // the dye: the clip (5 bits), the clip before it (5, 31 for none to fade from), how many ticks into that one

@@ -5,8 +5,8 @@ animations, for the mobs stitch (assets/minescape/stitches/mobs.*) to play.
                                              armour's overrides by its custom model data
 
 A mob is an item on an armour stand's head. Its model's cubes become one item model (Java has no bones), shrunk
-into -16 to 32 and grown back by its head display; every face gets its own copy of its texels in one S x S sprite
-(256, 512 or 1024; the atlas may put it anywhere):
+into -16 to 32 and grown back by its head display; every face gets its own copy of its texels, from whichever of the
+model's textures it reads, in one S x S sprite (256, 512 or 1024; the atlas may put it anywhere):
 
   from the top          the faces, packed edge to edge; each carries in the low 3 bits of the red, green and blue
                         of its four corner texels (top left, top right, bottom right, bottom left; 9 bits each, the
@@ -28,7 +28,18 @@ plus the keyframe's (Z then Y then X, right-handed), moves by the keyframe's pos
 inside its parent; Blockbench 5.2.2's own poses of the mithril dragon match these to 0.001 units. A face hidden
 inside another cube of its own bone is left out, with its texels (the two never move apart).
 
-Written (git-ignored): assets/ms/textures/item/mobs/<name>.png, assets/ms/models/mobs/animated/<name>.json
+Every face's uv is inset an eighth of a texel from its edges (INSET), which nothing else in the atlas has: a vertex that
+can't see its quad's corners (no subgroup shuffles) still knows it is a mob's, to drop the dye's tint.
+
+Each model is checked first (check()) against what the conversion and old Minecraft versions can take, every
+problem listed by cube, bone and animation name, and the build stops on any.
+
+A mob may take its model's textures from other PNGs ("textures": {"<texture name in the model>": "<png in
+mobs/textures/>"}), so one model and its animations can be several mobs in different colours.
+
+Written (git-ignored): assets/ms/textures/item/mobs/<name>.png, assets/ms/models/mobs/animated/<name>.json, and
+run/mobs.json, which the release publishes for the plugin: each mob's custom model data, its clips (id and ticks
+played) and a hitbox fitted to the model, in blocks about the stand's feet.
 """
 import base64
 import io
@@ -43,6 +54,8 @@ from PIL import Image
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 DEFINITIONS = os.path.join(ROOT, "mobs", "animated.json")
 SOURCES = os.path.join(ROOT, "mobs", "models")
+RECOLOURS = os.path.join(ROOT, "mobs", "textures")
+PUBLISHED = os.path.join(ROOT, "run", "mobs.json")
 TEXTURES = os.path.join(ROOT, "assets", "ms", "textures", "item", "mobs")
 MODELS = os.path.join(ROOT, "assets", "ms", "models", "mobs", "animated")
 FIRST_NUMBER = 100001
@@ -58,6 +71,18 @@ BLEND = 4
 # where a mob's feet are under an armour stand's head: a model point at y g shows at the head's
 # translation + scale * (g - 8) units, which is this for the ground
 GROUND = -38.8
+# an armour stand draws its head item at 0.625 of a block per 16 units, times the head display's scale
+HEAD_ITEM = 0.625 / 16
+# how far in from a face's edges its uv sits, in texels: a mob's mark (see the top)
+INSET = 0.125
+# the cube angles every Minecraft version takes (from 1.21.6 any angle, but not before)
+CUBE_ANGLES = (-45.0, -22.5, 0.0, 22.5, 45.0)
+MAX_FRAMES = 255
+MAX_CLIPS = 30
+
+
+class ModelError(Exception):
+    """A model the conversion can't take: every problem found, one a line."""
 
 
 def definitions():
@@ -302,6 +327,99 @@ def sample(keyframes, channel, t, default):
     return vals[-1][1]
 
 
+def texture_image(texture, mob):
+    """A texture's pixels: the mob's own PNG for it if it swaps it (mobs/textures/), else saved inside the .bbmodel
+    (Blockbench's default), else a PNG of the texture's name beside it in mobs/models/."""
+    name = os.path.basename(texture.get("name") or "")
+    if not name.lower().endswith(".png"):
+        name += ".png"
+    swaps = mob.get("textures", {})
+    swap = swaps.get(name, swaps.get(name[:-4]))
+    if swap is not None:
+        path = os.path.join(RECOLOURS, swap)
+        if not os.path.exists(path):
+            raise ModelError("%s: swaps %s for %s, which isn't in mobs/textures/" % (mob["name"], name, swap))
+        return Image.open(path).convert("RGBA")
+    source = texture.get("source") or ""
+    if source.startswith("data:") and "," in source:
+        return Image.open(io.BytesIO(base64.b64decode(source.split(",", 1)[1]))).convert("RGBA")
+    path = os.path.join(SOURCES, name)
+    if not os.path.exists(path):
+        raise ModelError("%s: texture %s isn't saved in the model, and there's no %s beside it in mobs/models/" % (mob["name"], name, name))
+    return Image.open(path).convert("RGBA")
+
+
+def check(d, mob):
+    """What in the model the conversion, or an older Minecraft, can't take (errors), and what it plays other than as
+    drawn in Blockbench (warnings)."""
+    errors, warnings = [], []
+    elements = {e["uuid"]: e for e in d.get("elements", [])}
+    owner, bones = {}, [0]
+    names = {g["uuid"]: g.get("name") or g["uuid"] for g in d.get("groups", [])}
+
+    def walk(nodes, bone):
+        for n in nodes:
+            uid = n if isinstance(n, str) else n.get("uuid")
+            if uid in elements:
+                owner[uid] = bone
+                continue
+            bones[0] += 1
+            walk(n.get("children", []) if isinstance(n, dict) else [], names.get(uid, uid))
+    walk(d.get("outliner", []), None)
+
+    def cube(e):
+        # cubes are often all called "cube": its bone and where it starts say which
+        return "cube %s%s at %s" % (e.get("name"), " in bone %s" % owner[e["uuid"]] if owner.get(e["uuid"]) else "",
+                                    "/".join("%g" % c for c in e.get("from", [])))
+    for e in elements.values():
+        turned = [(axis, a) for axis, a in zip("xyz", e.get("rotation", [0, 0, 0])) if abs(a) > 1e-6]
+        if len(turned) > 1:
+            errors.append("%s is rotated about %s; a cube may turn about one axis only" % (cube(e), " and ".join(t[0] for t in turned)))
+        for axis, a in turned:
+            if not any(abs(a - ok) < 1e-4 for ok in CUBE_ANGLES):
+                errors.append("%s is rotated %g degrees about %s; use -45, -22.5, 22.5 or 45" % (cube(e), a, axis))
+        if not owner.get(e["uuid"]):
+            errors.append("%s isn't in a bone (group)" % cube(e))
+    if bones[0] > 255:
+        errors.append("%d bones; at most 255" % bones[0])
+    for g in d.get("groups", []):
+        if any(abs(a) > 1e-6 for a in g.get("rotation", [0, 0, 0])):
+            warnings.append("bone %s has its own rest rotation, which shows only while an animation plays" % g.get("name"))
+    animations = {a["name"]: a for a in d.get("animations", [])}
+    if len(mob["clips"]) > MAX_CLIPS:
+        errors.append("%d clips; at most %d" % (len(mob["clips"]), MAX_CLIPS))
+    for clip in mob["clips"]:
+        if clip not in animations:
+            errors.append("mobs/animated.json plays %s, which the model has no animation called" % clip)
+    for a in animations.values():
+        if a["name"] not in mob["clips"]:
+            continue
+        if round(float(a.get("length", 0)) * 20) > MAX_FRAMES - 1:
+            errors.append("animation %s is %.2f s long; at most %.2f s" % (a["name"], float(a["length"]), (MAX_FRAMES - 1) / 20))
+        for an in a.get("animators", {}).values():
+            if an.get("type") != "bone":
+                if an.get("keyframes"):
+                    warnings.append("animation %s has %s keyframes, which are left out" % (a["name"], an.get("type", "effect")))
+                continue
+            for k in an.get("keyframes", []):
+                if k.get("channel") not in ("rotation", "position", "scale"):
+                    continue
+                where = "animation %s, bone %s, %s at %ss" % (a["name"], an.get("name"), k.get("channel"), k.get("time"))
+                values = []
+                for point in k.get("data_points", []):
+                    for axis in "xyz":
+                        v = point.get(axis, 0)
+                        try:
+                            values.append(number(v))
+                        except ValueError:
+                            errors.append("%s: %s is %r; keyframes must be plain numbers, not Molang" % (where, axis, v))
+                if k.get("interpolation", "linear") != "linear":
+                    warnings.append("%s is %s, which plays as linear" % (where, k.get("interpolation")))
+                if k.get("channel") == "scale" and len(values) >= 3 and max(values[:3]) - min(values[:3]) > 1e-4:
+                    warnings.append("%s scales %s unevenly; it plays as an even scale" % (where, "/".join("%g" % v for v in values[:3])))
+    return errors, warnings
+
+
 def clip_list(mob, animations):
     """The mob's clips in id order: (id, animation, end)."""
     out = []
@@ -316,9 +434,18 @@ def clip_list(mob, animations):
 
 
 def build(mob):
-    with open(os.path.join(SOURCES, mob["model"]), encoding="utf-8") as f:
-        d = json.load(f)
+    """The mob's texture and model, and what the plugin needs of it (for run/mobs.json)."""
     name = mob["name"]
+    path = os.path.join(SOURCES, mob["model"])
+    if not os.path.exists(path):
+        raise ModelError("%s: no %s in mobs/models/" % (name, mob["model"]))
+    with open(path, encoding="utf-8") as f:
+        d = json.load(f)
+    errors, warnings = check(d, mob)
+    for w in warnings:
+        print("  warning: %s: %s" % (name, w))
+    if errors:
+        raise ModelError("\n".join("%s: %s" % (name, e) for e in errors))
     groups = {g["uuid"]: g for g in d["groups"]}
     elements = {e["uuid"]: e for e in d["elements"]}
     animations = {a["name"]: a for a in d["animations"]}
@@ -350,9 +477,21 @@ def build(mob):
     def java(p):
         return f * np.array(p, float) + shift
 
-    texture = d["textures"][0]
-    src = Image.open(io.BytesIO(base64.b64decode(texture["source"].split(",", 1)[1]))).convert("RGBA")
-    per = texture["width"] / texture["uv_width"]
+    # the textures the faces read, loaded as a face first needs each: its pixels, and its pixels per uv unit
+    images = {}
+
+    def texture_of(ref):
+        if isinstance(ref, int) or (isinstance(ref, str) and ref.isdigit()):
+            index = int(ref)
+        else:
+            index = next((i for i, t in enumerate(d["textures"]) if ref in (t.get("uuid"), t.get("id"))), None)
+        if index is None or not 0 <= index < len(d["textures"]):
+            raise ModelError("%s: a face reads a texture the model hasn't got" % name)
+        if index not in images:
+            texture = d["textures"][index]
+            image = texture_image(texture, mob)
+            images[index] = (image, image.width / texture.get("uv_width", image.width))
+        return images[index]
 
     normals = {"north": (0, 0, -1), "south": (0, 0, 1), "east": (1, 0, 0), "west": (-1, 0, 0), "up": (0, 1, 0), "down": (0, -1, 0)}
     turns = {}
@@ -386,18 +525,18 @@ def build(mob):
         for face, fd in e["faces"].items():
             if fd.get("texture") is None or not fd.get("uv"):
                 continue
-            assert fd["texture"] == 0, "%s: a face reads a texture other than the first" % name
+            src, per = texture_of(fd["texture"])
             u0, v0, u1, v1 = (round(c * per) for c in fd["uv"])
             if u0 == u1 or v0 == v1:
                 continue
             if hidden(uid, face):
                 culled += 1
                 continue
-            faces.append((uid, face, fd, (u0, v0, u1, v1)))
+            faces.append((uid, face, fd, (u0, v0, u1, v1), src))
 
     # each face's own copy of its texels (at least 2 x 2, for its four corners to carry its number), edge to edge
     # on shelves, tallest first, in the smallest sprite they and the records fit
-    sizes = [(max(2, abs(u1 - u0)), max(2, abs(v1 - v0))) for _, _, _, (u0, v0, u1, v1) in faces]
+    sizes = [(max(2, abs(u1 - u0)), max(2, abs(v1 - v0))) for _, _, _, (u0, v0, u1, v1), _ in faces]
     lengths = {}
     for _, anim, end in clips:
         lengths[anim] = max(1, round(float(animations[anim]["length"]) * 20)) + (0 if end == LOOP else 1)
@@ -415,11 +554,12 @@ def build(mob):
         if y + row + -(-records // size) + 1 <= size:
             break
     else:
-        raise SystemExit("%s: the faces and records don't fit a 1024 sprite" % name)
+        raise ModelError("%s: its %d faces' pixels and %d animation frames don't fit 1024 x 1024; use fewer or lower-resolution"
+                         " faces, or shorter animations" % (name, len(faces), sum(lengths.values())))
     sprite = Sprite(size, len(bones))
 
     by_element = {}
-    for i, (uid, face, fd, (u0, v0, u1, v1)) in enumerate(faces):
+    for i, (uid, face, fd, (u0, v0, u1, v1), src) in enumerate(faces):
         e = elements[uid]
         px, py = place[i]
         w, h = sizes[i]
@@ -441,7 +581,10 @@ def build(mob):
         corners = rect_corners(face, java(e["from"]), java(e["to"]), (nu0, nv0, nu1, nv1), rotation, turn)
         sprite.face(index[owner[uid]], (px, py, px + w, py + h), corners)
         s = 16 / size
-        out = {"uv": [nu0 * s, nv0 * s, nu1 * s, nv1 * s], "texture": "#skin", "tintindex": 0}
+        # each edge an eighth of a texel in, towards the face's middle: the mob's mark (INSET)
+        iu0, iu1 = (nu0 + INSET, nu1 - INSET) if nu0 < nu1 else (nu0 - INSET, nu1 + INSET)
+        iv0, iv1 = (nv0 + INSET, nv1 - INSET) if nv0 < nv1 else (nv0 - INSET, nv1 + INSET)
+        out = {"uv": [round(c * s, 6) for c in (iu0, iv0, iu1, iv1)], "texture": "#skin", "tintindex": 0}
         if rotation:
             out["rotation"] = rotation
         by_element.setdefault(uid, {})[face] = out
@@ -493,16 +636,35 @@ def build(mob):
     os.makedirs(MODELS, exist_ok=True)
     with open(os.path.join(MODELS, name + ".json"), "w", encoding="utf-8", newline="\n") as fh:
         json.dump(model, fh, separators=(",", ":"))
-    print("%s (%d): %d bones, %d faces (%d inside their own bone left out), %d x %d sprite"
-          % (name, mob["custom_model_data"], len(bones), len(faces), culled, size, size))
+    # a hitbox about the stand's feet, in blocks, which the plugin turns with the mob: the model's height, and most
+    # of its width and length at rest (players click its body more than the tips of its wings and tail)
+    block = HEAD_ITEM * scale
+    half_x = 0.4 * (box_hi[0] - box_lo[0]) * block
+    half_z = 0.4 * (box_hi[2] - box_lo[2]) * block
+    height = (box_hi[1] - ground) * block
+    hitbox = [round(float(v), 2) for v in (-half_x, 0, -half_z, half_x, height, half_z)]
+    print("%s (%d): %d bones, %d faces (%d inside their own bone left out), %d x %d sprite, hitbox %s"
+          % (name, mob["custom_model_data"], len(bones), len(faces), culled, size, size, hitbox))
+    played = {}
     for cid, anim, end in clips:
         # how long it plays: a loop's frames, any other's last frame
-        print("  clip %2d %-14s %3d ticks, %s" % (cid, anim, lengths[anim] - (0 if end == LOOP else 1), {v: k for k, v in END.items()}[end]))
+        played[anim] = {"clip": cid, "ticks": lengths[anim] - (0 if end == LOOP else 1)}
+        print("  clip %2d %-14s %3d ticks, %s" % (cid, anim, played[anim]["ticks"], {v: k for k, v in END.items()}[end]))
+    return {"custom_model_data": mob["custom_model_data"], "clips": played, "hitbox": hitbox}
 
 
 def main():
+    published, failed = {}, []
     for mob in definitions():
-        build(mob)
+        try:
+            published[mob["name"]] = build(mob)
+        except ModelError as e:
+            failed.append(str(e))
+    if failed:
+        raise SystemExit("These models can't be built:\n  " + "\n  ".join("\n".join(failed).split("\n")))
+    os.makedirs(os.path.dirname(PUBLISHED), exist_ok=True)
+    with open(PUBLISHED, "w", encoding="utf-8", newline="\n") as fh:
+        json.dump(published, fh, indent=1, sort_keys=True)
 
 
 if __name__ == "__main__":
