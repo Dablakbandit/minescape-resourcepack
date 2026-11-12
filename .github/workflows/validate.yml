@@ -1,15 +1,139 @@
-name: Pull request workflow
+name: Pull request checks
 on:
   pull_request:
     branches:
       - master
+
+# A pull request into master is checked the way main.yml builds the pack, up to the zips: its files read,
+# then the armour, mobs, count icons and shaders build. The run keeps one comment on the pull request up
+# to date with what passed and what didn't, and fails if anything did, so a break shows before the merge.
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
-  validate_jsons:
-    name: Validate jsons
+  check:
+    name: Check the pack
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: json-syntax-check
-        uses: limitusus/json-syntax-check@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
         with:
-          pattern: "\\.json$"
+          python-version: '3.13'
+
+      - name: Install Python packages
+        run: |
+          pip install pillow numpy
+          mkdir -p "$RUNNER_TEMP/checks"
+          echo "LOGS=$RUNNER_TEMP/checks" >> "$GITHUB_ENV"
+
+      - name: Files
+        # every .json, .bbmodel and .mcmeta reads as JSON; no merge conflict markers anywhere
+        id: files
+        continue-on-error: true
+        run: set -o pipefail; python .github/scripts/check_files.py 2>&1 | tee "$LOGS/files.log"
+
+      - name: Armour sheets
+        id: armour
+        continue-on-error: true
+        run: set -o pipefail; python .github/scripts/build_armour.py 2>&1 | tee "$LOGS/armour.log"
+
+      - name: Animated mobs
+        id: mobs
+        if: steps.armour.outcome == 'success'
+        continue-on-error: true
+        run: set -o pipefail; python .github/scripts/build_mobs.py 2>&1 | tee "$LOGS/mobs.log"
+
+      - name: Stack count icons
+        id: icons
+        if: steps.mobs.outcome == 'success'
+        continue-on-error: true
+        run: set -o pipefail; python .github/scripts/count_icons.py 2>&1 | tee "$LOGS/icons.log"
+
+      - name: Cached Minecraft shaders
+        # master's builds fill the cache; a pull request only reads it
+        if: steps.icons.outcome == 'success'
+        uses: actions/cache/restore@v6
+        with:
+          path: cache/mc_shaders
+          key: mc-shaders-${{ github.run_id }}
+          restore-keys: mc-shaders-
+
+      - name: Slot text shaders
+        id: shaders
+        if: steps.icons.outcome == 'success'
+        continue-on-error: true
+        run: set -o pipefail; python .github/scripts/build_shaders.py 2>&1 | tee "$LOGS/shaders.log"
+
+      - name: Armour, minimap and mob shaders, by Stitch
+        id: stitch
+        if: steps.shaders.outcome == 'success'
+        continue-on-error: true
+        uses: AshleyThew/stitch@v0
+        with:
+          pack: .
+
+      - name: Report on the pull request
+        # one comment, found by its marker and edited on each run; a fork's pull request can't be written
+        # to, so there the job summary alone carries it
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          FILES: ${{ steps.files.outcome }}
+          ARMOUR: ${{ steps.armour.outcome }}
+          MOBS: ${{ steps.mobs.outcome }}
+          ICONS: ${{ steps.icons.outcome }}
+          SHADERS: ${{ steps.shaders.outcome }}
+          STITCH: ${{ steps.stitch.outcome }}
+        run: |
+          marker='<!-- pack-checks -->'
+          failed=0
+          rows=''
+          details=''
+          for check in "files|Files (JSON, models, conflict markers)|$FILES" "armour|Armour sheets|$ARMOUR" \
+                       "mobs|Animated mobs|$MOBS" "icons|Stack count icons|$ICONS" \
+                       "shaders|Slot text shaders|$SHADERS" "stitch|Stitch shaders|$STITCH"; do
+            IFS='|' read -r key name outcome <<< "$check"
+            case "$outcome" in
+              success) mark='✅ passed' ;;
+              failure) mark='❌ failed'; failed=1 ;;
+              *) mark='⏭️ not run' ;;
+            esac
+            rows+="| $name | $mark |"$'\n'
+            if [ "$outcome" = failure ]; then
+              if [ -s "$LOGS/$key.log" ]; then
+                # the end of its output, where the error is: a traceback's last lines
+                log=$(tail -n 25 "$LOGS/$key.log" | cut -c1-400 | sed -e "s|$GITHUB_WORKSPACE/||g")
+                details+=$'\n'"<details open><summary><b>$name</b></summary>"$'\n\n```\n'"$log"$'\n```\n</details>\n'
+              else
+                details+=$'\n'"**$name** failed; its output is in the [run log]($RUN)."$'\n'
+              fi
+            fi
+          done
+          if [ "$failed" = 1 ]; then
+            head="### ❌ Pack checks failed"$'\n\n'"Merging this would break the pack build on master. Fix what's below and push again; this comment updates."
+          else
+            head="### ✅ Pack checks passed"
+          fi
+          body="$marker"$'\n'"$head"$'\n\n'"| Check | Result |"$'\n'"|---|---|"$'\n'"$rows$details"$'\n'"<sub>${SHA:0:7} · [run]($RUN)</sub>"
+          printf '%s\n' "$body" >> "$GITHUB_STEP_SUMMARY"
+          id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate \
+                 --jq ".[] | select(.body | startswith(\"$marker\")) | .id" | tail -n 1) || id=''
+          case "$id" in *[!0-9]*) id='' ;; esac
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -f body="$body" >/dev/null \
+              || echo "::warning::couldn't update the pull request's comment"
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -f body="$body" >/dev/null \
+              || echo "::warning::couldn't comment on the pull request"
+          fi
+          exit $failed
