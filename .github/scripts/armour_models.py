@@ -323,11 +323,16 @@ class Shelf:
 
 def models_of(kind):
     """{look: (path, swaps)} for the piece's looks that have a model: each model's own, then those its
-    items wear with textures swapped (armour_looks.swapped)."""
+    items wear with textures swapped (armour_looks.swapped). A chest, boots or legs model no item wears
+    as it is (one not yet given an item, or only worn with its textures swapped) is left out: it would
+    only take room on the sheet, whose texture positions stop at 4096."""
     folder = os.path.join(MODELS, kind)
     if not os.path.isdir(folder):
         return {}
     own = {f[:-8]: (os.path.join(folder, f), {}) for f in sorted(os.listdir(folder)) if f.endswith(".bbmodel")}
+    if kind in ("chest", "boots", "legs"):
+        worn = {look_name(item) for item in looks.items(kind).values()}
+        own = {look: found for look, found in own.items() if look in worn}
     return dict(own, **dict(sorted(looks.swapped(kind).items())))
 
 
@@ -808,7 +813,10 @@ def traced(layer, sheet, entries=None):
                     tuvs = place(r, uvs)
                     for k, corner in enumerate((0, 1, 3)):
                         u, v = tuvs[corner]
-                        assert 0 <= u < 4096 and 0 <= v < 4096
+                        if not (0 <= u < 4096 and 0 <= v < 4096):
+                            raise SystemExit("the layer %d sheet is full: %s %s's textures land at %d, %d, past the 4096 "
+                                             "texture positions reach (a shape's header rows take most room; models no "
+                                             "item wears are left out)" % (layer, models[r][0], models[r][1], u, v))
                         texels[3 + 3 * f + k] = u24(u << 12 | v)
                     if textures[uvs[0][0]].info.get("animation"):
                         texels[3 + 3 * f] = texels[3 + 3 * f][:3] + (ANIMATED,)
