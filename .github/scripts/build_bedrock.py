@@ -161,6 +161,26 @@ def write_json(path, data, pretty=False):
             json.dump(data, f, separators=(",", ":"), ensure_ascii=False)
 
 
+# Item and armour geometries are collected and written at the end, GEOMETRIES_PER_FILE to a file: one file per model
+# was 1,995 files, and a Bedrock client unpacks a pack a file at a time (tens of thousands took it minutes).
+GEOMETRIES = []
+GEOMETRIES_PER_FILE = 150
+
+
+def add_geometries(geometries):
+    GEOMETRIES.extend(geometries)
+
+
+def write_geometries():
+    """The collected geometries, GEOMETRIES_PER_FILE to a file; returns how many files."""
+    files = 0
+    for n in range(0, len(GEOMETRIES), GEOMETRIES_PER_FILE):
+        write_json(os.path.join(PACK, "models", "entity", "ms", "g%03d.geo.json" % files),
+                   {"format_version": "1.21.0", "minecraft:geometry": GEOMETRIES[n:n + GEOMETRIES_PER_FILE]})
+        files += 1
+    return files
+
+
 def write_bytes(path, data):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "wb") as f:
@@ -1893,35 +1913,89 @@ def frame_display(fixed):
     return bone or None
 
 
-def frame_entity(index, parts, display):
-    """A frame entity's client entity: the item's geometries and textures, one render controller each (the attachables')."""
-    animations, animate = {"pose": FRAME_POSE}, ["pose"]
-    if display:
-        animations["fixed"] = display
-        animate.append("fixed")
-    return {"format_version": "1.10.0", "minecraft:client_entity": {"description": {
-        "identifier": "%s:frame_%04d" % (NAMESPACE, index),
-        "materials": {"default": ITEM_MATERIAL, "blend": BLEND_MATERIAL},
-        "textures": {"t%d" % i: t for i, (_, t, _) in enumerate(parts)},
-        "geometry": {"t%d" % i: g for i, (g, _, _) in enumerate(parts)},
-        "render_controllers": ["controller.render.ms.item_%s%d" % ("b" if b else "t", i) for i, (_, _, b) in enumerate(parts)],
-        "animations": animations, "scripts": {"animate": animate}}}}
+# One client entity draws every frame model: the extension sets its model (MODEL_PROPERTY, the frame's index) and the
+# model's fixed display (DISPLAY_PROPERTIES), and a render controller per part picks that model's geometry, texture and
+# material from arrays. An entity per model was 3,361 files and as many entities registered with Geyser.
+FRAME_ENTITY = "%s:frame" % NAMESPACE
+MODEL_PROPERTY = "%s:model" % NAMESPACE
+FRAME_FIXED = "animation.%s.frame.fixed" % NAMESPACE
+EMPTY_GEOMETRY = "geometry.%s.empty" % NAMESPACE
+# the fixed display's translation (x, y, z), rotation and scale, as frame_display gives them and Java clamps them
+DISPLAY_PROPERTIES = {"px": (-80, 80, 0), "py": (-80, 80, 0), "pz": (-80, 80, 0),
+                      "rx": (-180, 180, 0), "ry": (-180, 180, 0), "rz": (-180, 180, 0),
+                      "sx": (-4, 4, 1), "sy": (-4, 4, 1), "sz": (-4, 4, 1)}
+
+
+def frame_fixed():
+    """The model's fixed display on ms_y, from the properties the extension sets."""
+    q = lambda name: "q.property('%s:%s')" % (NAMESPACE, name)
+    return {"loop": True, "bones": {"ms_y": {"position": [q("px"), q("py"), q("pz")],
+                                             "rotation": [q("rx"), q("ry"), q("rz")],
+                                             "scale": [q("sx"), q("sy"), q("sz")]}}}
+
+
+def frame_display_values(display):
+    """The DISPLAY_PROPERTIES for a frame_display bone (None: none)."""
+    display = display or {}
+    position = display.get("position", [0, 0, 0])
+    rotation = display.get("rotation", [0, 0, 0])
+    scale = display.get("scale", [1, 1, 1])
+    if not isinstance(scale, list):
+        scale = [scale] * 3
+    return dict(zip(DISPLAY_PROPERTIES, [r4(v) for v in list(position) + list(rotation) + list(scale)]))
 
 
 def write_frames(frames):
-    """The frame entities and their animations; their entries in bedrock_entities.json."""
-    animations = {FRAME_POSE: frame_pose()}
+    """The frame entity, its render controllers and animations; the frames' entries in bedrock_entities.json."""
+    ordered = sorted(frames.values(), key=lambda f: f["index"])
+    assert [f["index"] for f in ordered] == list(range(len(ordered))), "frame indexes must run 0, 1, 2, ..."
+    slots = max([len(f["parts"]) for f in ordered] or [1])
+    geometries, textures = {EMPTY_GEOMETRY: "empty"}, {}
+    for f in ordered:
+        for g, t, _ in f["parts"]:
+            geometries.setdefault(g, "g%d" % len(geometries))
+            textures.setdefault(t, "t%d" % len(textures))
+    placeholder = next(iter(textures.values()), None)
+    model = "q.property('%s')" % MODEL_PROPERTY
+    controllers = {}
+    for i in range(slots):
+        g_arr, t_arr, m_arr = [], [], []
+        for f in ordered:
+            if i < len(f["parts"]):
+                g, t, blend = f["parts"][i]
+                g_arr.append("Geometry." + geometries[g])
+                t_arr.append("Texture." + textures[t])
+                m_arr.append("Material.blend" if blend else "Material.default")
+            else:
+                g_arr.append("Geometry.empty")
+                t_arr.append("Texture." + placeholder)
+                m_arr.append("Material.default")
+        controllers["controller.render.%s.frame_%d" % (NAMESPACE, i)] = {
+            "arrays": {"geometries": {"Array.g": g_arr}, "textures": {"Array.t": t_arr}, "materials": {"Array.m": m_arr}},
+            "geometry": "Array.g[%s]" % model, "textures": ["Array.t[%s]" % model],
+            "materials": [{"*": "Array.m[%s]" % model}]}
+    write_json(os.path.join(PACK, "render_controllers", "ms_frames.render_controllers.json"),
+               {"format_version": "1.8.0", "render_controllers": controllers})
+    add_geometries([{"description": {"identifier": EMPTY_GEOMETRY, "texture_width": 16, "texture_height": 16},
+                     "bones": [{"name": "ms_root", "pivot": [0, 0, 0]}]}])
+    write_json(os.path.join(PACK, "entity", "ms", "frame.entity.json"), {"format_version": "1.10.0", "minecraft:client_entity": {
+        "description": {
+            "identifier": FRAME_ENTITY,
+            "materials": {"default": ITEM_MATERIAL, "blend": BLEND_MATERIAL},
+            "textures": {name: path for path, name in textures.items()},
+            "geometry": {name: g for g, name in geometries.items()},
+            "render_controllers": list(controllers),
+            "animations": {"pose": FRAME_POSE, "fixed": FRAME_FIXED},
+            "scripts": {"animate": ["pose", "fixed"]}}}})
+    write_json(os.path.join(PACK, "animations", "ms_frames.animation.json"),
+               {"format_version": "1.8.0", "animations": {FRAME_POSE: frame_pose(), FRAME_FIXED: frame_fixed()}})
     entries = []
-    for frame in sorted(frames.values(), key=lambda f: f["index"]):
-        display = None
-        if frame["display"]:
-            display = "animation.ms.frame." + hashlib.sha1(json.dumps(frame["display"], sort_keys=True).encode()).hexdigest()[:12]
-            animations[display] = {"loop": True, "bones": {"ms_y": frame["display"]}}
-        write_json(os.path.join(PACK, "entity", "ms", "frames", "frame_%04d.entity.json" % frame["index"]),
-                   frame_entity(frame["index"], frame["parts"], display))
-        entries.append({"identifier": "%s:frame_%04d" % (NAMESPACE, frame["index"]), "kind": "frame", "index": frame["index"],
-                        "model": frame["model"], "match": {"items": sorted(frame["items"])}, "hitbox": FRAME_HITBOX, "scale": 1.0})
-    write_json(os.path.join(PACK, "animations", "ms_frames.animation.json"), {"format_version": "1.8.0", "animations": animations})
+    for f in ordered:
+        entries.append({"identifier": FRAME_ENTITY, "kind": "frame", "index": f["index"], "model": f["model"],
+                        "match": {"items": sorted(f["items"])}, "hitbox": FRAME_HITBOX, "scale": 1.0,
+                        "display": frame_display_values(f["display"])})
+    print("  frame entity: %d models, %d parts at most, %d geometries, %d textures"
+          % (len(ordered), slots, len(geometries) - 1, len(textures)))
     return entries
 
 
@@ -2153,8 +2227,7 @@ def build(jobs, make_zip):
                     copied_textures.add(target)
                 parts.append((gid, target, blend))
             if new:
-                write_json(os.path.join(PACK, "models", "entity", "ms", "i", short_name(name) + ".geo.json"),
-                           {"format_version": "1.21.0", "minecraft:geometry": new})
+                add_geometries(new)
                 geometries_written += len(new)
             geometry_done[d["ref"]] = parts
             display = {k: model.display.get(k) for k in ("thirdperson_righthand", "thirdperson_lefthand", "head",
@@ -2220,12 +2293,11 @@ def build(jobs, make_zip):
         if gkey not in looks_done:
             bones, layout, size = bbmodel_look(bb, piece, {})
             gid = "geometry.ms.armour.%s.%s" % (piece, slug(look))
-            write_json(os.path.join(PACK, "models", "entity", "ms", "armour", piece, short_name(slug(look)) + ".geo.json"),
-                       {"format_version": "1.21.0", "minecraft:geometry": [{
-                           "description": {"identifier": gid, "texture_width": size[0], "texture_height": size[1],
-                                           "visible_bounds_width": 3, "visible_bounds_height": 3,
-                                           "visible_bounds_offset": [0, 1, 0]},
-                           "bones": bones}]})
+            add_geometries([{
+                "description": {"identifier": gid, "texture_width": size[0], "texture_height": size[1],
+                                "visible_bounds_width": 3, "visible_bounds_height": 3,
+                                "visible_bounds_offset": [0, 1, 0]},
+                "bones": bones}])
             looks_done[gkey] = (gid, size)
         gid, size = looks_done[gkey]
         _, layout, size2 = bbmodel_look(bb, piece, swaps) if swaps else (None, None, None)
@@ -2253,6 +2325,7 @@ def build(jobs, make_zip):
     block_states, block_mappings = build_blocks()
     sound_events, sound_files = sounds()
     import bedrock_entities
+    print("  %d geometries in %d files" % (len(GEOMETRIES), write_geometries()))
     contract = bedrock_entities.build(PACK, OUT, frame_entries, frame_items)
 
     # 6. manifest, icon, mappings, zip
