@@ -56,28 +56,6 @@ jobs:
         # the mobs stitch plays; count_icons.py lists them on leather horse armour.
         run: python .github/scripts/build_mobs.py
 
-      - name: Cache Bedrock icons
-        # build_bedrock.py's rendered 3D item icons, by each model's and its textures' hash, and the Minecraft
-        # 1.18.2 client jar's models and textures it draws vanilla items' icons from.
-        if: matrix.set == 'full'
-        uses: actions/cache@v6
-        with:
-          path: cache/bedrock
-          key: bedrock-icons-${{ github.run_id }}
-          restore-keys: bedrock-icons-
-
-      - name: Build the Bedrock pack
-        # The Bedrock pack (item and vanilla icons, attachables, worn armour, world textures, furniture blocks,
-        # sounds, glyphs, the generated JSON UI, the mobs and frame entities), its music pack, Geyser's item and
-        # block mappings and the plugin's contracts (entities, icons), from the item models before
-        # count_icons.py rewrites them. They go to the release with the zips (below).
-        if: matrix.set == 'full'
-        run: |
-          python .github/scripts/build_bedrock.py
-          # Fails on what would crash the game or draw nothing (oversized textures, unparsable JSON, missing
-          # geometry or textures, icons the mappings name but the pack lacks), before anything is released.
-          python .github/scripts/check_bedrock.py build/bedrock
-
       - name: Cache Minecraft shaders
         # Each release's text shader, read once from its client jar; a new release adds to it.
         uses: actions/cache@v6
@@ -122,20 +100,14 @@ jobs:
 
       - name: Archive dev
         if: matrix.set == 'full'
-        uses: thedoctor0/zip-release@master
-        with:
-          filename: 'dev.zip'
-          exclusions: ${{ env.EXCLUDE }}
+        run: .github/scripts/archive.sh "dev.zip"
 
       - name: Delete dev files
         if: matrix.set == 'full'
         run: rm assets/minecraft/textures/particle/effect_*
 
       - name: Archive patreon
-        uses: thedoctor0/zip-release@master
-        with:
-          filename: 'patreon${{ env.SUFFIX }}.zip'
-          exclusions: ${{ env.EXCLUDE }}
+        run: .github/scripts/archive.sh "patreon$SUFFIX.zip"
 
       - name: Run script
         # the items' own models, not their count copies, then the copies again from them
@@ -157,10 +129,7 @@ jobs:
           base: false
 
       - name: Archive 20
-        uses: thedoctor0/zip-release@master
-        with:
-          filename: '20${{ env.SUFFIX }}.zip'
-          exclusions: ${{ env.EXCLUDE }}
+        run: .github/scripts/archive.sh "20$SUFFIX.zip"
 
       - name: Upgrade resource pack
         uses: AshleyThew/minecraft-resource-pack-upgrader@v1.1.9
@@ -180,38 +149,79 @@ jobs:
         run: python .github/scripts/check_item_atlases.py
 
       - name: Archive 21
-        uses: thedoctor0/zip-release@master
-        with:
-          filename: '21${{ env.SUFFIX }}.zip'
-          exclusions: ${{ env.EXCLUDE }}
+        run: .github/scripts/archive.sh "21$SUFFIX.zip"
 
       - name: Upload to the run's draft release
-        # the zips with their SHA1s, side by side; the full pack's job also brings run/noted.txt, the
-        # font sizes and animated mobs (build_mobs.py: their clips and hitboxes, for the plugin), and the
-        # Bedrock files (the packs for Geyser's packs/, the mappings for its custom_mappings/, the entities'
-        # contract for the plugin and the Geyser extension, the icon index for the plugin's forms),
-        # each with its SHA1
+        # the zips with their SHA1s, side by side; the full pack's job also brings run/noted.txt, and the
+        # font sizes and animated mobs (build_mobs.py: their clips and hitboxes, for the plugin)
         run: |
           for file in *.zip; do
             sha1sum "$file" | cut -d ' ' -f 1 > "$file.sha1"
           done
           files=(*.zip *.zip.sha1)
-          read -ra BEDROCK <<< "$BEDROCK_FILES"
           if [ "${{ matrix.set }}" = full ]; then
             sha1sum run/fonts.json | cut -d ' ' -f 1 > run/fonts.json.sha1
             sha1sum run/mobs.json | cut -d ' ' -f 1 > run/mobs.json.sha1
             files+=(run/noted.txt run/fonts.json run/fonts.json.sha1 run/mobs.json run/mobs.json.sha1)
-            for file in "${BEDROCK[@]}"; do
-              sha1sum "build/bedrock/$file" | cut -d ' ' -f 1 > "build/bedrock/$file.sha1"
-              files+=("build/bedrock/$file" "build/bedrock/$file.sha1")
-            done
           fi
           # the full pack's job made the draft as it began; wait for it no more than five minutes
           for i in $(seq 60); do gh release view "$DRAFT" >/dev/null 2>&1 && break; sleep 5; done
           printf '%s\n' "${files[@]}" | xargs -P 8 -I{} gh release upload "$DRAFT" {}
 
+  # The Bedrock pack in a job of its own, from its own checkout: its build (build/bedrock, 45,000 files) is
+  # never in the folder the Java zips are made from.
+  bedrock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: Build armour sheets and animated mobs
+        # as the pack job does before it, so the Bedrock build sees the folder as it always has
+        run: |
+          pip install pillow numpy
+          python .github/scripts/build_armour.py
+          python .github/scripts/build_mobs.py
+
+      - name: Cache Bedrock icons
+        # build_bedrock.py's rendered 3D item icons, by each model's and its textures' hash, and the Minecraft
+        # 1.18.2 client jar's models and textures it draws vanilla items' icons from.
+        uses: actions/cache@v6
+        with:
+          path: cache/bedrock
+          key: bedrock-icons-${{ github.run_id }}
+          restore-keys: bedrock-icons-
+
+      - name: Build the Bedrock pack
+        # The Bedrock pack (item and vanilla icons, attachables, worn armour, world textures, furniture blocks,
+        # sounds, glyphs, the generated JSON UI, the mobs and frame entities), its music pack, Geyser's item and
+        # block mappings and the plugin's contracts (entities, icons), from the item models as they are in the
+        # repository (before count_icons.py rewrites them).
+        run: |
+          python .github/scripts/build_bedrock.py
+          # Fails on what would crash the game or draw nothing (oversized textures, unparsable JSON, missing
+          # geometry or textures, icons the mappings name but the pack lacks), before anything is released.
+          python .github/scripts/check_bedrock.py build/bedrock
+
+      - name: Upload to the run's draft release
+        # the packs for Geyser's packs/, the mappings for its custom_mappings/, the entities' contract for the
+        # plugin and the Geyser extension, the icon index for the plugin's forms, each with its SHA1
+        run: |
+          files=()
+          for file in $BEDROCK_FILES; do
+            sha1sum "build/bedrock/$file" | cut -d ' ' -f 1 > "build/bedrock/$file.sha1"
+            files+=("build/bedrock/$file" "build/bedrock/$file.sha1")
+          done
+          # the full pack's job makes the draft as it begins; wait for it no more than five minutes
+          for i in $(seq 60); do gh release view "$DRAFT" >/dev/null 2>&1 && break; sleep 5; done
+          printf '%s\n' "${files[@]}" | xargs -P 8 -I{} gh release upload "$DRAFT" {}
+
   release:
-    needs: pack
+    needs: [pack, bedrock]
     runs-on: ubuntu-latest
     steps:
       - name: Publish the patreon release
@@ -258,7 +268,7 @@ jobs:
 
   # a failed build leaves no half-filled draft behind; the last patreon release stays as it was
   cleanup:
-    needs: pack
+    needs: [pack, bedrock]
     if: failure()
     runs-on: ubuntu-latest
     steps:
