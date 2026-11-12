@@ -1,7 +1,31 @@
 {
     "_about": "Animated mobs: each an item on an armour stand's head, leather horse armour with this custom model data (from 100001, above every item's), its model a Blockbench model in mobs/models/ whose animations the item shader plays (build_mobs.py bakes them into the model's texture, the mobs stitch plays them). The item's dye names the clip, by the ids here, and when it started. clips are by the model's animation names; end is how a clip ends where the model's own loop setting isn't what the mob wants (loop, once: back to rest, hold: its last frame). scale is the model's size on the stand's head (at most 4). textures swaps the model's textures, by their names in it, for PNGs in mobs/textures/: the same model and animations as another mob in its own colours. The release publishes mobs.json (each mob's custom model data, clip ids, ticks and a hitbox fitted to the model), which the plugin reads: a mob type names its mob here in entity_info's animated.",
+    "_skillcapes": "Skillcape emotes are props played the same way: skillcape_<skill>, <skill> the skill's name in lower case as the plugin has it (skillcape_attack, skillcape_ranged, skillcape_runecrafting, skillcape_construction), \"origin\": true and one clip, emote, which ends holding its last frame. The plugin stands it at the player's feet facing where they face, plays it once and takes it away. The player stands at the model's origin facing +z (a mob's front), their right hand on -x. origin keeps the model's origin over the stand, not its middle, and draws it a block a 16 units (no scale): within 60 units of the origin and 117 tall. A trimmed cape plays its cape's. These props are placeholders after OSRS's emotes, each as long as the cape's emote there (cooking's, smithing's and woodcutting's capped at 11.5 s: a clip that doesn't loop must be under 12 s, since it's timed from the game time mod 240 ticks).",
     "mobs": [
         {"custom_model_data": 100001, "name": "mithril_dragon", "model": "mithril_dragon.bbmodel", "scale": 3,
-         "clips": {"walking": 1, "idle": 2, "periodic_idle": {"id": 3, "end": "once"}, "melee": 4, "defend": 5, "dragonfire": 6, "magic": 7, "ranged": 8}}
+         "clips": {"walking": 1, "idle": 2, "periodic_idle": {"id": 3, "end": "once"}, "melee": 4, "defend": 5, "dragonfire": 6, "magic": 7, "ranged": 8}},
+        {"custom_model_data": 100002, "name": "skillcape_attack", "model": "skillcape_attack.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
+        {"custom_model_data": 100003, "name": "skillcape_strength", "model": "skillcape_strength.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
+        {"custom_model_data": 100004, "name": "skillcape_defence", "model": "skillcape_defence.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
+        {"custom_model_data": 100005, "name": "skillcape_ranged", "model": "skillcape_ranged.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
+        {"custom_model_data": 100006, "name": "skillcape_prayer", "model": "skillcape_prayer.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
+        {"custom_model_data": 100007, "name": "skillcape_magic", "model": "skillcape_magic.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
+        {"custom_model_data": 100008, "name": "skillcape_runecrafting", "model": "skillcape_runecrafting.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
+        {"custom_model_data": 100009, "name": "skillcape_construction", "model": "skillcape_construction.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
+        {"custom_model_data": 100010, "name": "skillcape_hitpoints", "model": "skillcape_hitpoints.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
+        {"custom_model_data": 100011, "name": "skillcape_agility", "model": "skillcape_agility.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
+        {"custom_model_data": 100012, "name": "skillcape_herblore", "model": "skillcape_herblore.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
+        {"custom_model_data": 100013, "name": "skillcape_thieving", "model": "skillcape_thieving.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
+        {"custom_model_data": 100014, "name": "skillcape_crafting", "model": "skillcape_crafting.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
+        {"custom_model_data": 100015, "name": "skillcape_fletching", "model": "skillcape_fletching.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
+        {"custom_model_data": 100016, "name": "skillcape_slayer", "model": "skillcape_slayer.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
+        {"custom_model_data": 100017, "name": "skillcape_hunter", "model": "skillcape_hunter.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
+        {"custom_model_data": 100018, "name": "skillcape_mining", "model": "skillcape_mining.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
+        {"custom_model_data": 100019, "name": "skillcape_smithing", "model": "skillcape_smithing.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
+        {"custom_model_data": 100020, "name": "skillcape_fishing", "model": "skillcape_fishing.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
+        {"custom_model_data": 100021, "name": "skillcape_cooking", "model": "skillcape_cooking.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
+        {"custom_model_data": 100022, "name": "skillcape_firemaking", "model": "skillcape_firemaking.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
+        {"custom_model_data": 100023, "name": "skillcape_woodcutting", "model": "skillcape_woodcutting.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
+        {"custom_model_data": 100024, "name": "skillcape_farming", "model": "skillcape_farming.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}}
     ]
 }

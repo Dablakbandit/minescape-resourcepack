@@ -34,6 +34,10 @@ can't see its quad's corners (no subgroup shuffles) still knows it is a mob's, t
 Each model is checked first (check()) against what the conversion and old Minecraft versions can take, every
 problem listed by cube, bone and animation name, and the build stops on any.
 
+A prop ("origin": true, such as a skillcape emote's) keeps its model's origin over the stand instead of its middle, and
+is drawn a block a 16 of its units (it takes no scale): it reaches at most 60 units from its origin and stands at most
+117 tall.
+
 A mob may take its model's textures from other PNGs ("textures": {"<texture name in the model>": "<png in
 mobs/textures/>"}), so one model and its animations can be several mobs in different colours.
 
@@ -396,6 +400,11 @@ def check(d, mob):
             continue
         if round(float(a.get("length", 0)) * 20) > MAX_FRAMES - 1:
             errors.append("animation %s is %.2f s long; at most %.2f s" % (a["name"], float(a["length"]), (MAX_FRAMES - 1) / 20))
+        clip = mob["clips"][a["name"]]
+        end = (clip.get("end") if isinstance(clip, dict) else None) or a.get("loop")
+        if end != "loop" and round(float(a.get("length", 0)) * 20) >= 240:
+            # a played clip's start is the game time mod 240 ticks: by 240 ticks in it would start again
+            errors.append("animation %s is %.2f s long and doesn't loop; at most 11.95 s" % (a["name"], float(a["length"])))
         for an in a.get("animators", {}).values():
             if an.get("type") != "bone":
                 if an.get("keyframes"):
@@ -466,11 +475,18 @@ def build(mob):
     assert len(bones) < 256
     index = {u: i for i, u in enumerate(bones)}
 
-    # the cubes fitted into Java's -16 to 32, ground (y 0) kept level
+    # the cubes fitted into Java's -16 to 32, ground (y 0) kept level: a mob's middle over the stand, as big as it
+    # fits; a prop's ("origin": true) own origin over the stand, which its display grows back to a block a 16 units
     lo = np.min([e["from"] for e in d["elements"]] + [e["to"] for e in d["elements"]], axis=0)
     hi = np.max([e["from"] for e in d["elements"]] + [e["to"] for e in d["elements"]], axis=0)
-    f = 47.0 / float(max(hi - lo))
-    shift = np.array([8 - f * (lo[0] + hi[0]) / 2, -15.5 - f * lo[1], 8 - f * (lo[2] + hi[2]) / 2])
+    anchored = bool(mob.get("origin", False))
+    if anchored:
+        reach = max(abs(float(v)) for v in (lo[0], hi[0], lo[2], hi[2]))
+        f = min(24.0 / max(reach, 1e-6), 47.0 / float(hi[1] - lo[1]))
+        shift = np.array([8.0, -15.5 - f * lo[1], 8.0])
+    else:
+        f = 47.0 / float(max(hi - lo))
+        shift = np.array([8 - f * (lo[0] + hi[0]) / 2, -15.5 - f * lo[1], 8 - f * (lo[2] + hi[2]) / 2])
     A = affine(np.eye(3) * f, shift)
     A_inv = np.linalg.inv(A)
 
@@ -618,6 +634,11 @@ def build(mob):
                 local = affine(np.eye(3), pivot + pos) @ affine(euler_zyx(rot) @ np.diag(scl), np.zeros(3)) @ affine(np.eye(3), -pivot)
                 world[uid] = (world[parent[uid]] @ local) if parent[uid] else local
             frames.append([((A @ world[uid] @ A_inv)[:3, :3], (A @ world[uid] @ A_inv)[:3, 3]) for uid in bones])
+            # a keyframe's offset is kept to within 64 Java units of where the bone rests (the sprite's encoding)
+            for uid, (_, offset) in zip(bones, frames[-1]):
+                if np.max(np.abs(offset)) >= 63.9:
+                    raise ModelError("%s: animation %s at %.2f s takes bone %s %.0f units from where it rests; at most %.0f here"
+                                     % (name, anim, t, groups[uid]["name"], np.max(np.abs(offset)) / f, 63.9 / f))
         assert sprite.clip(frames, end) == cid
 
     box_lo = np.min([e["from"] for e in model_elements] + [e["to"] for e in model_elements], axis=0)
@@ -625,7 +646,16 @@ def build(mob):
     os.makedirs(TEXTURES, exist_ok=True)
     sprite.write().save(os.path.join(TEXTURES, name + ".png"))
     ground = float(java([0, 0, 0])[1])
-    scale = float(mob.get("scale", 1))
+    if anchored:
+        # sixteen of the model's units a block: f Java units each, HEAD_ITEM blocks a Java unit at display scale 1
+        assert "scale" not in mob, "%s: a prop (origin) is drawn a block a 16 units; it takes no scale" % name
+        scale = 1.0 / (f * HEAD_ITEM * 16)
+        if scale > 4:
+            raise ModelError("%s: reaches %.1f units from its origin and stands %.1f tall; a prop reaches at most %.0f and stands at most %.0f"
+                             % (name, reach, float(hi[1] - lo[1]), 24 * 4 * HEAD_ITEM * 16, 47 * 4 * HEAD_ITEM * 16))
+        scale = round(scale, 4)
+    else:
+        scale = float(mob.get("scale", 1))
     assert 0 < scale <= 4, "%s: a display scale is at most 4" % name
     model = {"textures": {"skin": "ms:item/mobs/" + name, "particle": "ms:item/mobs/" + name},
              "elements": model_elements,
