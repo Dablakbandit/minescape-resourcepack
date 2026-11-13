@@ -336,6 +336,8 @@ class Model:
             textures.update(model.get("textures", {}))
             display.update(model.get("display", {}))
         self.display = display
+        # whether the model's own json (not a parent's) says how an item frame shows it: made to be scenery in frames
+        self.own_fixed = bool(chain) and "fixed" in (chain[0].get("display") or {})
         self.gui_light = next((m["gui_light"] for m in chain if "gui_light" in m), None)
         self.root = split(root)[1] if root else None
         self.handheld = any(split(n)[1] in ("item/handheld", "item/handheld_rod") for n in list(names) + [root or ""])
@@ -2082,6 +2084,11 @@ def build(jobs, make_zip):
         tint = tuple(d["armour"]["icon_colour"]) if d["armour"] else None
         model = load_model(d["ref"]) or load_model(d["ref"], vanilla=True)
         d["model"] = model
+        if model is not None and not d["real"] and not model.own_fixed:
+            # scenery whose model has no item-frame display of its own isn't made for item frames: no Bedrock item,
+            # icon or frame entity (Geyser shows its material's own)
+            d["model"] = None
+            continue
         if model is None:
             missing_models.add(d["ref"])
         elif (d["ref"], tint) not in tasks:
