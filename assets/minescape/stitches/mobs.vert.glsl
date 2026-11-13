@@ -156,8 +156,13 @@ mat3 frame(vec3 a, vec3 b) {
 void stitch_vertex(inout StitchVertex v) {
     vec3 corners[4];
     vec2 uvs[4];
-    // every vertex shares its corners, whatever it is (the lanes beside it may be a mob's)
+    // every vertex shares its corners, whatever it is (the lanes beside it may be a mob's); quad_corners is a
+    // "uses" capability, so a program without it (26.3's items) has no stitch_quad_corners at all
+#ifdef STITCH_HAS_QUAD_CORNERS
     bool quad = stitch_quad_corners(corners, uvs);
+#else
+    bool quad = false;
+#endif
 
     ivec2 atlas = stitch_texture_size();
     int face;
