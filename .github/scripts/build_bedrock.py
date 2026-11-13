@@ -275,11 +275,8 @@ def overrides():
         model = pristine(material)
         listed = []
         if material == ITEM:
-            # as count_icons.py lists them: the items by number, the noted icons below zero, ascending
+            # the items by number (noted items are carrots, not leather horse armour below zero: none here)
             numbers = cmd_numbers(model)
-            for number, ref in cmd_numbers(read_json(os.path.join(ITEM_MODELS, NOTED + ".json"))).items():
-                if number > 0:
-                    numbers[-number] = ref
             listed = [("cmd", n, numbers[n], None) for n in sorted(numbers) if n < MOBS_FROM]
         else:
             most = count_icons.durability(material)
@@ -1513,8 +1510,8 @@ def music_pack(version, make_zip):
     write_json(os.path.join(MUSIC_PACK, "manifest.json"), {
         "format_version": 2,
         "header": {"name": PACK_NAME + " Music", "description": "MineScape's music player instruments",
-                   "uuid": MUSIC_UUID, "version": [1, 0, version], "min_engine_version": MIN_ENGINE},
-        "modules": [{"type": "resources", "uuid": MUSIC_MODULE_UUID, "version": [1, 0, version]}],
+                   "uuid": MUSIC_UUID, "version": version, "min_engine_version": MIN_ENGINE},
+        "modules": [{"type": "resources", "uuid": MUSIC_MODULE_UUID, "version": version}],
     }, pretty=True)
     size = zip_pack(os.path.join(OUT, "minescape-music.mcpack"), MUSIC_PACK) if make_zip else 0
     return events, files, size
@@ -1968,7 +1965,9 @@ def ui_files():
 
 def content_version(tree):
     """A pack's version from its files (all but its manifest): the same files, the same version, so a client keeps the
-    pack it has instead of loading it again after every release. 28 bits of their SHA-1."""
+    pack it has instead of loading it again after every release. [1, minor, patch], each 0-9999, from their SHA-1:
+    a Bedrock client refuses to join ("Block", InitialConnection-90) with larger numbers (1.0.233501477 did; 1.0.9123
+    joined, the same pack otherwise)."""
     digest = hashlib.sha1()
     for folder, _, files in sorted(os.walk(tree)):
         for file in sorted(files):
@@ -1979,7 +1978,8 @@ def content_version(tree):
             digest.update(name.encode() + b"\0")
             with open(path, "rb") as f:
                 digest.update(f.read())
-    return int(digest.hexdigest()[:7], 16)
+    n = int(digest.hexdigest()[:12], 16) % 10 ** 8
+    return [1, n // 10000, n % 10000]
 
 
 def pack_version():
@@ -2241,24 +2241,6 @@ def build(jobs, make_zip):
             frame["items"].append(["minecraft:" + d["material"], value if d["kind"] == "cmd" else 0,
                                    value if d["kind"] == "damage" else 0, False])
         d["frame"] = frame["index"]
-    if noted_items:
-        # every noted item as a stand holds it: the plain note (ms:wooden_shovel/note), one attachable for them all
-        note = "textures/ms/note"
-        shutil.copyfile(os.path.join(ROOT, "assets", "minecraft", "textures", "item", "custom", "wooden_shovel", "note.png"),
-                        os.path.join(PACK, *note.split("/")) + ".png")
-        display = {k: FLAT_DISPLAY.get(k) for k in ("thirdperson_righthand", "thirdperson_lefthand", "head",
-                                                    "firstperson_righthand", "firstperson_lefthand")}
-        dkey = hashlib.sha1(json.dumps(display, sort_keys=True).encode()).hexdigest()[:12]
-        if dkey not in anim_keys:
-            anim_keys[dkey] = True
-            animations.update(display_animations(display, dkey))
-        desc = flat_stand_attachable(noted_items[0], note, dkey)
-        desc["identifier"] = "%s:noted.stand" % NAMESPACE
-        desc["item"] = {i: "q.owner_identifier == 'minecraft:armor_stand'" for i in sorted(noted_items)}
-        write_json(os.path.join(PACK, "attachables", "ms", "noted.json"),
-                   {"format_version": "1.10.0", "minecraft:attachable": {"description": desc}})
-        flat_attachables += 1
-        print("  noted: %d items, one attachable" % len(noted_items))
     write_json(os.path.join(PACK, "animations", "ms_items.animation.json"),
                {"format_version": "1.8.0", "animations": animations})
     write_json(os.path.join(PACK, "models", "entity", "ms", "flat.geo.json"), {"format_version": "1.21.0", "minecraft:geometry": [flat_geometry()]})
@@ -2340,8 +2322,8 @@ def build(jobs, make_zip):
     write_json(os.path.join(PACK, "manifest.json"), {
         "format_version": 2,
         "header": {"name": PACK_NAME, "description": "MineScape for Bedrock: items, armour, glyphs, menus and mobs",
-                   "uuid": PACK_UUID, "version": [1, 0, version], "min_engine_version": MIN_ENGINE},
-        "modules": [{"type": "resources", "uuid": MODULE_UUID, "version": [1, 0, version]}],
+                   "uuid": PACK_UUID, "version": version, "min_engine_version": MIN_ENGINE},
+        "modules": [{"type": "resources", "uuid": MODULE_UUID, "version": version}],
     }, pretty=True)
     for material in mappings:
         mappings[material].sort(key=lambda e: (-e.get("priority", 0), e.get("custom_model_data", e.get("predicate", {}).get("threshold", 0))))
@@ -2379,7 +2361,7 @@ def build(jobs, make_zip):
           % (music_events, music_files, ", minescape-music.mcpack %.1f MB" % (music_size / 1e6) if make_zip else ""))
     print("  entities:   %d (tag %04x) in bedrock_entities.json" % (len(contract["entities"]), contract["tag"]))
     if make_zip:
-        print("  pack:       minescape.mcpack, %.1f MB, version 1.0.%d" % (size / 1e6, version))
+        print("  pack:       minescape.mcpack, %.1f MB, version %s" % (size / 1e6, ".".join(map(str, version))))
     if total > MAX_ITEMS:
         problems.append("%d Bedrock items is more than %d" % (total, MAX_ITEMS))
     if WARNINGS:
