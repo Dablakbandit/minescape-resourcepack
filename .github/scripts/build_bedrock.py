@@ -335,6 +335,8 @@ class Model:
         self.display = display
         # whether the model's own json (not a parent's) says how an item frame shows it: made to be scenery in frames
         self.own_fixed = bool(chain) and "fixed" in (chain[0].get("display") or {})
+        # whether its own json says how it is worn on the head: made for armour stands (the path arrow, props)
+        self.own_head = bool(chain) and "head" in (chain[0].get("display") or {})
         self.gui_light = next((m["gui_light"] for m in chain if "gui_light" in m), None)
         self.root = split(root)[1] if root else None
         self.handheld = any(split(n)[1] in ("item/handheld", "item/handheld_rod") for n in list(names) + [root or ""])
@@ -2084,11 +2086,6 @@ def build(jobs, make_zip):
         tint = tuple(d["armour"]["icon_colour"]) if d["armour"] else None
         model = load_model(d["ref"]) or load_model(d["ref"], vanilla=True)
         d["model"] = model
-        if model is not None and not d["real"] and not model.own_fixed:
-            # scenery whose model has no item-frame display of its own isn't made for item frames: no Bedrock item,
-            # icon or frame entity (Geyser shows its material's own)
-            d["model"] = None
-            continue
         if model is None:
             missing_models.add(d["ref"])
         elif (d["ref"], tint) not in tasks:
@@ -2166,7 +2163,7 @@ def build(jobs, make_zip):
         if model.kind == "flat":
             # an attachable only lets an armour stand hold it (a ground item): scenery is never on the ground, and a
             # noted item lies there as a note, one attachable for them all (below)
-            if not d["real"]:
+            if not d["real"] and not model.own_head:
                 continue
             if d["noted"]:
                 noted_items.append(d["identifier"])
@@ -2227,13 +2224,16 @@ def build(jobs, make_zip):
                                {"t%d" % i: t for i, (_, t, _) in enumerate(parts)}, model._anim)
         desc["render_controllers"] = ["controller.render.ms.item_%s%d" % ("b" if b else "t", i)
                                       for i, (_, _, b) in enumerate(parts)]
-        if d["real"] and not d["noted"]:
+        if (d["real"] and not d["noted"]) or model.own_head:
             write_json(os.path.join(PACK, "attachables", "ms", "items", d["identifier"].split(":", 1)[1] + ".json"),
                        {"format_version": "1.10.0", "minecraft:attachable": {"description": desc}})
             attachables += 1
         elif d["noted"]:
             noted_items.append(d["identifier"])
-        # its frame entity: one per look, the items that show it listed as the plugin matches them
+        # its frame entity: one per look whose own json says how an item frame shows it (made for frames), the items
+        # that show it listed as the plugin matches them
+        if not model.own_fixed:
+            continue
         fixed = frame_display(model.display.get("fixed") or {})
         frame = frames.setdefault((tuple(parts), json.dumps(fixed, sort_keys=True)),
                                   {"index": len(frames), "parts": parts, "display": fixed, "model": d["ref"], "items": []})
