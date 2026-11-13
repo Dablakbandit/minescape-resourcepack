@@ -275,11 +275,8 @@ def overrides():
         model = pristine(material)
         listed = []
         if material == ITEM:
-            # as count_icons.py lists them: the items by number, the noted icons below zero, ascending
+            # the items by number (noted items are carrots, not leather horse armour below zero: none here)
             numbers = cmd_numbers(model)
-            for number, ref in cmd_numbers(read_json(os.path.join(ITEM_MODELS, NOTED + ".json"))).items():
-                if number > 0:
-                    numbers[-number] = ref
             listed = [("cmd", n, numbers[n], None) for n in sorted(numbers) if n < MOBS_FROM]
         else:
             most = count_icons.durability(material)
@@ -2241,24 +2238,6 @@ def build(jobs, make_zip):
             frame["items"].append(["minecraft:" + d["material"], value if d["kind"] == "cmd" else 0,
                                    value if d["kind"] == "damage" else 0, False])
         d["frame"] = frame["index"]
-    if noted_items:
-        # every noted item as a stand holds it: the plain note (ms:wooden_shovel/note), one attachable for them all
-        note = "textures/ms/note"
-        shutil.copyfile(os.path.join(ROOT, "assets", "minecraft", "textures", "item", "custom", "wooden_shovel", "note.png"),
-                        os.path.join(PACK, *note.split("/")) + ".png")
-        display = {k: FLAT_DISPLAY.get(k) for k in ("thirdperson_righthand", "thirdperson_lefthand", "head",
-                                                    "firstperson_righthand", "firstperson_lefthand")}
-        dkey = hashlib.sha1(json.dumps(display, sort_keys=True).encode()).hexdigest()[:12]
-        if dkey not in anim_keys:
-            anim_keys[dkey] = True
-            animations.update(display_animations(display, dkey))
-        desc = flat_stand_attachable(noted_items[0], note, dkey)
-        desc["identifier"] = "%s:noted.stand" % NAMESPACE
-        desc["item"] = {i: "q.owner_identifier == 'minecraft:armor_stand'" for i in sorted(noted_items)}
-        write_json(os.path.join(PACK, "attachables", "ms", "noted.json"),
-                   {"format_version": "1.10.0", "minecraft:attachable": {"description": desc}})
-        flat_attachables += 1
-        print("  noted: %d items, one attachable" % len(noted_items))
     write_json(os.path.join(PACK, "animations", "ms_items.animation.json"),
                {"format_version": "1.8.0", "animations": animations})
     write_json(os.path.join(PACK, "models", "entity", "ms", "flat.geo.json"), {"format_version": "1.21.0", "minecraft:geometry": [flat_geometry()]})
