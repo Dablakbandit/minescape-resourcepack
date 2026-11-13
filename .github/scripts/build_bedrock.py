@@ -1510,8 +1510,8 @@ def music_pack(version, make_zip):
     write_json(os.path.join(MUSIC_PACK, "manifest.json"), {
         "format_version": 2,
         "header": {"name": PACK_NAME + " Music", "description": "MineScape's music player instruments",
-                   "uuid": MUSIC_UUID, "version": [1, 0, version], "min_engine_version": MIN_ENGINE},
-        "modules": [{"type": "resources", "uuid": MUSIC_MODULE_UUID, "version": [1, 0, version]}],
+                   "uuid": MUSIC_UUID, "version": version, "min_engine_version": MIN_ENGINE},
+        "modules": [{"type": "resources", "uuid": MUSIC_MODULE_UUID, "version": version}],
     }, pretty=True)
     size = zip_pack(os.path.join(OUT, "minescape-music.mcpack"), MUSIC_PACK) if make_zip else 0
     return events, files, size
@@ -1965,7 +1965,9 @@ def ui_files():
 
 def content_version(tree):
     """A pack's version from its files (all but its manifest): the same files, the same version, so a client keeps the
-    pack it has instead of loading it again after every release. 28 bits of their SHA-1."""
+    pack it has instead of loading it again after every release. [1, minor, patch], each 0-9999, from their SHA-1:
+    a Bedrock client refuses to join ("Block", InitialConnection-90) with larger numbers (1.0.233501477 did; 1.0.9123
+    joined, the same pack otherwise)."""
     digest = hashlib.sha1()
     for folder, _, files in sorted(os.walk(tree)):
         for file in sorted(files):
@@ -1976,7 +1978,8 @@ def content_version(tree):
             digest.update(name.encode() + b"\0")
             with open(path, "rb") as f:
                 digest.update(f.read())
-    return int(digest.hexdigest()[:7], 16)
+    n = int(digest.hexdigest()[:12], 16) % 10 ** 8
+    return [1, n // 10000, n % 10000]
 
 
 def pack_version():
@@ -2319,8 +2322,8 @@ def build(jobs, make_zip):
     write_json(os.path.join(PACK, "manifest.json"), {
         "format_version": 2,
         "header": {"name": PACK_NAME, "description": "MineScape for Bedrock: items, armour, glyphs, menus and mobs",
-                   "uuid": PACK_UUID, "version": [1, 0, version], "min_engine_version": MIN_ENGINE},
-        "modules": [{"type": "resources", "uuid": MODULE_UUID, "version": [1, 0, version]}],
+                   "uuid": PACK_UUID, "version": version, "min_engine_version": MIN_ENGINE},
+        "modules": [{"type": "resources", "uuid": MODULE_UUID, "version": version}],
     }, pretty=True)
     for material in mappings:
         mappings[material].sort(key=lambda e: (-e.get("priority", 0), e.get("custom_model_data", e.get("predicate", {}).get("threshold", 0))))
@@ -2358,7 +2361,7 @@ def build(jobs, make_zip):
           % (music_events, music_files, ", minescape-music.mcpack %.1f MB" % (music_size / 1e6) if make_zip else ""))
     print("  entities:   %d (tag %04x) in bedrock_entities.json" % (len(contract["entities"]), contract["tag"]))
     if make_zip:
-        print("  pack:       minescape.mcpack, %.1f MB, version 1.0.%d" % (size / 1e6, version))
+        print("  pack:       minescape.mcpack, %.1f MB, version %s" % (size / 1e6, ".".join(map(str, version))))
     if total > MAX_ITEMS:
         problems.append("%d Bedrock items is more than %d" % (total, MAX_ITEMS))
     if WARNINGS:
