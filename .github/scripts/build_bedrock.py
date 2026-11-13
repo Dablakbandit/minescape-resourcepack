@@ -161,6 +161,26 @@ def write_json(path, data, pretty=False):
             json.dump(data, f, separators=(",", ":"), ensure_ascii=False)
 
 
+# Item and armour geometries are collected and written at the end, GEOMETRIES_PER_FILE to a file: one file per model
+# was 1,995 files, and a Bedrock client unpacks a pack a file at a time (tens of thousands took it minutes).
+GEOMETRIES = []
+GEOMETRIES_PER_FILE = 150
+
+
+def add_geometries(geometries):
+    GEOMETRIES.extend(geometries)
+
+
+def write_geometries():
+    """The collected geometries, GEOMETRIES_PER_FILE to a file; returns how many files."""
+    files = 0
+    for n in range(0, len(GEOMETRIES), GEOMETRIES_PER_FILE):
+        write_json(os.path.join(PACK, "models", "entity", "ms", "g%03d.geo.json" % files),
+                   {"format_version": "1.21.0", "minecraft:geometry": GEOMETRIES[n:n + GEOMETRIES_PER_FILE]})
+        files += 1
+    return files
+
+
 def write_bytes(path, data):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "wb") as f:
@@ -316,6 +336,8 @@ class Model:
             textures.update(model.get("textures", {}))
             display.update(model.get("display", {}))
         self.display = display
+        # whether the model's own json (not a parent's) says how an item frame shows it: made to be scenery in frames
+        self.own_fixed = bool(chain) and "fixed" in (chain[0].get("display") or {})
         self.gui_light = next((m["gui_light"] for m in chain if "gui_light" in m), None)
         self.root = split(root)[1] if root else None
         self.handheld = any(split(n)[1] in ("item/handheld", "item/handheld_rod") for n in list(names) + [root or ""])
@@ -1486,13 +1508,14 @@ def music_pack(version, make_zip):
             for sound in definition["sounds"]:
                 sound["is3D"] = False
         write_json(definitions_path, definitions, pretty=True)
+    shutil.copyfile(os.path.join(PACK, "pack_icon.png"), os.path.join(MUSIC_PACK, "pack_icon.png"))
+    version = content_version(MUSIC_PACK)
     write_json(os.path.join(MUSIC_PACK, "manifest.json"), {
         "format_version": 2,
         "header": {"name": PACK_NAME + " Music", "description": "MineScape's music player instruments",
                    "uuid": MUSIC_UUID, "version": [1, 0, version], "min_engine_version": MIN_ENGINE},
         "modules": [{"type": "resources", "uuid": MUSIC_MODULE_UUID, "version": [1, 0, version]}],
     }, pretty=True)
-    shutil.copyfile(os.path.join(PACK, "pack_icon.png"), os.path.join(MUSIC_PACK, "pack_icon.png"))
     size = zip_pack(os.path.join(OUT, "minescape-music.mcpack"), MUSIC_PACK) if make_zip else 0
     return events, files, size
 
@@ -1943,6 +1966,22 @@ def ui_files():
 
 # --- the build -----------------------------------------------------------------------------------------
 
+def content_version(tree):
+    """A pack's version from its files (all but its manifest): the same files, the same version, so a client keeps the
+    pack it has instead of loading it again after every release. 28 bits of their SHA-1."""
+    digest = hashlib.sha1()
+    for folder, _, files in sorted(os.walk(tree)):
+        for file in sorted(files):
+            path = os.path.join(folder, file)
+            name = os.path.relpath(path, tree).replace(os.sep, "/")
+            if name == "manifest.json":
+                continue
+            digest.update(name.encode() + b"\0")
+            with open(path, "rb") as f:
+                digest.update(f.read())
+    return int(digest.hexdigest()[:7], 16)
+
+
 def pack_version():
     for name in ("BEDROCK_PACK_VERSION", "GITHUB_RUN_NUMBER"):
         if os.environ.get(name, "").isdigit():
@@ -2038,9 +2077,18 @@ def build(jobs, make_zip):
     tasks = {}  # (ref, tint) -> icon task
     missing_models = set()
     for d in definitions:
+        # an item a player can have: every MineScape item is leather horse armour (noted ones below zero), and worn
+        # armour leather; the other materials' models are scenery, shown in item frames by their frame entities
+        d["real"] = d["material"] == ITEM or bool(d["armour"])
+        d["noted"] = d["material"] == ITEM and d["kind"] == "cmd" and d["values"][0] < 0
         tint = tuple(d["armour"]["icon_colour"]) if d["armour"] else None
         model = load_model(d["ref"]) or load_model(d["ref"], vanilla=True)
         d["model"] = model
+        if model is not None and not d["real"] and not model.own_fixed:
+            # scenery whose model has no item-frame display of its own isn't made for item frames: no Bedrock item,
+            # icon or frame entity (Geyser shows its material's own)
+            d["model"] = None
+            continue
         if model is None:
             missing_models.add(d["ref"])
         elif (d["ref"], tint) not in tasks:
@@ -2110,11 +2158,19 @@ def build(jobs, make_zip):
     attachables = 0
     max_layers = 0
     flat_attachables = 0
+    noted_items = []
     for d in definitions:
         model = d["model"]
         if d["armour"]:
             continue
         if model.kind == "flat":
+            # an attachable only lets an armour stand hold it (a ground item): scenery is never on the ground, and a
+            # noted item lies there as a note, one attachable for them all (below)
+            if not d["real"]:
+                continue
+            if d["noted"]:
+                noted_items.append(d["identifier"])
+                continue
             display = dict(FLAT_DISPLAY, **{k: v for k, v in model.display.items() if v})
             display = {k: display.get(k) for k in ("thirdperson_righthand", "thirdperson_lefthand", "head",
                                                    "firstperson_righthand", "firstperson_lefthand")}
@@ -2153,8 +2209,7 @@ def build(jobs, make_zip):
                     copied_textures.add(target)
                 parts.append((gid, target, blend))
             if new:
-                write_json(os.path.join(PACK, "models", "entity", "ms", "i", short_name(name) + ".geo.json"),
-                           {"format_version": "1.21.0", "minecraft:geometry": new})
+                add_geometries(new)
                 geometries_written += len(new)
             geometry_done[d["ref"]] = parts
             display = {k: model.display.get(k) for k in ("thirdperson_righthand", "thirdperson_lefthand", "head",
@@ -2172,9 +2227,12 @@ def build(jobs, make_zip):
                                {"t%d" % i: t for i, (_, t, _) in enumerate(parts)}, model._anim)
         desc["render_controllers"] = ["controller.render.ms.item_%s%d" % ("b" if b else "t", i)
                                       for i, (_, _, b) in enumerate(parts)]
-        write_json(os.path.join(PACK, "attachables", "ms", "items", d["identifier"].split(":", 1)[1] + ".json"),
-                   {"format_version": "1.10.0", "minecraft:attachable": {"description": desc}})
-        attachables += 1
+        if d["real"] and not d["noted"]:
+            write_json(os.path.join(PACK, "attachables", "ms", "items", d["identifier"].split(":", 1)[1] + ".json"),
+                       {"format_version": "1.10.0", "minecraft:attachable": {"description": desc}})
+            attachables += 1
+        elif d["noted"]:
+            noted_items.append(d["identifier"])
         # its frame entity: one per look, the items that show it listed as the plugin matches them
         fixed = frame_display(model.display.get("fixed") or {})
         frame = frames.setdefault((tuple(parts), json.dumps(fixed, sort_keys=True)),
@@ -2183,6 +2241,24 @@ def build(jobs, make_zip):
             frame["items"].append(["minecraft:" + d["material"], value if d["kind"] == "cmd" else 0,
                                    value if d["kind"] == "damage" else 0, False])
         d["frame"] = frame["index"]
+    if noted_items:
+        # every noted item as a stand holds it: the plain note (ms:wooden_shovel/note), one attachable for them all
+        note = "textures/ms/note"
+        shutil.copyfile(os.path.join(ROOT, "assets", "minecraft", "textures", "item", "custom", "wooden_shovel", "note.png"),
+                        os.path.join(PACK, *note.split("/")) + ".png")
+        display = {k: FLAT_DISPLAY.get(k) for k in ("thirdperson_righthand", "thirdperson_lefthand", "head",
+                                                    "firstperson_righthand", "firstperson_lefthand")}
+        dkey = hashlib.sha1(json.dumps(display, sort_keys=True).encode()).hexdigest()[:12]
+        if dkey not in anim_keys:
+            anim_keys[dkey] = True
+            animations.update(display_animations(display, dkey))
+        desc = flat_stand_attachable(noted_items[0], note, dkey)
+        desc["identifier"] = "%s:noted.stand" % NAMESPACE
+        desc["item"] = {i: "q.owner_identifier == 'minecraft:armor_stand'" for i in sorted(noted_items)}
+        write_json(os.path.join(PACK, "attachables", "ms", "noted.json"),
+                   {"format_version": "1.10.0", "minecraft:attachable": {"description": desc}})
+        flat_attachables += 1
+        print("  noted: %d items, one attachable" % len(noted_items))
     write_json(os.path.join(PACK, "animations", "ms_items.animation.json"),
                {"format_version": "1.8.0", "animations": animations})
     write_json(os.path.join(PACK, "models", "entity", "ms", "flat.geo.json"), {"format_version": "1.21.0", "minecraft:geometry": [flat_geometry()]})
@@ -2220,12 +2296,11 @@ def build(jobs, make_zip):
         if gkey not in looks_done:
             bones, layout, size = bbmodel_look(bb, piece, {})
             gid = "geometry.ms.armour.%s.%s" % (piece, slug(look))
-            write_json(os.path.join(PACK, "models", "entity", "ms", "armour", piece, short_name(slug(look)) + ".geo.json"),
-                       {"format_version": "1.21.0", "minecraft:geometry": [{
-                           "description": {"identifier": gid, "texture_width": size[0], "texture_height": size[1],
-                                           "visible_bounds_width": 3, "visible_bounds_height": 3,
-                                           "visible_bounds_offset": [0, 1, 0]},
-                           "bones": bones}]})
+            add_geometries([{
+                "description": {"identifier": gid, "texture_width": size[0], "texture_height": size[1],
+                                "visible_bounds_width": 3, "visible_bounds_height": 3,
+                                "visible_bounds_offset": [0, 1, 0]},
+                "bones": bones}])
             looks_done[gkey] = (gid, size)
         gid, size = looks_done[gkey]
         _, layout, size2 = bbmodel_look(bb, piece, swaps) if swaps else (None, None, None)
@@ -2253,20 +2328,21 @@ def build(jobs, make_zip):
     block_states, block_mappings = build_blocks()
     sound_events, sound_files = sounds()
     import bedrock_entities
+    print("  %d geometries in %d files" % (len(GEOMETRIES), write_geometries()))
     contract = bedrock_entities.build(PACK, OUT, frame_entries, frame_items)
 
     # 6. manifest, icon, mappings, zip
-    version = pack_version()
+    icon = Image.open(os.path.join(ROOT, "pack.png")).convert("RGBA")
+    if icon.width > 256:
+        icon = icon.resize((256, 256), Image.LANCZOS)
+    write_bytes(os.path.join(PACK, "pack_icon.png"), png_bytes(icon))
+    version = content_version(PACK)
     write_json(os.path.join(PACK, "manifest.json"), {
         "format_version": 2,
         "header": {"name": PACK_NAME, "description": "MineScape for Bedrock: items, armour, glyphs, menus and mobs",
                    "uuid": PACK_UUID, "version": [1, 0, version], "min_engine_version": MIN_ENGINE},
         "modules": [{"type": "resources", "uuid": MODULE_UUID, "version": [1, 0, version]}],
     }, pretty=True)
-    icon = Image.open(os.path.join(ROOT, "pack.png")).convert("RGBA")
-    if icon.width > 256:
-        icon = icon.resize((256, 256), Image.LANCZOS)
-    write_bytes(os.path.join(PACK, "pack_icon.png"), png_bytes(icon))
     for material in mappings:
         mappings[material].sort(key=lambda e: (-e.get("priority", 0), e.get("custom_model_data", e.get("predicate", {}).get("threshold", 0))))
     write_json(os.path.join(OUT, "geyser_mappings.json"), {"format_version": 2, "items": dict(sorted(mappings.items()))})
