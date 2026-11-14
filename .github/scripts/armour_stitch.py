@@ -35,6 +35,17 @@ const float PIXEL = 0.9375 / 16.0;
 // leather's own colour: never dyed
 const int UNDYED = %(undyed)d;
 
+// Where the eye is in the position space (eye_position): off its origin while the view bobs (Minecraft moves
+// it in the projection), so every ray, card and pull is measured from here; the origin where the renderer
+// doesn't say.
+vec3 eye_at() {
+#ifdef STITCH_HAS_EYE_POSITION
+    return stitch_eye_position();
+#else
+    return vec3(0.0);
+#endif
+}
+
 int sheet_mark() {
     ivec2 size = stitch_texture_size();
     vec4 mark = stitch_texel_fetch(ivec2(size.x - 1, 0));
@@ -495,7 +506,8 @@ bool trace_card(int layer, int column, int amulet, int cape, inout StitchVertex 
         float s = length(m[a]);
         m[c] = cross(m[a], m[b]) / s * ((a + 1) % 3 == b ? 1.0 : -1.0);
         vec3 t = qp[0] - m * l[0];
-        vec3 cp = m * centre + t;
+        vec3 eye = eye_at();
+        vec3 cp = m * centre + t - eye;
         float dc = length(cp);
         if (s > 1e-6 && dc > 1e-4) {
             vec3 dir = cp / dc;
@@ -510,20 +522,20 @@ bool trace_card(int layer, int column, int amulet, int cape, inout StitchVertex 
             float near = 1e30;
             for (int k = 0; k < 8; k++) {
                 c[k] = m * vec3((k & 1) != 0 ? bhi.x : blo.x, (k & 2) != 0 ? bhi.y : blo.y, (k & 4) != 0 ? bhi.z : blo.z) + t;
-                near = min(near, dot(c[k], dir));
+                near = min(near, dot(c[k] - eye, dir));
             }
             if (near > dc * 0.02) {
                 vec2 rlo = vec2(1e30);
                 vec2 rhi = vec2(-1e30);
                 for (int k = 0; k < 8; k++) {
-                    vec3 x = c[k] * (near / dot(c[k], dir));
+                    vec3 x = (c[k] - eye) * (near / dot(c[k] - eye, dir));
                     vec2 at = vec2(dot(x, right), dot(x, above));
                     rlo = min(rlo, at);
                     rhi = max(rhi, at);
                 }
                 vec2 pad = vec2(0.02 * s);
                 vec2 at = mix(rlo - pad, rhi + pad, SPREAD[corner] * 0.5 + 0.5);
-                vec3 card = dir * near + right * at.x + above * at.y;
+                vec3 card = eye + dir * near + right * at.x + above * at.y;
                 rt_orig = card;
                 rt_local = transpose(m) / (s * s) * (card - t);
                 v.position = card;
@@ -557,9 +569,11 @@ bool trace_card(int layer, int column, int amulet, int cape, inout StitchVertex 
         reach = length(local) + far + lean;
     }
     float radius = reach * PIXEL;
+    vec3 eye = eye_at();
     vec3 at = v.position;
-    float d = length(at);
-    vec3 dir = at / max(d, 1e-4);
+    vec3 fromEye = at - eye;
+    float d = length(fromEye);
+    vec3 dir = fromEye / max(d, 1e-4);
     vec3 right = cross(dir, up);
     right = length(right) > 1e-3 ? normalize(right) : vec3(1.0, 0.0, 0.0);
     vec3 above = cross(right, dir);
@@ -567,7 +581,7 @@ bool trace_card(int layer, int column, int amulet, int cape, inout StitchVertex 
     rt_orig = at;
     rt_local = local;
     // drawn nearer the eye (the same rays) by the model's reach, so every hit lies beyond the card
-    v.position = (at + (right * SPREAD[corner].x + above * SPREAD[corner].y) * spread) * (max(d - radius, 0.06) / max(d, 1e-4));
+    v.position = eye + (fromEye + (right * SPREAD[corner].x + above * SPREAD[corner].y) * spread) * (max(d - radius, 0.06) / max(d, 1e-4));
     return true;
 }
 #endif
@@ -758,6 +772,17 @@ vec3 decode_point(vec4 t) {
     return (round(t.rgb * 255.0) - 128.0) / 4.0;
 }
 
+// Where the eye is in the position space (eye_position): off its origin while the view bobs (Minecraft moves
+// it in the projection), so every ray, card and pull is measured from here; the origin where the renderer
+// doesn't say.
+vec3 eye_at() {
+#ifdef STITCH_HAS_EYE_POSITION
+    return stitch_eye_position();
+#else
+    return vec3(0.0);
+#endif
+}
+
 // the most cubes a traced part has, a cube's texels, and where a part's header row lists its cubes
 // (armour_models.most_cubes(), CUBE, HEADER_CUBES)
 const int MAX_CUBES = %(max_cubes)d;
@@ -914,8 +939,9 @@ vec4 trace(StitchFragment f, vec3 dpx, vec3 dpy, vec3 dlx, vec3 dly) {
     vec3 t = rt_orig - m * rt_local;
     mat3 mi = transpose(m) / (s * s);
     // the eye is at the position space's origin
-    vec3 origin = mi * (-t);
-    vec3 dir = mi * f.position;
+    vec3 eyeP = eye_at();
+    vec3 origin = mi * (eyeP - t);
+    vec3 dir = mi * (f.position - eyeP);
 
     int row = rt_info.y;
     vec3 inv = 1.0 / dir;
@@ -946,7 +972,7 @@ vec4 trace(StitchFragment f, vec3 dpx, vec3 dpy, vec3 dlx, vec3 dly) {
     }
     vec3 n = normalize(m * h.normal);
     vec3 hitPos = m * (origin + dir * h.best) + t;
-    vec3 eye = normalize(-hitPos);
+    vec3 eye = normalize(eyeP - hitPos);
     if (dot(n, eye) < 0.0) {
         n = -n;
     }
@@ -955,12 +981,12 @@ vec4 trace(StitchFragment f, vec3 dpx, vec3 dpy, vec3 dlx, vec3 dly) {
     // the chest: by AMULET_PULL pixels where it hangs in front of the body (its part's front is z -2) and
     // is seen from the front, less as the eye goes round, none from the side or behind, where the
     // chestplate covers it as it would
-    float d = length(hitPos);
+    float d = length(hitPos - eyeP);
     float pull = 0.0;
     if (rt_info.x == 6 && (origin + dir * h.best).z < -2.0) {
         pull = AMULET_PULL * 0.9375 / 16.0 * clamp(dot(eye, normalize(m * vec3(0.0, 0.0, -1.0))), 0.0, 1.0);
     }
-    stitch_set_depth(hitPos * max(d - pull, d * 0.5) / max(d, 1e-4));
+    stitch_set_depth(eyeP + (hitPos - eyeP) * max(d - pull, d * 0.5) / max(d, 1e-4));
 #endif
     // lit towards the eye
     return model_texel(stitch_texel_fetch(ivec2(face_texel(h.cube, h.face, h.q))), 0.55 + 0.45 * max(dot(n, eye), 0.0));
@@ -1082,8 +1108,9 @@ vec4 trace_cape(StitchFragment f, vec3 dpx, vec3 dpy, vec3 dlx, vec3 dly) {
     mat3 m = mat3(dpx, dpy, np / s) * inverse(mat3(dlx, dly, nl));
     vec3 t = rt_orig - m * rt_local;
     mat3 mi = transpose(m) / (s * s);
-    vec3 origin = mi * (-t);
-    vec3 dir = mi * f.position;
+    vec3 eyeP = eye_at();
+    vec3 origin = mi * (eyeP - t);
+    vec3 dir = mi * (f.position - eyeP);
     int n = rt_info.z & 0x3FFFFFFF;
     bool crouching = (rt_info.z & (1 << 30)) != 0;
     vec3 up = vec3(float((n >> 20) & 1023), float((n >> 10) & 1023), float(n & 1023)) / 1023.0 * 2.0 - 1.0;
@@ -1157,7 +1184,7 @@ vec4 trace_cape(StitchFragment f, vec3 dpx, vec3 dpy, vec3 dlx, vec3 dly) {
     }
     vec3 nrm = normalize(m * turn_x(nb, -swing));
     vec3 hitPos = m * (origin + dir * h.best) + t;
-    vec3 eye = normalize(-hitPos);
+    vec3 eye = normalize(eyeP - hitPos);
     if (dot(nrm, eye) < 0.0) {
         nrm = -nrm;
     }
@@ -1244,7 +1271,7 @@ DEFINITION = {
                  {"name": "rt_local", "type": "vec3"}, {"name": "rt_info", "type": "ivec4", "flat": True}],
     "uniforms": ["game_time"],
     "requires": ["vertex_corner", "texture_size", "orientation"],
-    "uses": ["quad_corners", "vertex_index", "fragment_position", "fragment_depth"],
+    "uses": ["quad_corners", "vertex_index", "fragment_position", "fragment_depth", "eye_position"],
     "passes": ["main", "shadow"],
 }
 
