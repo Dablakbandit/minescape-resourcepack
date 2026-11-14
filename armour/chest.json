@@ -1,166 +1,1801 @@
 {
-    "_about": "Each leather chestplate the plugin has (LEATHER_CHESTPLATE): its custom model data, 10000 + its tile, 1 to 511; the look it wears, a file in armour/chest/ (or plain), dyed this colour where the file is grey; its inventory icon, an item model whose dyed layer (layer0) is coloured the same; and the shape of its body below the waist (none, fauld, jerkin, tunic). Chestplates and boots share the armour's first layer, a chestplate and the boots with its tile drawn on the same sheet tile. Add one with the next free custom model data, and the same number on the item in the plugin.",
-    "items": [
-        {"custom_model_data": 10001, "name": "adamant_chainbody", "look": "77_chainbody_normal", "colour": "#415341", "icon": "ms:chestplate/leather_chainbody", "shape": "none"},
-        {"custom_model_data": 10002, "name": "adamant_platebody", "look": "80_platebody_normal", "colour": "#415341", "icon": "ms:chestplate/leather_chestplate", "shape": "none"},
-        {"custom_model_data": 10003, "name": "black_chainbody", "look": "77_chainbody_normal", "colour": "#1e1c1c", "icon": "ms:chestplate/leather_chainbody", "shape": "none"},
-        {"custom_model_data": 10004, "name": "black_platebody", "look": "80_platebody_normal", "colour": "#1e1c1c", "icon": "ms:chestplate/leather_chestplate", "shape": "none"},
-        {"custom_model_data": 10005, "name": "black_robe", "look": "70_robe_top", "colour": "#17170d", "icon": "ms:chestplate/leather_robe_top", "shape": "none"},
-        {"custom_model_data": 10006, "name": "bronze_chainbody", "look": "77_chainbody_normal", "colour": "#4a3921", "icon": "ms:chestplate/leather_chainbody", "shape": "none"},
-        {"custom_model_data": 10007, "name": "bronze_platebody", "look": "80_platebody_normal", "colour": "#4a3921", "icon": "ms:chestplate/leather_chestplate", "shape": "none"},
-        {"custom_model_data": 10008, "name": "green_dhide_body", "look": "dhide_body", "colour": "#11b219", "icon": "ms:chestplate/leather_dragonhide", "shape": "none"},
-        {"custom_model_data": 10009, "name": "hardleather_body", "look": "67_hard_leather_body", "colour": "#39331d", "icon": "ms:chestplate/leather_hardbody", "shape": "none"},
-        {"custom_model_data": 10010, "name": "iron_chainbody", "look": "77_chainbody_normal", "colour": "#524c4c", "icon": "ms:chestplate/leather_chainbody", "shape": "none"},
-        {"custom_model_data": 10011, "name": "iron_platebody", "look": "80_platebody_normal", "colour": "#524c4c", "icon": "ms:chestplate/leather_chestplate", "shape": "none"},
-        {"custom_model_data": 10012, "name": "leather_body", "look": "68_leather_body", "colour": "#45422f", "icon": "ms:chestplate/leather_body", "shape": "none"},
-        {"custom_model_data": 10013, "name": "mithril_chainbody", "look": "77_chainbody_normal", "colour": "#404060", "icon": "ms:chestplate/leather_chainbody", "shape": "none"},
-        {"custom_model_data": 10014, "name": "mithril_platebody", "look": "80_platebody_normal", "colour": "#404060", "icon": "ms:chestplate/leather_chestplate", "shape": "none"},
-        {"custom_model_data": 10015, "name": "monks_robe_top", "look": "70_robe_top", "colour": "#513c1d", "icon": "ms:chestplate/leather_robe_top", "shape": "none"},
-        {"custom_model_data": 10016, "name": "priest_gown_top", "look": "72_gown_top_normal", "colour": "#0d0808", "icon": "ms:chestplate/leather_robe_top", "shape": "none"},
-        {"custom_model_data": 10017, "name": "rune_chainbody", "look": "77_chainbody_normal", "colour": "#465d67", "icon": "ms:chestplate/leather_chainbody", "shape": "none"},
-        {"custom_model_data": 10018, "name": "rune_platebody", "look": "80_platebody_normal", "colour": "#465d67", "icon": "ms:chestplate/leather_chestplate", "shape": "none"},
-        {"custom_model_data": 10019, "name": "steel_chainbody", "look": "77_chainbody_normal", "colour": "#7c7373", "icon": "ms:chestplate/leather_chainbody", "shape": "none"},
-        {"custom_model_data": 10020, "name": "steel_platebody", "look": "80_platebody_normal", "colour": "#7c7373", "icon": "ms:chestplate/leather_chestplate", "shape": "none"},
-        {"custom_model_data": 10021, "name": "studded_body", "look": "48_studded_body", "colour": "#45422f", "icon": "ms:chestplate/studded_body", "shape": "none"},
-        {"custom_model_data": 10022, "name": "blue_wizard_robe", "look": "70_robe_top", "colour": "#0f5a8e", "icon": "ms:chestplate/leather_robe_top", "shape": "none"},
-        {"custom_model_data": 10023, "name": "black_dhide_body", "look": "dhide_body", "colour": "#151111", "icon": "ms:chestplate/leather_dragonhide", "shape": "none"},
-        {"custom_model_data": 10024, "name": "blue_dhide_body", "look": "dhide_body", "colour": "#7979b2", "icon": "ms:chestplate/leather_dragonhide", "shape": "none"},
-        {"custom_model_data": 10025, "name": "red_dhide_body", "look": "dhide_body", "colour": "#b22111", "icon": "ms:chestplate/leather_dragonhide", "shape": "none"},
-        {"custom_model_data": 10026, "name": "zamorak_monk_top", "look": "70_robe_top", "colour": "#c0322f", "icon": "ms:chestplate/leather_robe_top", "shape": "none"},
-        {"custom_model_data": 10027, "name": "elder_chaos_top", "look": "70_robe_top", "colour": "#db2c20", "icon": "ms:chestplate/leather_robe_top", "shape": "none"},
-        {"custom_model_data": 10028, "name": "white_platebody", "look": "80_platebody_normal", "colour": "#ffffff", "icon": "ms:chestplate/leather_chestplate", "shape": "none"},
-        {"custom_model_data": 10029, "name": "bronze_platebody_g", "look": "79_platebody_gold_trimmed", "colour": "#4a3921", "icon": "ms:chestplate/leather_chestplate_gtrim", "shape": "none"},
-        {"custom_model_data": 10030, "name": "iron_platebody_g", "look": "79_platebody_gold_trimmed", "colour": "#524c4c", "icon": "ms:chestplate/leather_chestplate_gtrim", "shape": "none"},
-        {"custom_model_data": 10031, "name": "steel_platebody_g", "look": "79_platebody_gold_trimmed", "colour": "#7c7373", "icon": "ms:chestplate/leather_chestplate_gtrim", "shape": "none"},
-        {"custom_model_data": 10032, "name": "black_platebody_g", "look": "79_platebody_gold_trimmed", "colour": "#1e1c1c", "icon": "ms:chestplate/leather_chestplate_gtrim", "shape": "none"},
-        {"custom_model_data": 10033, "name": "mithril_platebody_g", "look": "79_platebody_gold_trimmed", "colour": "#404060", "icon": "ms:chestplate/leather_chestplate_gtrim", "shape": "none"},
-        {"custom_model_data": 10034, "name": "adamant_platebody_g", "look": "79_platebody_gold_trimmed", "colour": "#415341", "icon": "ms:chestplate/leather_chestplate_gtrim", "shape": "none"},
-        {"custom_model_data": 10035, "name": "rune_platebody_g", "look": "79_platebody_gold_trimmed", "colour": "#465d67", "icon": "ms:chestplate/leather_chestplate_gtrim", "shape": "none"},
-        {"custom_model_data": 10036, "name": "gilded_platebody_g", "look": "79_platebody_gold_trimmed", "colour": "#efc700", "icon": "ms:chestplate/leather_chestplate_gtrim", "shape": "none"},
-        {"custom_model_data": 10037, "name": "leather_body_g", "look": "64_leather_body_gold_trimmed", "colour": "#45422f", "icon": "ms:chestplate/leather_body_gtrim", "shape": "none"},
-        {"custom_model_data": 10038, "name": "bronze_platebody_t", "look": "78_platebody_blue_trimmed", "colour": "#4a3921", "icon": "ms:chestplate/leather_chestplate_trim", "shape": "none"},
-        {"custom_model_data": 10039, "name": "iron_platebody_t", "look": "78_platebody_blue_trimmed", "colour": "#524c4c", "icon": "ms:chestplate/leather_chestplate_trim", "shape": "none"},
-        {"custom_model_data": 10040, "name": "steel_platebody_t", "look": "78_platebody_blue_trimmed", "colour": "#7c7373", "icon": "ms:chestplate/leather_chestplate_trim", "shape": "none"},
-        {"custom_model_data": 10041, "name": "black_platebody_t", "look": "78_platebody_blue_trimmed", "colour": "#1e1c1c", "icon": "ms:chestplate/leather_chestplate_trim", "shape": "none"},
-        {"custom_model_data": 10042, "name": "mithril_platebody_t", "look": "78_platebody_blue_trimmed", "colour": "#404060", "icon": "ms:chestplate/leather_chestplate_trim", "shape": "none"},
-        {"custom_model_data": 10043, "name": "adamant_platebody_t", "look": "78_platebody_blue_trimmed", "colour": "#415341", "icon": "ms:chestplate/leather_chestplate_trim", "shape": "none"},
-        {"custom_model_data": 10044, "name": "rune_platebody_t", "look": "78_platebody_blue_trimmed", "colour": "#465d67", "icon": "ms:chestplate/leather_chestplate_trim", "shape": "none"},
-        {"custom_model_data": 10045, "name": "gilded_platebody_t", "look": "78_platebody_blue_trimmed", "colour": "#efc700", "icon": "ms:chestplate/leather_chestplate_trim", "shape": "none"},
-        {"custom_model_data": 10046, "name": "studded_body_g", "look": "52_studded_body_gold_trimmed", "colour": "#45422f", "icon": "ms:chestplate/studded_body_gold", "shape": "none"},
-        {"custom_model_data": 10047, "name": "studded_body_t", "look": "51_studded_body_blue_trimmed", "colour": "#45422f", "icon": "ms:chestplate/studded_body_blue", "shape": "none"},
-        {"custom_model_data": 10048, "name": "green_dhide_body_g", "look": "dhide_body", "textures": {"dhide_body.png": "dhide_body/73_dhide_gold_trimmed.png", "dhide_body_details.png": "dhide_body/73_dhide_gold_trimmed_details.png"}, "colour": "#11b219", "icon": "ms:chestplate/leather_dragonhide_gtrim", "shape": "none"},
-        {"custom_model_data": 10049, "name": "blue_dhide_body_g", "look": "dhide_body", "textures": {"dhide_body.png": "dhide_body/73_dhide_gold_trimmed.png", "dhide_body_details.png": "dhide_body/73_dhide_gold_trimmed_details.png"}, "colour": "#7979b2", "icon": "ms:chestplate/leather_dragonhide_gtrim", "shape": "none"},
-        {"custom_model_data": 10050, "name": "black_dhide_body_g", "look": "dhide_body", "textures": {"dhide_body.png": "dhide_body/73_dhide_gold_trimmed.png", "dhide_body_details.png": "dhide_body/73_dhide_gold_trimmed_details.png"}, "colour": "#151111", "icon": "ms:chestplate/leather_dragonhide_gtrim", "shape": "none"},
-        {"custom_model_data": 10051, "name": "red_dhide_body_g", "look": "dhide_body", "textures": {"dhide_body.png": "dhide_body/73_dhide_gold_trimmed.png", "dhide_body_details.png": "dhide_body/73_dhide_gold_trimmed_details.png"}, "colour": "#b22111", "icon": "ms:chestplate/leather_dragonhide_gtrim", "shape": "none"},
-        {"custom_model_data": 10052, "name": "green_dhide_body_t", "look": "dhide_body", "textures": {"dhide_body.png": "dhide_body/65_dhide_blue_trimmed.png", "dhide_body_details.png": "dhide_body/65_dhide_blue_trimmed_details.png"}, "colour": "#11b219", "icon": "ms:chestplate/leather_dragonhide_trim", "shape": "none"},
-        {"custom_model_data": 10053, "name": "blue_dhide_body_t", "look": "dhide_body", "textures": {"dhide_body.png": "dhide_body/65_dhide_blue_trimmed.png", "dhide_body_details.png": "dhide_body/65_dhide_blue_trimmed_details.png"}, "colour": "#7979b2", "icon": "ms:chestplate/leather_dragonhide_trim", "shape": "none"},
-        {"custom_model_data": 10054, "name": "black_dhide_body_t", "look": "dhide_body", "textures": {"dhide_body.png": "dhide_body/65_dhide_blue_trimmed.png", "dhide_body_details.png": "dhide_body/65_dhide_blue_trimmed_details.png"}, "colour": "#151111", "icon": "ms:chestplate/leather_dragonhide_trim", "shape": "none"},
-        {"custom_model_data": 10055, "name": "red_dhide_body_t", "look": "dhide_body", "textures": {"dhide_body.png": "dhide_body/65_dhide_blue_trimmed.png", "dhide_body_details.png": "dhide_body/65_dhide_blue_trimmed_details.png"}, "colour": "#b22111", "icon": "ms:chestplate/leather_dragonhide_trim", "shape": "none"},
-        {"custom_model_data": 10056, "name": "blue_wizard_robe_g", "look": "69_robe_top_gold_trimmed", "colour": "#0f5a8e", "icon": "ms:chestplate/leather_robe_top_gtrim", "shape": "none"},
-        {"custom_model_data": 10057, "name": "monks_robe_top_g", "look": "69_robe_top_gold_trimmed", "colour": "#513c1d", "icon": "ms:chestplate/leather_robe_top_gtrim", "shape": "none"},
-        {"custom_model_data": 10058, "name": "black_wizard_robe_g", "look": "69_robe_top_gold_trimmed", "colour": "#17170d", "icon": "ms:chestplate/leather_robe_top_gtrim", "shape": "none"},
-        {"custom_model_data": 10059, "name": "blue_wizard_robe_t", "look": "63_robe_top_blue_trimmed", "colour": "#0f5a8e", "icon": "ms:chestplate/leather_robe_top_trim", "shape": "none"},
-        {"custom_model_data": 10060, "name": "monks_robe_top_t", "look": "63_robe_top_blue_trimmed", "colour": "#513c1d", "icon": "ms:chestplate/leather_robe_top_trim", "shape": "none"},
-        {"custom_model_data": 10061, "name": "black_wizard_robe_t", "look": "63_robe_top_blue_trimmed", "colour": "#17170d", "icon": "ms:chestplate/leather_robe_top_trim", "shape": "none"},
-        {"custom_model_data": 10062, "name": "guthix_platebody", "look": "5_guthix_platebody", "colour": "#465d67", "icon": "ms:chestplate/leather_chestplate_guthix", "shape": "none"},
-        {"custom_model_data": 10063, "name": "saradomin_platebody", "look": "4_saradomin_platebody", "colour": "#465d67", "icon": "ms:chestplate/leather_chestplate_saradomin", "shape": "none"},
-        {"custom_model_data": 10064, "name": "zamorak_platebody", "look": "3_zamorak_platebody", "colour": "#465d67", "icon": "ms:chestplate/leather_chestplate_zamorak", "shape": "none"},
-        {"custom_model_data": 10065, "name": "armadyl_platebody", "look": "2_armadyl_platebody", "colour": "#465d67", "icon": "ms:chestplate/leather_chestplate_armadyl", "shape": "none"},
-        {"custom_model_data": 10066, "name": "ancient_platebody", "look": "1_ancient_platebody", "colour": "#465d67", "icon": "ms:chestplate/leather_chestplate_ancient", "shape": "none"},
-        {"custom_model_data": 10067, "name": "bandos_platebody", "look": "0_bandos_platebody", "colour": "#465d67", "icon": "ms:chestplate/leather_chestplate_bandos", "shape": "none"},
-        {"custom_model_data": 10068, "name": "ham_shirt", "look": "70_robe_top", "colour": "#9e2065", "icon": "ms:chestplate/leather_robe_top", "shape": "none"},
-        {"custom_model_data": 10069, "name": "grey_robe_top", "look": "70_robe_top", "colour": "#5c5555", "icon": "ms:chestplate/leather_robe_top", "shape": "none"},
-        {"custom_model_data": 10070, "name": "purple_robe_top", "look": "70_robe_top", "colour": "#6e0066", "icon": "ms:chestplate/leather_robe_top", "shape": "none"},
-        {"custom_model_data": 10071, "name": "red_robe_top", "look": "70_robe_top", "colour": "#640400", "icon": "ms:chestplate/leather_robe_top", "shape": "none"},
-        {"custom_model_data": 10072, "name": "teal_robe_top", "look": "70_robe_top", "colour": "#004043", "icon": "ms:chestplate/leather_robe_top", "shape": "none"},
-        {"custom_model_data": 10073, "name": "yellow_robe_top", "look": "70_robe_top", "colour": "#b68f00", "icon": "ms:chestplate/leather_robe_top", "shape": "none"},
-        {"custom_model_data": 10074, "name": "ahrims_robetop", "look": "58_ahrims_robetop", "colour": "#333323", "icon": "ms:chestplate/leather_ahrims_robetop", "shape": "tunic"},
-        {"custom_model_data": 10075, "name": "ahrims_robetop_degraded", "look": "58_ahrims_robetop", "colour": "#333323", "icon": "ms:chestplate/leather_ahrims_robetop", "shape": "tunic"},
-        {"custom_model_data": 10076, "name": "dharoks_platebody", "look": "57_dharoks_platebody", "colour": "#1e1e08", "icon": "ms:chestplate/leather_dharoks_platebody", "shape": "fauld"},
-        {"custom_model_data": 10077, "name": "dharoks_platebody_degraded", "look": "57_dharoks_platebody", "colour": "#1e1e08", "icon": "ms:chestplate/leather_dharoks_platebody", "shape": "fauld"},
-        {"custom_model_data": 10078, "name": "guthans_platebody", "look": "56_guthans_platebody", "colour": "#26261b", "icon": "ms:chestplate/leather_guthans_platebody", "shape": "fauld"},
-        {"custom_model_data": 10079, "name": "guthans_platebody_degraded", "look": "56_guthans_platebody", "colour": "#26261b", "icon": "ms:chestplate/leather_guthans_platebody", "shape": "fauld"},
-        {"custom_model_data": 10080, "name": "karils_leathertop", "look": "55_karils_leathertop", "colour": "#28281f", "icon": "ms:chestplate/leather_karils_leathertop", "shape": "jerkin"},
-        {"custom_model_data": 10081, "name": "karils_leathertop_degraded", "look": "55_karils_leathertop", "colour": "#28281f", "icon": "ms:chestplate/leather_karils_leathertop", "shape": "jerkin"},
-        {"custom_model_data": 10082, "name": "torags_platebody", "look": "54_torags_platebody", "colour": "#3f3f34", "icon": "ms:chestplate/leather_torags_platebody", "shape": "fauld"},
-        {"custom_model_data": 10083, "name": "torags_platebody_degraded", "look": "54_torags_platebody", "colour": "#3f3f34", "icon": "ms:chestplate/leather_torags_platebody", "shape": "fauld"},
-        {"custom_model_data": 10084, "name": "veracs_brassard", "look": "53_veracs_brassard", "colour": "#191907", "icon": "ms:chestplate/leather_veracs_brassard", "shape": "none"},
-        {"custom_model_data": 10085, "name": "veracs_brassard_degraded", "look": "53_veracs_brassard", "colour": "#191907", "icon": "ms:chestplate/leather_veracs_brassard", "shape": "none"},
-        {"custom_model_data": 10086, "name": "mystic_robe_top_dark", "look": "mystic_robe_top", "textures": {"mystic_robe_top.png": "mystic_robe_top/dark_flat.png", "mystic_robe_top_details.png": "mystic_robe_top/dark_details.png"}, "colour": "#151111", "icon": "ms:chestplate/leather_mystic_robe_top_dark", "shape": "none"},
-        {"custom_model_data": 10087, "name": "mystic_robe_top_light", "look": "mystic_robe_top", "textures": {"mystic_robe_top.png": "mystic_robe_top/light_flat.png", "mystic_robe_top_details.png": "mystic_robe_top/light_details.png"}, "colour": "#d8d3d3", "icon": "ms:chestplate/leather_mystic_robe_top_light", "shape": "none"},
-        {"custom_model_data": 10088, "name": "mystic_robe_top_blue", "look": "mystic_robe_top", "colour": "#495c82", "icon": "ms:chestplate/leather_mystic_robe_top_blue", "shape": "none"},
-        {"custom_model_data": 10089, "name": "mystic_robe_top_dusk", "look": "mystic_robe_top", "textures": {"mystic_robe_top.png": "mystic_robe_top/dusk_flat.png", "mystic_robe_top_details.png": "mystic_robe_top/dusk_details.png"}, "colour": "#36362a", "icon": "ms:chestplate/leather_mystic_robe_top_dusk", "shape": "none"},
-        {"custom_model_data": 10090, "name": "druids_robe_top", "look": "70_robe_top", "colour": "#eaeaea", "icon": "ms:chestplate/leather_robe_top", "shape": "none"},
-        {"custom_model_data": 10091, "name": "builders_shirt", "look": "apron", "textures": {"apron.png": "apron/49_builders_shirt.png", "apron_details.png": "apron/49_builders_shirt_details.png"}, "colour": "#615c4d", "icon": "ms:chestplate/builders_shirt", "shape": "none"},
-        {"custom_model_data": 10092, "name": "graceful_top", "look": "40_graceful_top", "colour": "#908b73", "icon": "ms:chestplate/graceful_top", "shape": "none"},
-        {"custom_model_data": 10093, "name": "snakeskin_body", "look": "50_snakeskin_body", "colour": "#40402a", "icon": "ms:chestplate/snakeskin_body", "shape": "none"},
-        {"custom_model_data": 10094, "name": "bare_arms", "look": "81_bare", "colour": "#ffffff", "icon": "ms:chestplate/bare_arms", "shape": "none"},
-        {"custom_model_data": 10095, "name": "adamant_platebody_h1", "look": "80_platebody_normal", "colour": "#415341", "icon": "ms:diamond_hoe/clues/adamant_platebody_h1", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10096, "name": "adamant_platebody_h2", "look": "80_platebody_normal", "colour": "#415341", "icon": "ms:diamond_hoe/clues/adamant_platebody_h2", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10097, "name": "adamant_platebody_h3", "look": "80_platebody_normal", "colour": "#415341", "icon": "ms:diamond_hoe/clues/adamant_platebody_h3", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10098, "name": "adamant_platebody_h4", "look": "80_platebody_normal", "colour": "#415341", "icon": "ms:diamond_hoe/clues/adamant_platebody_h4", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10099, "name": "adamant_platebody_h5", "look": "80_platebody_normal", "colour": "#415341", "icon": "ms:diamond_hoe/clues/adamant_platebody_h5", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10100, "name": "ancient_robe_top", "look": "69_robe_top_gold_trimmed", "colour": "#948a89", "icon": "ms:diamond_hoe/clues/ancient_robe_top", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10101, "name": "armadyl_robe_top", "look": "69_robe_top_gold_trimmed", "colour": "#a69a99", "icon": "ms:diamond_hoe/clues/armadyl_robe_top", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10102, "name": "bandos_robe_top", "look": "69_robe_top_gold_trimmed", "colour": "#a69a99", "icon": "ms:diamond_hoe/clues/bandos_robe_top", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10103, "name": "black_elegant_shirt", "look": "70_robe_top", "colour": "#2a2a2e", "icon": "ms:diamond_hoe/clues/black_elegant_shirt", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10104, "name": "black_platebody_h1", "look": "80_platebody_normal", "colour": "#1e1c1c", "icon": "ms:diamond_hoe/clues/black_platebody_h1", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10105, "name": "black_platebody_h2", "look": "80_platebody_normal", "colour": "#1e1c1c", "icon": "ms:diamond_hoe/clues/black_platebody_h2", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10106, "name": "black_platebody_h3", "look": "80_platebody_normal", "colour": "#1e1c1c", "icon": "ms:diamond_hoe/clues/black_platebody_h3", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10107, "name": "black_platebody_h4", "look": "80_platebody_normal", "colour": "#1e1c1c", "icon": "ms:diamond_hoe/clues/black_platebody_h4", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10108, "name": "black_platebody_h5", "look": "80_platebody_normal", "colour": "#1e1c1c", "icon": "ms:diamond_hoe/clues/black_platebody_h5", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10109, "name": "blue_elegant_blouse", "look": "70_robe_top", "colour": "#2846a0", "icon": "ms:diamond_hoe/clues/blue_elegant_blouse", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10110, "name": "blue_elegant_shirt", "look": "70_robe_top", "colour": "#2846a0", "icon": "ms:diamond_hoe/clues/blue_elegant_shirt", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10111, "name": "bobs_black_shirt", "look": "70_robe_top", "colour": "#2a2a2e", "icon": "ms:diamond_hoe/clues/bobs_black_shirt", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10112, "name": "bobs_blue_shirt", "look": "70_robe_top", "colour": "#2846a0", "icon": "ms:diamond_hoe/clues/bobs_blue_shirt", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10113, "name": "bobs_green_shirt", "look": "70_robe_top", "colour": "#2d7d3c", "icon": "ms:diamond_hoe/clues/bobs_green_shirt", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10114, "name": "bobs_purple_shirt", "look": "70_robe_top", "colour": "#693291", "icon": "ms:diamond_hoe/clues/bobs_purple_shirt", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10115, "name": "bobs_red_shirt", "look": "70_robe_top", "colour": "#a01e23", "icon": "ms:diamond_hoe/clues/bobs_red_shirt", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10116, "name": "brown_apron", "look": "apron", "colour": "#634223", "icon": "ms:armor/cosmetic/brown_apron", "icon_colour": "#ffffff", "shape": "tunic"},
-        {"custom_model_data": 10117, "name": "camo_top", "look": "70_robe_top", "colour": "#464b22", "icon": "ms:random/camo_top", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10118, "name": "chicken_wings", "look": "70_robe_top", "colour": "#c3c386", "icon": "ms:rare/holiday/chicken_wings", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10119, "name": "crier_coat", "look": "70_robe_top", "colour": "#556479", "icon": "ms:diamond_hoe/clues/crier_coat", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10120, "name": "decorative_armour_magic_top", "look": "70_robe_top", "colour": "#948a89", "icon": "ms:castlewars/decorative_magic_top", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10121, "name": "decorative_armour_ranged_top", "look": "68_leather_body", "colour": "#78772a", "icon": "ms:castlewars/decorative_ranged_top", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10122, "name": "decorative_armour_gold_platebody", "look": "80_platebody_normal", "colour": "#8a8931", "icon": "ms:castlewars/decorative_gold_platebody", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10123, "name": "gold_elegant_blouse", "look": "70_robe_top", "colour": "#cda52d", "icon": "ms:diamond_hoe/clues/gold_elegant_blouse", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10124, "name": "gold_elegant_shirt", "look": "70_robe_top", "colour": "#cda52d", "icon": "ms:diamond_hoe/clues/gold_elegant_shirt", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10125, "name": "golden_apron", "look": "apron", "colour": "#d3a611", "icon": "ms:clues/golden_apron", "icon_colour": "#ffffff", "shape": "tunic"},
-        {"custom_model_data": 10126, "name": "green_elegant_blouse", "look": "70_robe_top", "colour": "#2d7d3c", "icon": "ms:diamond_hoe/clues/green_elegant_blouse", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10127, "name": "green_elegant_shirt", "look": "70_robe_top", "colour": "#2d7d3c", "icon": "ms:diamond_hoe/clues/green_elegant_shirt", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10128, "name": "guthix_robe_top", "look": "69_robe_top_gold_trimmed", "colour": "#a69a99", "icon": "ms:diamond_hoe/clues/guthix_robe_top", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10129, "name": "khazard_armour", "look": "77_chainbody_normal", "colour": "#3a3535", "icon": "ms:quest/khazard_armour", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10130, "name": "lederhosen_top", "look": "70_robe_top", "colour": "#baba96", "icon": "ms:random/lederhosen_top", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10131, "name": "mime_top", "look": "70_robe_top", "colour": "#2a2a2e", "icon": "ms:random/mime_top", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10132, "name": "pink_elegant_blouse", "look": "70_robe_top", "colour": "#d778a0", "icon": "ms:diamond_hoe/clues/pink_elegant_blouse", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10133, "name": "pink_elegant_shirt", "look": "70_robe_top", "colour": "#d778a0", "icon": "ms:diamond_hoe/clues/pink_elegant_shirt", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10134, "name": "prince_tunic", "look": "70_robe_top", "colour": "#410d78", "icon": "ms:random/prince_tunic", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10135, "name": "princess_blouse", "look": "70_robe_top", "colour": "#a49897", "icon": "ms:random/princess_blouse", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10136, "name": "purple_elegant_blouse", "look": "70_robe_top", "colour": "#693291", "icon": "ms:diamond_hoe/clues/purple_elegant_blouse", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10137, "name": "purple_elegant_shirt", "look": "70_robe_top", "colour": "#693291", "icon": "ms:diamond_hoe/clues/purple_elegant_shirt", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10138, "name": "decorative_armour_red_platebody", "look": "80_platebody_normal", "colour": "#76180d", "icon": "ms:castlewars/decorative_red_platebody", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10139, "name": "red_elegant_blouse", "look": "70_robe_top", "colour": "#a01e23", "icon": "ms:diamond_hoe/clues/red_elegant_blouse", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10140, "name": "red_elegant_shirt", "look": "70_robe_top", "colour": "#a01e23", "icon": "ms:diamond_hoe/clues/red_elegant_shirt", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10141, "name": "rogue_top", "look": "70_robe_top", "colour": "#333228", "icon": "ms:rogues_den/rogue_top", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10142, "name": "saradomin_robe_top", "look": "69_robe_top_gold_trimmed", "colour": "#a69a99", "icon": "ms:diamond_hoe/clues/saradomin_robe_top", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10143, "name": "shade_robe_top", "look": "69_robe_top_gold_trimmed", "colour": "#080808", "icon": "ms:armor/shade_robe_top", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10144, "name": "skeleton_shirt", "look": "70_robe_top", "colour": "#d8d4c4", "icon": "ms:rare/holiday/skeleton_shirt", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10145, "name": "splitbark_body", "look": "70_robe_top", "colour": "#7b6946", "icon": "ms:quest/s_o_m/splitbark_body", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10146, "name": "swampbark_body", "look": "70_robe_top", "colour": "#554926", "icon": "ms:quest/s_o_m/swampbark_body", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10147, "name": "white_apron", "look": "apron", "colour": "#a49796", "icon": "ms:armor/cosmetic/white_apron", "icon_colour": "#ffffff", "shape": "tunic"},
-        {"custom_model_data": 10148, "name": "decorative_armour_white_platebody", "look": "80_platebody_normal", "colour": "#958a8a", "icon": "ms:castlewars/decorative_white_platebody", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10149, "name": "white_elegant_blouse", "look": "70_robe_top", "colour": "#dcdcd7", "icon": "ms:diamond_hoe/clues/white_elegant_blouse", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10150, "name": "zombie_shirt", "look": "70_robe_top", "colour": "#312e2d", "icon": "ms:random/zombie_shirt", "icon_colour": "#ffffff", "shape": "none"},
-        {"custom_model_data": 10151, "name": "white_chainbody", "look": "82_chainbody_white", "colour": "#ffffff", "icon": "ms:chestplate/white_chainbody", "shape": "none"},
-        {"custom_model_data": 10152, "name": "gilded_chainbody", "look": "83_chainbody_gilded", "colour": "#ffffff", "icon": "ms:chestplate/gilded_chainbody", "shape": "none"},
-        {"custom_model_data": 10153, "name": "dragon_chainbody", "look": "84_chainbody_dragon", "colour": "#ffffff", "icon": "ms:chestplate/dragon_chainbody", "shape": "none"},
-        {"custom_model_data": 10154, "name": "dragon_chainbody_g", "look": "85_chainbody_dragon_gold", "colour": "#ffffff", "icon": "ms:chestplate/dragon_chainbody_g", "shape": "none"},
-        {"custom_model_data": 10155, "name": "angler_top", "look": "68_leather_body", "colour": "#5a5a36", "icon": "ms:chestplate/angler_top", "shape": "none"},
-        {"custom_model_data": 10156, "name": "ironman_platebody", "look": "80_platebody_normal", "colour": "#8a8a8a", "icon": "ms:chestplate/ironman_platebody", "shape": "none"},
-        {"custom_model_data": 10157, "name": "ultimate_ironman_platebody", "look": "80_platebody_normal", "colour": "#d4d4d4", "icon": "ms:chestplate/ultimate_ironman_platebody", "shape": "none"},
-        {"custom_model_data": 10158, "name": "hardcore_ironman_platebody", "look": "78_platebody_blue_trimmed", "colour": "#7a1f1f", "icon": "ms:chestplate/hardcore_ironman_platebody", "shape": "none"},
-        {"custom_model_data": 10159, "name": "group_ironman_platebody", "look": "78_platebody_blue_trimmed", "colour": "#3e4c6b", "icon": "ms:chestplate/group_ironman_platebody", "shape": "none"},
-        {"custom_model_data": 10160, "name": "hardcore_group_ironman_platebody", "look": "78_platebody_blue_trimmed", "colour": "#5e2a2a", "icon": "ms:chestplate/hardcore_group_ironman_platebody", "shape": "none"},
-        {"custom_model_data": 10161, "name": "group_ironman_platebody_unranked", "look": "78_platebody_blue_trimmed", "colour": "#3b5a48", "icon": "ms:chestplate/group_ironman_platebody_unranked", "shape": "none"}
-    ]
+  "_about": "Each leather chestplate the plugin has (LEATHER_CHESTPLATE): its custom model data, 10000 + its tile, 1 to 511; the look it wears, a file in armour/chest/ (or plain), dyed this colour where the file is grey; its inventory icon, an item model whose dyed layer (layer0) is coloured the same; and the shape of its body below the waist (none, fauld, jerkin, tunic). Chestplates and boots share the armour's first layer, a chestplate and the boots with its tile drawn on the same sheet tile. Add one with the next free custom model data, and the same number on the item in the plugin.",
+  "items": [
+    {
+      "custom_model_data": 10001,
+      "name": "adamant_chainbody",
+      "look": "77_chainbody_normal",
+      "colour": "#415341",
+      "icon": "ms:chestplate/leather_chainbody",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10002,
+      "name": "adamant_platebody",
+      "look": "80_platebody_normal",
+      "colour": "#415341",
+      "icon": "ms:chestplate/leather_chestplate",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10003,
+      "name": "black_chainbody",
+      "look": "77_chainbody_normal",
+      "colour": "#1e1c1c",
+      "icon": "ms:chestplate/leather_chainbody",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10004,
+      "name": "black_platebody",
+      "look": "80_platebody_normal",
+      "colour": "#1e1c1c",
+      "icon": "ms:chestplate/leather_chestplate",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10005,
+      "name": "black_robe",
+      "look": "70_robe_top",
+      "colour": "#17170d",
+      "icon": "ms:chestplate/leather_robe_top",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10006,
+      "name": "bronze_chainbody",
+      "look": "77_chainbody_normal",
+      "colour": "#4a3921",
+      "icon": "ms:chestplate/leather_chainbody",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10007,
+      "name": "bronze_platebody",
+      "look": "80_platebody_normal",
+      "colour": "#4a3921",
+      "icon": "ms:chestplate/leather_chestplate",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10008,
+      "name": "green_dhide_body",
+      "look": "dhide_body",
+      "colour": "#11b219",
+      "icon": "ms:chestplate/leather_dragonhide",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10009,
+      "name": "hardleather_body",
+      "look": "67_hard_leather_body",
+      "colour": "#39331d",
+      "icon": "ms:chestplate/leather_hardbody",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10010,
+      "name": "iron_chainbody",
+      "look": "77_chainbody_normal",
+      "colour": "#524c4c",
+      "icon": "ms:chestplate/leather_chainbody",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10011,
+      "name": "iron_platebody",
+      "look": "80_platebody_normal",
+      "colour": "#524c4c",
+      "icon": "ms:chestplate/leather_chestplate",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10012,
+      "name": "leather_body",
+      "look": "68_leather_body",
+      "colour": "#45422f",
+      "icon": "ms:chestplate/leather_body",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10013,
+      "name": "mithril_chainbody",
+      "look": "77_chainbody_normal",
+      "colour": "#404060",
+      "icon": "ms:chestplate/leather_chainbody",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10014,
+      "name": "mithril_platebody",
+      "look": "80_platebody_normal",
+      "colour": "#404060",
+      "icon": "ms:chestplate/leather_chestplate",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10015,
+      "name": "monks_robe_top",
+      "look": "monk_robe_top",
+      "colour": "#513c1d",
+      "icon": "ms:chestplate/leather_robe_top",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10016,
+      "name": "priest_gown_top",
+      "look": "72_gown_top_normal",
+      "colour": "#0d0808",
+      "icon": "ms:chestplate/leather_robe_top",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10017,
+      "name": "rune_chainbody",
+      "look": "77_chainbody_normal",
+      "colour": "#465d67",
+      "icon": "ms:chestplate/leather_chainbody",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10018,
+      "name": "rune_platebody",
+      "look": "80_platebody_normal",
+      "colour": "#465d67",
+      "icon": "ms:chestplate/leather_chestplate",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10019,
+      "name": "steel_chainbody",
+      "look": "77_chainbody_normal",
+      "colour": "#7c7373",
+      "icon": "ms:chestplate/leather_chainbody",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10020,
+      "name": "steel_platebody",
+      "look": "80_platebody_normal",
+      "colour": "#7c7373",
+      "icon": "ms:chestplate/leather_chestplate",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10021,
+      "name": "studded_body",
+      "look": "48_studded_body",
+      "colour": "#45422f",
+      "icon": "ms:chestplate/studded_body",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10022,
+      "name": "blue_wizard_robe",
+      "look": "70_robe_top",
+      "colour": "#0f5a8e",
+      "icon": "ms:chestplate/leather_robe_top",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10023,
+      "name": "black_dhide_body",
+      "look": "black_dhide_body",
+      "colour": "#151111",
+      "icon": "ms:chestplate/leather_dragonhide",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10024,
+      "name": "blue_dhide_body",
+      "look": "dhide_body",
+      "colour": "#7979b2",
+      "icon": "ms:chestplate/leather_dragonhide",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10025,
+      "name": "red_dhide_body",
+      "look": "dhide_body",
+      "colour": "#b22111",
+      "icon": "ms:chestplate/leather_dragonhide",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10026,
+      "name": "zamorak_monk_top",
+      "look": "zamorak_monk_top",
+      "colour": "#c0322f",
+      "icon": "ms:chestplate/leather_robe_top",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10027,
+      "name": "elder_chaos_top",
+      "look": "elder_chaos_top",
+      "colour": "#db2c20",
+      "icon": "ms:chestplate/leather_robe_top",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10028,
+      "name": "white_platebody",
+      "look": "80_platebody_normal",
+      "colour": "#ffffff",
+      "icon": "ms:chestplate/leather_chestplate",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10029,
+      "name": "bronze_platebody_g",
+      "look": "79_platebody_gold_trimmed",
+      "colour": "#4a3921",
+      "icon": "ms:chestplate/leather_chestplate_gtrim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10030,
+      "name": "iron_platebody_g",
+      "look": "79_platebody_gold_trimmed",
+      "colour": "#524c4c",
+      "icon": "ms:chestplate/leather_chestplate_gtrim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10031,
+      "name": "steel_platebody_g",
+      "look": "79_platebody_gold_trimmed",
+      "colour": "#7c7373",
+      "icon": "ms:chestplate/leather_chestplate_gtrim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10032,
+      "name": "black_platebody_g",
+      "look": "79_platebody_gold_trimmed",
+      "colour": "#1e1c1c",
+      "icon": "ms:chestplate/leather_chestplate_gtrim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10033,
+      "name": "mithril_platebody_g",
+      "look": "79_platebody_gold_trimmed",
+      "colour": "#404060",
+      "icon": "ms:chestplate/leather_chestplate_gtrim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10034,
+      "name": "adamant_platebody_g",
+      "look": "79_platebody_gold_trimmed",
+      "colour": "#415341",
+      "icon": "ms:chestplate/leather_chestplate_gtrim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10035,
+      "name": "rune_platebody_g",
+      "look": "79_platebody_gold_trimmed",
+      "colour": "#465d67",
+      "icon": "ms:chestplate/leather_chestplate_gtrim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10036,
+      "name": "gilded_platebody_g",
+      "look": "79_platebody_gold_trimmed",
+      "colour": "#efc700",
+      "icon": "ms:chestplate/leather_chestplate_gtrim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10037,
+      "name": "leather_body_g",
+      "look": "64_leather_body_gold_trimmed",
+      "colour": "#45422f",
+      "icon": "ms:chestplate/leather_body_gtrim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10038,
+      "name": "bronze_platebody_t",
+      "look": "78_platebody_blue_trimmed",
+      "colour": "#4a3921",
+      "icon": "ms:chestplate/leather_chestplate_trim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10039,
+      "name": "iron_platebody_t",
+      "look": "78_platebody_blue_trimmed",
+      "colour": "#524c4c",
+      "icon": "ms:chestplate/leather_chestplate_trim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10040,
+      "name": "steel_platebody_t",
+      "look": "78_platebody_blue_trimmed",
+      "colour": "#7c7373",
+      "icon": "ms:chestplate/leather_chestplate_trim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10041,
+      "name": "black_platebody_t",
+      "look": "78_platebody_blue_trimmed",
+      "colour": "#1e1c1c",
+      "icon": "ms:chestplate/leather_chestplate_trim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10042,
+      "name": "mithril_platebody_t",
+      "look": "78_platebody_blue_trimmed",
+      "colour": "#404060",
+      "icon": "ms:chestplate/leather_chestplate_trim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10043,
+      "name": "adamant_platebody_t",
+      "look": "78_platebody_blue_trimmed",
+      "colour": "#415341",
+      "icon": "ms:chestplate/leather_chestplate_trim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10044,
+      "name": "rune_platebody_t",
+      "look": "78_platebody_blue_trimmed",
+      "colour": "#465d67",
+      "icon": "ms:chestplate/leather_chestplate_trim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10045,
+      "name": "gilded_platebody_t",
+      "look": "78_platebody_blue_trimmed",
+      "colour": "#efc700",
+      "icon": "ms:chestplate/leather_chestplate_trim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10046,
+      "name": "studded_body_g",
+      "look": "52_studded_body_gold_trimmed",
+      "colour": "#45422f",
+      "icon": "ms:chestplate/studded_body_gold",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10047,
+      "name": "studded_body_t",
+      "look": "51_studded_body_blue_trimmed",
+      "colour": "#45422f",
+      "icon": "ms:chestplate/studded_body_blue",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10048,
+      "name": "green_dhide_body_g",
+      "look": "dhide_body",
+      "textures": {
+        "dhide_body.png": "dhide_body/73_dhide_gold_trimmed.png",
+        "dhide_body_details.png": "dhide_body/73_dhide_gold_trimmed_details.png"
+      },
+      "colour": "#11b219",
+      "icon": "ms:chestplate/leather_dragonhide_gtrim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10049,
+      "name": "blue_dhide_body_g",
+      "look": "dhide_body",
+      "textures": {
+        "dhide_body.png": "dhide_body/73_dhide_gold_trimmed.png",
+        "dhide_body_details.png": "dhide_body/73_dhide_gold_trimmed_details.png"
+      },
+      "colour": "#7979b2",
+      "icon": "ms:chestplate/leather_dragonhide_gtrim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10050,
+      "name": "black_dhide_body_g",
+      "look": "black_dhide_body_g",
+      "colour": "#151111",
+      "icon": "ms:chestplate/leather_dragonhide_gtrim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10051,
+      "name": "red_dhide_body_g",
+      "look": "dhide_body",
+      "textures": {
+        "dhide_body.png": "dhide_body/73_dhide_gold_trimmed.png",
+        "dhide_body_details.png": "dhide_body/73_dhide_gold_trimmed_details.png"
+      },
+      "colour": "#b22111",
+      "icon": "ms:chestplate/leather_dragonhide_gtrim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10052,
+      "name": "green_dhide_body_t",
+      "look": "dhide_body",
+      "textures": {
+        "dhide_body.png": "dhide_body/65_dhide_blue_trimmed.png",
+        "dhide_body_details.png": "dhide_body/65_dhide_blue_trimmed_details.png"
+      },
+      "colour": "#11b219",
+      "icon": "ms:chestplate/leather_dragonhide_trim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10053,
+      "name": "blue_dhide_body_t",
+      "look": "dhide_body",
+      "textures": {
+        "dhide_body.png": "dhide_body/65_dhide_blue_trimmed.png",
+        "dhide_body_details.png": "dhide_body/65_dhide_blue_trimmed_details.png"
+      },
+      "colour": "#7979b2",
+      "icon": "ms:chestplate/leather_dragonhide_trim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10054,
+      "name": "black_dhide_body_t",
+      "look": "black_dhide_body_t",
+      "colour": "#151111",
+      "icon": "ms:chestplate/leather_dragonhide_trim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10055,
+      "name": "red_dhide_body_t",
+      "look": "dhide_body",
+      "textures": {
+        "dhide_body.png": "dhide_body/65_dhide_blue_trimmed.png",
+        "dhide_body_details.png": "dhide_body/65_dhide_blue_trimmed_details.png"
+      },
+      "colour": "#b22111",
+      "icon": "ms:chestplate/leather_dragonhide_trim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10056,
+      "name": "blue_wizard_robe_g",
+      "look": "69_robe_top_gold_trimmed",
+      "colour": "#0f5a8e",
+      "icon": "ms:chestplate/leather_robe_top_gtrim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10057,
+      "name": "monks_robe_top_g",
+      "look": "monk_robe_top_g",
+      "colour": "#513c1d",
+      "icon": "ms:chestplate/leather_robe_top_gtrim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10058,
+      "name": "black_wizard_robe_g",
+      "look": "69_robe_top_gold_trimmed",
+      "colour": "#17170d",
+      "icon": "ms:chestplate/leather_robe_top_gtrim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10059,
+      "name": "blue_wizard_robe_t",
+      "look": "63_robe_top_blue_trimmed",
+      "colour": "#0f5a8e",
+      "icon": "ms:chestplate/leather_robe_top_trim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10060,
+      "name": "monks_robe_top_t",
+      "look": "monk_robe_top_t",
+      "colour": "#513c1d",
+      "icon": "ms:chestplate/leather_robe_top_trim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10061,
+      "name": "black_wizard_robe_t",
+      "look": "63_robe_top_blue_trimmed",
+      "colour": "#17170d",
+      "icon": "ms:chestplate/leather_robe_top_trim",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10062,
+      "name": "guthix_platebody",
+      "look": "5_guthix_platebody",
+      "colour": "#465d67",
+      "icon": "ms:chestplate/leather_chestplate_guthix",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10063,
+      "name": "saradomin_platebody",
+      "look": "4_saradomin_platebody",
+      "colour": "#465d67",
+      "icon": "ms:chestplate/leather_chestplate_saradomin",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10064,
+      "name": "zamorak_platebody",
+      "look": "3_zamorak_platebody",
+      "colour": "#465d67",
+      "icon": "ms:chestplate/leather_chestplate_zamorak",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10065,
+      "name": "armadyl_platebody",
+      "look": "2_armadyl_platebody",
+      "colour": "#465d67",
+      "icon": "ms:chestplate/leather_chestplate_armadyl",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10066,
+      "name": "ancient_platebody",
+      "look": "1_ancient_platebody",
+      "colour": "#465d67",
+      "icon": "ms:chestplate/leather_chestplate_ancient",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10067,
+      "name": "bandos_platebody",
+      "look": "0_bandos_platebody",
+      "colour": "#465d67",
+      "icon": "ms:chestplate/leather_chestplate_bandos",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10068,
+      "name": "ham_shirt",
+      "look": "ham_shirt",
+      "colour": "#9e2065",
+      "icon": "ms:chestplate/leather_robe_top",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10069,
+      "name": "grey_robe_top",
+      "look": "coloured_robe_top",
+      "colour": "#5c5555",
+      "icon": "ms:chestplate/leather_robe_top",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10070,
+      "name": "purple_robe_top",
+      "look": "coloured_robe_top",
+      "colour": "#6e0066",
+      "icon": "ms:chestplate/leather_robe_top",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10071,
+      "name": "red_robe_top",
+      "look": "coloured_robe_top",
+      "colour": "#640400",
+      "icon": "ms:chestplate/leather_robe_top",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10072,
+      "name": "teal_robe_top",
+      "look": "coloured_robe_top",
+      "colour": "#004043",
+      "icon": "ms:chestplate/leather_robe_top",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10073,
+      "name": "yellow_robe_top",
+      "look": "coloured_robe_top",
+      "colour": "#b68f00",
+      "icon": "ms:chestplate/leather_robe_top",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10074,
+      "name": "ahrims_robetop",
+      "look": "58_ahrims_robetop",
+      "colour": "#333323",
+      "icon": "ms:chestplate/leather_ahrims_robetop",
+      "shape": "tunic"
+    },
+    {
+      "custom_model_data": 10075,
+      "name": "ahrims_robetop_degraded",
+      "look": "58_ahrims_robetop",
+      "colour": "#333323",
+      "icon": "ms:chestplate/leather_ahrims_robetop",
+      "shape": "tunic"
+    },
+    {
+      "custom_model_data": 10076,
+      "name": "dharoks_platebody",
+      "look": "57_dharoks_platebody",
+      "colour": "#1e1e08",
+      "icon": "ms:chestplate/leather_dharoks_platebody",
+      "shape": "fauld"
+    },
+    {
+      "custom_model_data": 10077,
+      "name": "dharoks_platebody_degraded",
+      "look": "57_dharoks_platebody",
+      "colour": "#1e1e08",
+      "icon": "ms:chestplate/leather_dharoks_platebody",
+      "shape": "fauld"
+    },
+    {
+      "custom_model_data": 10078,
+      "name": "guthans_platebody",
+      "look": "56_guthans_platebody",
+      "colour": "#26261b",
+      "icon": "ms:chestplate/leather_guthans_platebody",
+      "shape": "fauld"
+    },
+    {
+      "custom_model_data": 10079,
+      "name": "guthans_platebody_degraded",
+      "look": "56_guthans_platebody",
+      "colour": "#26261b",
+      "icon": "ms:chestplate/leather_guthans_platebody",
+      "shape": "fauld"
+    },
+    {
+      "custom_model_data": 10080,
+      "name": "karils_leathertop",
+      "look": "55_karils_leathertop",
+      "colour": "#28281f",
+      "icon": "ms:chestplate/leather_karils_leathertop",
+      "shape": "jerkin"
+    },
+    {
+      "custom_model_data": 10081,
+      "name": "karils_leathertop_degraded",
+      "look": "55_karils_leathertop",
+      "colour": "#28281f",
+      "icon": "ms:chestplate/leather_karils_leathertop",
+      "shape": "jerkin"
+    },
+    {
+      "custom_model_data": 10082,
+      "name": "torags_platebody",
+      "look": "54_torags_platebody",
+      "colour": "#3f3f34",
+      "icon": "ms:chestplate/leather_torags_platebody",
+      "shape": "fauld"
+    },
+    {
+      "custom_model_data": 10083,
+      "name": "torags_platebody_degraded",
+      "look": "54_torags_platebody",
+      "colour": "#3f3f34",
+      "icon": "ms:chestplate/leather_torags_platebody",
+      "shape": "fauld"
+    },
+    {
+      "custom_model_data": 10084,
+      "name": "veracs_brassard",
+      "look": "53_veracs_brassard",
+      "colour": "#191907",
+      "icon": "ms:chestplate/leather_veracs_brassard",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10085,
+      "name": "veracs_brassard_degraded",
+      "look": "53_veracs_brassard",
+      "colour": "#191907",
+      "icon": "ms:chestplate/leather_veracs_brassard",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10086,
+      "name": "mystic_robe_top_dark",
+      "look": "mystic_robe_top",
+      "textures": {
+        "mystic_robe_top_details.png": "mystic_robe_top/dark_details.png",
+        "mystic_robe_top.png": "mystic_robe_top/dark_flat.png"
+      },
+      "colour": "#151111",
+      "icon": "ms:chestplate/leather_mystic_robe_top_dark",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10087,
+      "name": "mystic_robe_top_light",
+      "look": "mystic_robe_top",
+      "textures": {
+        "mystic_robe_top_details.png": "mystic_robe_top/light_details.png",
+        "mystic_robe_top.png": "mystic_robe_top/light_flat.png"
+      },
+      "colour": "#d8d3d3",
+      "icon": "ms:chestplate/leather_mystic_robe_top_light",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10088,
+      "name": "mystic_robe_top_blue",
+      "look": "mystic_robe_top",
+      "colour": "#495c82",
+      "icon": "ms:chestplate/leather_mystic_robe_top_blue",
+      "shape": "none",
+      "textures": {
+        "mystic_robe_top_details.png": "mystic_robe_top/blue_details.png",
+        "mystic_robe_top.png": "mystic_robe_top/blue_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10089,
+      "name": "mystic_robe_top_dusk",
+      "look": "mystic_robe_top",
+      "textures": {
+        "mystic_robe_top_details.png": "mystic_robe_top/dusk_details.png",
+        "mystic_robe_top.png": "mystic_robe_top/dusk_flat.png"
+      },
+      "colour": "#36362a",
+      "icon": "ms:chestplate/leather_mystic_robe_top_dusk",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10090,
+      "name": "druids_robe_top",
+      "look": "druid_robe_top",
+      "colour": "#eaeaea",
+      "icon": "ms:chestplate/leather_robe_top",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10091,
+      "name": "builders_shirt",
+      "look": "builders_shirt",
+      "textures": {
+        "builders_shirt_details.png": "builders_shirt/details.png",
+        "builders_shirt.png": "builders_shirt/flat.png"
+      },
+      "colour": "#615c4d",
+      "icon": "ms:chestplate/builders_shirt",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10092,
+      "name": "graceful_top",
+      "look": "graceful_top",
+      "colour": "#908b73",
+      "icon": "ms:chestplate/graceful_top",
+      "shape": "none",
+      "textures": {
+        "graceful_top_details.png": "graceful_top/details.png",
+        "graceful_top.png": "graceful_top/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10093,
+      "name": "snakeskin_body",
+      "look": "50_snakeskin_body",
+      "colour": "#40402a",
+      "icon": "ms:chestplate/snakeskin_body",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10094,
+      "name": "bare_arms",
+      "look": "81_bare",
+      "colour": "#ffffff",
+      "icon": "ms:chestplate/bare_arms",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10095,
+      "name": "adamant_platebody_h1",
+      "look": "heraldic_platebody",
+      "colour": "#415341",
+      "icon": "ms:diamond_hoe/clues/adamant_platebody_h1",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "heraldic_platebody_details.png": "heraldic_platebody/adamant_h1_details.png",
+        "heraldic_platebody.png": "heraldic_platebody/adamant_h1_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10096,
+      "name": "adamant_platebody_h2",
+      "look": "heraldic_platebody",
+      "colour": "#415341",
+      "icon": "ms:diamond_hoe/clues/adamant_platebody_h2",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "heraldic_platebody_details.png": "heraldic_platebody/adamant_h2_details.png",
+        "heraldic_platebody.png": "heraldic_platebody/adamant_h2_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10097,
+      "name": "adamant_platebody_h3",
+      "look": "heraldic_platebody",
+      "colour": "#415341",
+      "icon": "ms:diamond_hoe/clues/adamant_platebody_h3",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "heraldic_platebody_details.png": "heraldic_platebody/adamant_h3_details.png",
+        "heraldic_platebody.png": "heraldic_platebody/adamant_h3_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10098,
+      "name": "adamant_platebody_h4",
+      "look": "heraldic_platebody",
+      "colour": "#415341",
+      "icon": "ms:diamond_hoe/clues/adamant_platebody_h4",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "heraldic_platebody_details.png": "heraldic_platebody/adamant_h4_details.png",
+        "heraldic_platebody.png": "heraldic_platebody/adamant_h4_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10099,
+      "name": "adamant_platebody_h5",
+      "look": "heraldic_platebody",
+      "colour": "#415341",
+      "icon": "ms:diamond_hoe/clues/adamant_platebody_h5",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "heraldic_platebody_details.png": "heraldic_platebody/adamant_h5_details.png",
+        "heraldic_platebody.png": "heraldic_platebody/adamant_h5_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10100,
+      "name": "ancient_robe_top",
+      "look": "god_robe_top",
+      "colour": "#948a89",
+      "icon": "ms:diamond_hoe/clues/ancient_robe_top",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "god_robe_top_details.png": "god_robe_top/ancient_details.png",
+        "god_robe_top.png": "god_robe_top/ancient_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10101,
+      "name": "armadyl_robe_top",
+      "look": "god_robe_top",
+      "colour": "#a69a99",
+      "icon": "ms:diamond_hoe/clues/armadyl_robe_top",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "god_robe_top_details.png": "god_robe_top/armadyl_details.png",
+        "god_robe_top.png": "god_robe_top/armadyl_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10102,
+      "name": "bandos_robe_top",
+      "look": "god_robe_top",
+      "colour": "#a69a99",
+      "icon": "ms:diamond_hoe/clues/bandos_robe_top",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "god_robe_top_details.png": "god_robe_top/bandos_details.png",
+        "god_robe_top.png": "god_robe_top/bandos_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10103,
+      "name": "black_elegant_shirt",
+      "look": "70_robe_top",
+      "colour": "#2a2a2e",
+      "icon": "ms:diamond_hoe/clues/black_elegant_shirt",
+      "icon_colour": "#ffffff",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10104,
+      "name": "black_platebody_h1",
+      "look": "heraldic_platebody",
+      "colour": "#1e1c1c",
+      "icon": "ms:diamond_hoe/clues/black_platebody_h1",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "heraldic_platebody_details.png": "heraldic_platebody/black_h1_details.png",
+        "heraldic_platebody.png": "heraldic_platebody/black_h1_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10105,
+      "name": "black_platebody_h2",
+      "look": "heraldic_platebody",
+      "colour": "#1e1c1c",
+      "icon": "ms:diamond_hoe/clues/black_platebody_h2",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "heraldic_platebody_details.png": "heraldic_platebody/black_h2_details.png",
+        "heraldic_platebody.png": "heraldic_platebody/black_h2_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10106,
+      "name": "black_platebody_h3",
+      "look": "heraldic_platebody",
+      "colour": "#1e1c1c",
+      "icon": "ms:diamond_hoe/clues/black_platebody_h3",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "heraldic_platebody_details.png": "heraldic_platebody/black_h3_details.png",
+        "heraldic_platebody.png": "heraldic_platebody/black_h3_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10107,
+      "name": "black_platebody_h4",
+      "look": "heraldic_platebody",
+      "colour": "#1e1c1c",
+      "icon": "ms:diamond_hoe/clues/black_platebody_h4",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "heraldic_platebody_details.png": "heraldic_platebody/black_h4_details.png",
+        "heraldic_platebody.png": "heraldic_platebody/black_h4_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10108,
+      "name": "black_platebody_h5",
+      "look": "heraldic_platebody",
+      "colour": "#1e1c1c",
+      "icon": "ms:diamond_hoe/clues/black_platebody_h5",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "heraldic_platebody_details.png": "heraldic_platebody/black_h5_details.png",
+        "heraldic_platebody.png": "heraldic_platebody/black_h5_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10109,
+      "name": "blue_elegant_blouse",
+      "look": "70_robe_top",
+      "colour": "#2846a0",
+      "icon": "ms:diamond_hoe/clues/blue_elegant_blouse",
+      "icon_colour": "#ffffff",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10110,
+      "name": "blue_elegant_shirt",
+      "look": "70_robe_top",
+      "colour": "#2846a0",
+      "icon": "ms:diamond_hoe/clues/blue_elegant_shirt",
+      "icon_colour": "#ffffff",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10111,
+      "name": "bobs_black_shirt",
+      "look": "bobs_black_shirt",
+      "colour": "#2a2a2e",
+      "icon": "ms:diamond_hoe/clues/bobs_black_shirt",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "bobs_black_shirt_details.png": "bobs_black_shirt/details.png",
+        "bobs_black_shirt.png": "bobs_black_shirt/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10112,
+      "name": "bobs_blue_shirt",
+      "look": "bobs_blue_shirt",
+      "colour": "#2846a0",
+      "icon": "ms:diamond_hoe/clues/bobs_blue_shirt",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "bobs_blue_shirt_details.png": "bobs_blue_shirt/details.png",
+        "bobs_blue_shirt.png": "bobs_blue_shirt/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10113,
+      "name": "bobs_green_shirt",
+      "look": "bobs_green_shirt",
+      "colour": "#2d7d3c",
+      "icon": "ms:diamond_hoe/clues/bobs_green_shirt",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "bobs_green_shirt_details.png": "bobs_green_shirt/details.png",
+        "bobs_green_shirt.png": "bobs_green_shirt/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10114,
+      "name": "bobs_purple_shirt",
+      "look": "bobs_purple_shirt",
+      "colour": "#693291",
+      "icon": "ms:diamond_hoe/clues/bobs_purple_shirt",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "bobs_purple_shirt_details.png": "bobs_purple_shirt/details.png",
+        "bobs_purple_shirt.png": "bobs_purple_shirt/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10115,
+      "name": "bobs_red_shirt",
+      "look": "bobs_red_shirt",
+      "colour": "#a01e23",
+      "icon": "ms:diamond_hoe/clues/bobs_red_shirt",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "bobs_red_shirt_details.png": "bobs_red_shirt/details.png",
+        "bobs_red_shirt.png": "bobs_red_shirt/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10116,
+      "name": "brown_apron",
+      "look": "brown_apron",
+      "colour": "#634223",
+      "icon": "ms:armor/cosmetic/brown_apron",
+      "icon_colour": "#ffffff",
+      "shape": "tunic",
+      "textures": {
+        "brown_apron_details.png": "brown_apron/details.png",
+        "brown_apron.png": "brown_apron/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10117,
+      "name": "camo_top",
+      "look": "camo_top",
+      "colour": "#464b22",
+      "icon": "ms:random/camo_top",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "camo_top_details.png": "camo_top/details.png",
+        "camo_top.png": "camo_top/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10118,
+      "name": "chicken_wings",
+      "look": "chicken_wings",
+      "colour": "#c3c386",
+      "icon": "ms:rare/holiday/chicken_wings",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "chicken_wings_details.png": "chicken_wings/details.png",
+        "chicken_wings.png": "chicken_wings/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10119,
+      "name": "crier_coat",
+      "look": "crier_coat",
+      "colour": "#556479",
+      "icon": "ms:diamond_hoe/clues/crier_coat",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "crier_coat_details.png": "crier_coat/details.png",
+        "crier_coat.png": "crier_coat/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10120,
+      "name": "decorative_armour_magic_top",
+      "look": "decorative_armour_magic_top",
+      "colour": "#948a89",
+      "icon": "ms:castlewars/decorative_magic_top",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "decorative_armour_magic_top_details.png": "decorative_armour_magic_top/details.png",
+        "decorative_armour_magic_top.png": "decorative_armour_magic_top/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10121,
+      "name": "decorative_armour_ranged_top",
+      "look": "decorative_armour_ranged_top",
+      "colour": "#78772a",
+      "icon": "ms:castlewars/decorative_ranged_top",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "decorative_armour_ranged_top_details.png": "decorative_armour_ranged_top/details.png",
+        "decorative_armour_ranged_top.png": "decorative_armour_ranged_top/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10122,
+      "name": "decorative_armour_gold_platebody",
+      "look": "decorative_armour_gold_platebody",
+      "colour": "#8a8931",
+      "icon": "ms:castlewars/decorative_gold_platebody",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "decorative_armour_gold_platebody_details.png": "decorative_armour_gold_platebody/details.png",
+        "decorative_armour_gold_platebody.png": "decorative_armour_gold_platebody/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10123,
+      "name": "gold_elegant_blouse",
+      "look": "70_robe_top",
+      "colour": "#cda52d",
+      "icon": "ms:diamond_hoe/clues/gold_elegant_blouse",
+      "icon_colour": "#ffffff",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10124,
+      "name": "gold_elegant_shirt",
+      "look": "70_robe_top",
+      "colour": "#cda52d",
+      "icon": "ms:diamond_hoe/clues/gold_elegant_shirt",
+      "icon_colour": "#ffffff",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10125,
+      "name": "golden_apron",
+      "look": "golden_apron",
+      "colour": "#d3a611",
+      "icon": "ms:clues/golden_apron",
+      "icon_colour": "#ffffff",
+      "shape": "tunic",
+      "textures": {
+        "golden_apron_details.png": "golden_apron/details.png",
+        "golden_apron.png": "golden_apron/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10126,
+      "name": "green_elegant_blouse",
+      "look": "70_robe_top",
+      "colour": "#2d7d3c",
+      "icon": "ms:diamond_hoe/clues/green_elegant_blouse",
+      "icon_colour": "#ffffff",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10127,
+      "name": "green_elegant_shirt",
+      "look": "70_robe_top",
+      "colour": "#2d7d3c",
+      "icon": "ms:diamond_hoe/clues/green_elegant_shirt",
+      "icon_colour": "#ffffff",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10128,
+      "name": "guthix_robe_top",
+      "look": "god_robe_top",
+      "colour": "#a69a99",
+      "icon": "ms:diamond_hoe/clues/guthix_robe_top",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "god_robe_top_details.png": "god_robe_top/guthix_details.png",
+        "god_robe_top.png": "god_robe_top/guthix_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10129,
+      "name": "khazard_armour",
+      "look": "khazard_armour",
+      "colour": "#3a3535",
+      "icon": "ms:quest/khazard_armour",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "khazard_armour_details.png": "khazard_armour/details.png",
+        "khazard_armour.png": "khazard_armour/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10130,
+      "name": "lederhosen_top",
+      "look": "lederhosen_top",
+      "colour": "#baba96",
+      "icon": "ms:random/lederhosen_top",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "lederhosen_top_details.png": "lederhosen_top/details.png",
+        "lederhosen_top.png": "lederhosen_top/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10131,
+      "name": "mime_top",
+      "look": "mime_top",
+      "colour": "#2a2a2e",
+      "icon": "ms:random/mime_top",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "mime_top_details.png": "mime_top/details.png",
+        "mime_top.png": "mime_top/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10132,
+      "name": "pink_elegant_blouse",
+      "look": "70_robe_top",
+      "colour": "#d778a0",
+      "icon": "ms:diamond_hoe/clues/pink_elegant_blouse",
+      "icon_colour": "#ffffff",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10133,
+      "name": "pink_elegant_shirt",
+      "look": "70_robe_top",
+      "colour": "#d778a0",
+      "icon": "ms:diamond_hoe/clues/pink_elegant_shirt",
+      "icon_colour": "#ffffff",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10134,
+      "name": "prince_tunic",
+      "look": "prince_tunic",
+      "colour": "#410d78",
+      "icon": "ms:random/prince_tunic",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "prince_tunic_details.png": "prince_tunic/details.png",
+        "prince_tunic.png": "prince_tunic/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10135,
+      "name": "princess_blouse",
+      "look": "princess_blouse",
+      "colour": "#a49897",
+      "icon": "ms:random/princess_blouse",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "princess_blouse_details.png": "princess_blouse/details.png",
+        "princess_blouse.png": "princess_blouse/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10136,
+      "name": "purple_elegant_blouse",
+      "look": "70_robe_top",
+      "colour": "#693291",
+      "icon": "ms:diamond_hoe/clues/purple_elegant_blouse",
+      "icon_colour": "#ffffff",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10137,
+      "name": "purple_elegant_shirt",
+      "look": "70_robe_top",
+      "colour": "#693291",
+      "icon": "ms:diamond_hoe/clues/purple_elegant_shirt",
+      "icon_colour": "#ffffff",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10138,
+      "name": "decorative_armour_red_platebody",
+      "look": "decorative_armour_red_platebody",
+      "colour": "#76180d",
+      "icon": "ms:castlewars/decorative_red_platebody",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "decorative_armour_red_platebody_details.png": "decorative_armour_red_platebody/details.png",
+        "decorative_armour_red_platebody.png": "decorative_armour_red_platebody/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10139,
+      "name": "red_elegant_blouse",
+      "look": "70_robe_top",
+      "colour": "#a01e23",
+      "icon": "ms:diamond_hoe/clues/red_elegant_blouse",
+      "icon_colour": "#ffffff",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10140,
+      "name": "red_elegant_shirt",
+      "look": "70_robe_top",
+      "colour": "#a01e23",
+      "icon": "ms:diamond_hoe/clues/red_elegant_shirt",
+      "icon_colour": "#ffffff",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10141,
+      "name": "rogue_top",
+      "look": "rogue_top",
+      "colour": "#333228",
+      "icon": "ms:rogues_den/rogue_top",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "rogue_top_details.png": "rogue_top/details.png",
+        "rogue_top.png": "rogue_top/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10142,
+      "name": "saradomin_robe_top",
+      "look": "god_robe_top",
+      "colour": "#a69a99",
+      "icon": "ms:diamond_hoe/clues/saradomin_robe_top",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "god_robe_top_details.png": "god_robe_top/saradomin_details.png",
+        "god_robe_top.png": "god_robe_top/saradomin_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10143,
+      "name": "shade_robe_top",
+      "look": "shade_robe_top",
+      "colour": "#080808",
+      "icon": "ms:armor/shade_robe_top",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "shade_robe_top_details.png": "shade_robe_top/details.png",
+        "shade_robe_top.png": "shade_robe_top/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10144,
+      "name": "skeleton_shirt",
+      "look": "skeleton_shirt",
+      "colour": "#d8d4c4",
+      "icon": "ms:rare/holiday/skeleton_shirt",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "skeleton_shirt_details.png": "skeleton_shirt/details.png",
+        "skeleton_shirt.png": "skeleton_shirt/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10145,
+      "name": "splitbark_body",
+      "look": "70_robe_top",
+      "colour": "#7b6946",
+      "icon": "ms:quest/s_o_m/splitbark_body",
+      "icon_colour": "#ffffff",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10146,
+      "name": "swampbark_body",
+      "look": "70_robe_top",
+      "colour": "#554926",
+      "icon": "ms:quest/s_o_m/swampbark_body",
+      "icon_colour": "#ffffff",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10147,
+      "name": "white_apron",
+      "look": "white_apron",
+      "colour": "#a49796",
+      "icon": "ms:armor/cosmetic/white_apron",
+      "icon_colour": "#ffffff",
+      "shape": "tunic",
+      "textures": {
+        "white_apron_details.png": "white_apron/details.png",
+        "white_apron.png": "white_apron/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10148,
+      "name": "decorative_armour_white_platebody",
+      "look": "decorative_armour_white_platebody",
+      "colour": "#958a8a",
+      "icon": "ms:castlewars/decorative_white_platebody",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "decorative_armour_white_platebody_details.png": "decorative_armour_white_platebody/details.png",
+        "decorative_armour_white_platebody.png": "decorative_armour_white_platebody/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10149,
+      "name": "white_elegant_blouse",
+      "look": "70_robe_top",
+      "colour": "#dcdcd7",
+      "icon": "ms:diamond_hoe/clues/white_elegant_blouse",
+      "icon_colour": "#ffffff",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10150,
+      "name": "zombie_shirt",
+      "look": "zombie_shirt",
+      "colour": "#312e2d",
+      "icon": "ms:random/zombie_shirt",
+      "icon_colour": "#ffffff",
+      "shape": "none",
+      "textures": {
+        "zombie_shirt_details.png": "zombie_shirt/details.png",
+        "zombie_shirt.png": "zombie_shirt/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10151,
+      "name": "white_chainbody",
+      "look": "82_chainbody_white",
+      "colour": "#ffffff",
+      "icon": "ms:chestplate/white_chainbody",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10152,
+      "name": "gilded_chainbody",
+      "look": "83_chainbody_gilded",
+      "colour": "#ffffff",
+      "icon": "ms:chestplate/gilded_chainbody",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10153,
+      "name": "dragon_chainbody",
+      "look": "84_chainbody_dragon",
+      "colour": "#ffffff",
+      "icon": "ms:chestplate/dragon_chainbody",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10154,
+      "name": "dragon_chainbody_g",
+      "look": "85_chainbody_dragon_gold",
+      "colour": "#ffffff",
+      "icon": "ms:chestplate/dragon_chainbody_g",
+      "shape": "none"
+    },
+    {
+      "custom_model_data": 10155,
+      "name": "angler_top",
+      "look": "angler_top",
+      "colour": "#5a5a36",
+      "icon": "ms:chestplate/angler_top",
+      "shape": "none",
+      "textures": {
+        "angler_top_details.png": "angler_top/details.png",
+        "angler_top.png": "angler_top/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10156,
+      "name": "ironman_platebody",
+      "look": "ironman_platebody",
+      "colour": "#8a8a8a",
+      "icon": "ms:chestplate/ironman_platebody",
+      "shape": "none",
+      "textures": {
+        "ironman_platebody_details.png": "ironman_platebody/details.png",
+        "ironman_platebody.png": "ironman_platebody/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10157,
+      "name": "ultimate_ironman_platebody",
+      "look": "ultimate_ironman_platebody",
+      "colour": "#d4d4d4",
+      "icon": "ms:chestplate/ultimate_ironman_platebody",
+      "shape": "none",
+      "textures": {
+        "ultimate_ironman_platebody_details.png": "ultimate_ironman_platebody/details.png",
+        "ultimate_ironman_platebody.png": "ultimate_ironman_platebody/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10158,
+      "name": "hardcore_ironman_platebody",
+      "look": "hardcore_ironman_platebody",
+      "colour": "#7a1f1f",
+      "icon": "ms:chestplate/hardcore_ironman_platebody",
+      "shape": "none",
+      "textures": {
+        "hardcore_ironman_platebody_details.png": "hardcore_ironman_platebody/details.png",
+        "hardcore_ironman_platebody.png": "hardcore_ironman_platebody/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10159,
+      "name": "group_ironman_platebody",
+      "look": "group_ironman_platebody",
+      "colour": "#3e4c6b",
+      "icon": "ms:chestplate/group_ironman_platebody",
+      "shape": "none",
+      "textures": {
+        "group_ironman_platebody_details.png": "group_ironman_platebody/details.png",
+        "group_ironman_platebody.png": "group_ironman_platebody/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10160,
+      "name": "hardcore_group_ironman_platebody",
+      "look": "hardcore_group_ironman_platebody",
+      "colour": "#5e2a2a",
+      "icon": "ms:chestplate/hardcore_group_ironman_platebody",
+      "shape": "none",
+      "textures": {
+        "hardcore_group_ironman_platebody_details.png": "hardcore_group_ironman_platebody/details.png",
+        "hardcore_group_ironman_platebody.png": "hardcore_group_ironman_platebody/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10161,
+      "name": "group_ironman_platebody_unranked",
+      "look": "group_ironman_platebody_unranked",
+      "colour": "#3b5a48",
+      "icon": "ms:chestplate/group_ironman_platebody_unranked",
+      "shape": "none",
+      "textures": {
+        "group_ironman_platebody_unranked_details.png": "group_ironman_platebody_unranked/details.png",
+        "group_ironman_platebody_unranked.png": "group_ironman_platebody_unranked/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10172,
+      "name": "group_ironman_platebody_3",
+      "look": "group_ironman_platebody_3",
+      "colour": "#3e4c6b",
+      "icon": "ms:chestplate/group_ironman_platebody",
+      "shape": "none",
+      "textures": {
+        "group_ironman_platebody_3_details.png": "group_ironman_platebody_3/details.png",
+        "group_ironman_platebody_3.png": "group_ironman_platebody_3/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10173,
+      "name": "group_ironman_platebody_4",
+      "look": "group_ironman_platebody_4",
+      "colour": "#3e4c6b",
+      "icon": "ms:chestplate/group_ironman_platebody",
+      "shape": "none",
+      "textures": {
+        "group_ironman_platebody_4_details.png": "group_ironman_platebody_4/details.png",
+        "group_ironman_platebody_4.png": "group_ironman_platebody_4/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10174,
+      "name": "group_ironman_platebody_5",
+      "look": "group_ironman_platebody_5",
+      "colour": "#3e4c6b",
+      "icon": "ms:chestplate/group_ironman_platebody",
+      "shape": "none",
+      "textures": {
+        "group_ironman_platebody_5_details.png": "group_ironman_platebody_5/details.png",
+        "group_ironman_platebody_5.png": "group_ironman_platebody_5/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10175,
+      "name": "hardcore_group_ironman_platebody_3",
+      "look": "hardcore_group_ironman_platebody_3",
+      "colour": "#5e2a2a",
+      "icon": "ms:chestplate/hardcore_group_ironman_platebody",
+      "shape": "none",
+      "textures": {
+        "hardcore_group_ironman_platebody_3_details.png": "hardcore_group_ironman_platebody_3/details.png",
+        "hardcore_group_ironman_platebody_3.png": "hardcore_group_ironman_platebody_3/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10176,
+      "name": "hardcore_group_ironman_platebody_4",
+      "look": "hardcore_group_ironman_platebody_4",
+      "colour": "#5e2a2a",
+      "icon": "ms:chestplate/hardcore_group_ironman_platebody",
+      "shape": "none",
+      "textures": {
+        "hardcore_group_ironman_platebody_4_details.png": "hardcore_group_ironman_platebody_4/details.png",
+        "hardcore_group_ironman_platebody_4.png": "hardcore_group_ironman_platebody_4/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10177,
+      "name": "hardcore_group_ironman_platebody_5",
+      "look": "hardcore_group_ironman_platebody_5",
+      "colour": "#5e2a2a",
+      "icon": "ms:chestplate/hardcore_group_ironman_platebody",
+      "shape": "none",
+      "textures": {
+        "hardcore_group_ironman_platebody_5_details.png": "hardcore_group_ironman_platebody_5/details.png",
+        "hardcore_group_ironman_platebody_5.png": "hardcore_group_ironman_platebody_5/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10178,
+      "name": "group_ironman_platebody_unranked_3",
+      "look": "group_ironman_platebody_unranked_3",
+      "colour": "#3b5a48",
+      "icon": "ms:chestplate/group_ironman_platebody_unranked",
+      "shape": "none",
+      "textures": {
+        "group_ironman_platebody_unranked_3_details.png": "group_ironman_platebody_unranked_3/details.png",
+        "group_ironman_platebody_unranked_3.png": "group_ironman_platebody_unranked_3/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10179,
+      "name": "group_ironman_platebody_unranked_4",
+      "look": "group_ironman_platebody_unranked_4",
+      "colour": "#3b5a48",
+      "icon": "ms:chestplate/group_ironman_platebody_unranked",
+      "shape": "none",
+      "textures": {
+        "group_ironman_platebody_unranked_4_details.png": "group_ironman_platebody_unranked_4/details.png",
+        "group_ironman_platebody_unranked_4.png": "group_ironman_platebody_unranked_4/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10180,
+      "name": "group_ironman_platebody_unranked_5",
+      "look": "group_ironman_platebody_unranked_5",
+      "colour": "#3b5a48",
+      "icon": "ms:chestplate/group_ironman_platebody_unranked",
+      "shape": "none",
+      "textures": {
+        "group_ironman_platebody_unranked_5_details.png": "group_ironman_platebody_unranked_5/details.png",
+        "group_ironman_platebody_unranked_5.png": "group_ironman_platebody_unranked_5/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10181,
+      "name": "group_ironman_platebody_1",
+      "look": "group_ironman_platebody_1",
+      "colour": "#3e4c6b",
+      "icon": "ms:chestplate/group_ironman_platebody",
+      "shape": "none",
+      "textures": {
+        "group_ironman_platebody_1_details.png": "group_ironman_platebody_1/details.png",
+        "group_ironman_platebody_1.png": "group_ironman_platebody_1/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10182,
+      "name": "hardcore_group_ironman_platebody_1",
+      "look": "hardcore_group_ironman_platebody_1",
+      "colour": "#5e2a2a",
+      "icon": "ms:chestplate/hardcore_group_ironman_platebody",
+      "shape": "none",
+      "textures": {
+        "hardcore_group_ironman_platebody_1_details.png": "hardcore_group_ironman_platebody_1/details.png",
+        "hardcore_group_ironman_platebody_1.png": "hardcore_group_ironman_platebody_1/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10183,
+      "name": "group_ironman_platebody_unranked_1",
+      "look": "group_ironman_platebody_unranked_1",
+      "colour": "#3b5a48",
+      "icon": "ms:chestplate/group_ironman_platebody_unranked",
+      "shape": "none",
+      "textures": {
+        "group_ironman_platebody_unranked_1_details.png": "group_ironman_platebody_unranked_1/details.png",
+        "group_ironman_platebody_unranked_1.png": "group_ironman_platebody_unranked_1/flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10162,
+      "name": "zamorak_robe_top",
+      "look": "god_robe_top",
+      "colour": "#b5aaa9",
+      "icon": "ms:chestplate/leather_robe_top",
+      "shape": "none",
+      "textures": {
+        "god_robe_top_details.png": "god_robe_top/zamorak_details.png",
+        "god_robe_top.png": "god_robe_top/zamorak_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10163,
+      "name": "rune_platebody_h1",
+      "look": "heraldic_platebody",
+      "colour": "#465d67",
+      "icon": "ms:chestplate/leather_chestplate",
+      "shape": "none",
+      "textures": {
+        "heraldic_platebody_details.png": "heraldic_platebody/rune_h1_details.png",
+        "heraldic_platebody.png": "heraldic_platebody/rune_h1_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10164,
+      "name": "rune_platebody_h2",
+      "look": "heraldic_platebody",
+      "colour": "#465d67",
+      "icon": "ms:chestplate/leather_chestplate",
+      "shape": "none",
+      "textures": {
+        "heraldic_platebody_details.png": "heraldic_platebody/rune_h2_details.png",
+        "heraldic_platebody.png": "heraldic_platebody/rune_h2_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10165,
+      "name": "rune_platebody_h3",
+      "look": "heraldic_platebody",
+      "colour": "#465d67",
+      "icon": "ms:chestplate/leather_chestplate",
+      "shape": "none",
+      "textures": {
+        "heraldic_platebody_details.png": "heraldic_platebody/rune_h3_details.png",
+        "heraldic_platebody.png": "heraldic_platebody/rune_h3_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10166,
+      "name": "rune_platebody_h4",
+      "look": "heraldic_platebody",
+      "colour": "#465d67",
+      "icon": "ms:chestplate/leather_chestplate",
+      "shape": "none",
+      "textures": {
+        "heraldic_platebody_details.png": "heraldic_platebody/rune_h4_details.png",
+        "heraldic_platebody.png": "heraldic_platebody/rune_h4_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10167,
+      "name": "rune_platebody_h5",
+      "look": "heraldic_platebody",
+      "colour": "#465d67",
+      "icon": "ms:chestplate/leather_chestplate",
+      "shape": "none",
+      "textures": {
+        "heraldic_platebody_details.png": "heraldic_platebody/rune_h5_details.png",
+        "heraldic_platebody.png": "heraldic_platebody/rune_h5_flat.png"
+      }
+    }
+  ]
 }
