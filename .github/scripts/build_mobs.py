@@ -146,6 +146,9 @@ def quaternion(m):
 def split(m):
     """A 3x3 rotation times a uniform scale, as (rotation, scale)."""
     s = float(np.cbrt(abs(np.linalg.det(m))))
+    if s < 1e-6:
+        # scaled to nothing (a bone a clip makes vanish): no turn left to keep, and dividing by it would be NaN
+        return np.eye(3), 0.0
     return m / s, s
 
 
@@ -618,7 +621,10 @@ def build(mob):
         sw, sh = abs(u1 - u0), abs(v1 - v0)
         for yy in range(h):
             for xx in range(w):
-                sprite.visible(px + xx, py + yy, src.getpixel((su + xx * sw // w, sv + yy * sh // h)))
+                # a face's uv may run past its texture's edge (Blockbench allows it): the nearest texel there
+                tx = min(max(su + xx * sw // w, 0), src.width - 1)
+                ty = min(max(sv + yy * sh // h, 0), src.height - 1)
+                sprite.visible(px + xx, py + yy, src.getpixel((tx, ty)))
         # the same corners of the copy, flipped as the face was
         nu0, nu1 = (px, px + w) if u0 < u1 else (px + w, px)
         nv0, nv1 = (py, py + h) if v0 < v1 else (py + h, py)

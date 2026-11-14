@@ -2,30 +2,1572 @@
     "_about": "Animated mobs: each an item on an armour stand's head, leather horse armour with this custom model data (from 100001, above every item's), its model a Blockbench model in mobs/models/ whose animations the item shader plays (build_mobs.py bakes them into the model's texture, the mobs stitch plays them). The item's dye names the clip, by the ids here, and when it started. clips are by the model's animation names; end is how a clip ends where the model's own loop setting isn't what the mob wants (loop, once: back to rest, hold: its last frame). scale is the model's size on the stand's head (at most 4). textures swaps the model's textures, by their names in it, for PNGs in mobs/textures/: the same model and animations as another mob in its own colours. The release publishes mobs.json (each mob's custom model data, clip ids, ticks and a hitbox fitted to the model), which the plugin reads: a mob type names its mob here in entity_info's animated.",
     "_skillcapes": "Skillcape emotes are props played the same way: skillcape_<skill>, <skill> the skill's name in lower case as the plugin has it (skillcape_attack, skillcape_ranged, skillcape_runecrafting, skillcape_construction), \"origin\": true and one clip, emote, which ends holding its last frame. The plugin stands it at the player's feet facing where they face, plays it once and takes it away. The player stands at the model's origin facing +z (a mob's front), their right hand on -x. origin keeps the model's origin over the stand, not its middle, and draws it a block a 16 units (no scale): within 60 units of the origin and 117 tall. A trimmed cape plays its cape's. These props are placeholders after OSRS's emotes, each as long as the cape's emote there (cooking's, smithing's and woodcutting's capped at 11.5 s: a clip that doesn't loop must be under 12 s, since it's timed from the game time mod 240 ticks).",
     "mobs": [
-        {"custom_model_data": 100001, "name": "mithril_dragon", "model": "mithril_dragon.bbmodel", "scale": 3,
-         "clips": {"walking": 1, "idle": 2, "periodic_idle": {"id": 3, "end": "once"}, "melee": 4, "defend": 5, "dragonfire": 6, "magic": 7, "ranged": 8}},
-        {"custom_model_data": 100002, "name": "skillcape_attack", "model": "skillcape_attack.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
-        {"custom_model_data": 100003, "name": "skillcape_strength", "model": "skillcape_strength.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
-        {"custom_model_data": 100004, "name": "skillcape_defence", "model": "skillcape_defence.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
-        {"custom_model_data": 100005, "name": "skillcape_ranged", "model": "skillcape_ranged.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
-        {"custom_model_data": 100006, "name": "skillcape_prayer", "model": "skillcape_prayer.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
-        {"custom_model_data": 100007, "name": "skillcape_magic", "model": "skillcape_magic.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
-        {"custom_model_data": 100008, "name": "skillcape_runecrafting", "model": "skillcape_runecrafting.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
-        {"custom_model_data": 100009, "name": "skillcape_construction", "model": "skillcape_construction.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
-        {"custom_model_data": 100010, "name": "skillcape_hitpoints", "model": "skillcape_hitpoints.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
-        {"custom_model_data": 100011, "name": "skillcape_agility", "model": "skillcape_agility.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
-        {"custom_model_data": 100012, "name": "skillcape_herblore", "model": "skillcape_herblore.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
-        {"custom_model_data": 100013, "name": "skillcape_thieving", "model": "skillcape_thieving.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
-        {"custom_model_data": 100014, "name": "skillcape_crafting", "model": "skillcape_crafting.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
-        {"custom_model_data": 100015, "name": "skillcape_fletching", "model": "skillcape_fletching.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
-        {"custom_model_data": 100016, "name": "skillcape_slayer", "model": "skillcape_slayer.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
-        {"custom_model_data": 100017, "name": "skillcape_hunter", "model": "skillcape_hunter.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
-        {"custom_model_data": 100018, "name": "skillcape_mining", "model": "skillcape_mining.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
-        {"custom_model_data": 100019, "name": "skillcape_smithing", "model": "skillcape_smithing.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
-        {"custom_model_data": 100020, "name": "skillcape_fishing", "model": "skillcape_fishing.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
-        {"custom_model_data": 100021, "name": "skillcape_cooking", "model": "skillcape_cooking.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
-        {"custom_model_data": 100022, "name": "skillcape_firemaking", "model": "skillcape_firemaking.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
-        {"custom_model_data": 100023, "name": "skillcape_woodcutting", "model": "skillcape_woodcutting.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}},
-        {"custom_model_data": 100024, "name": "skillcape_farming", "model": "skillcape_farming.bbmodel", "origin": true, "clips": {"emote": {"id": 1, "end": "hold"}}}
+        {
+            "custom_model_data": 100001,
+            "name": "mithril_dragon",
+            "model": "mithril_dragon.bbmodel",
+            "scale": 3,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "periodic_idle": {
+                    "id": 3,
+                    "end": "once"
+                },
+                "melee": 4,
+                "defend": 5,
+                "dragonfire": 6,
+                "magic": 7,
+                "ranged": 8
+            }
+        },
+        {
+            "custom_model_data": 100002,
+            "name": "skillcape_attack",
+            "model": "skillcape_attack.bbmodel",
+            "origin": true,
+            "clips": {
+                "emote": {
+                    "id": 1,
+                    "end": "hold"
+                }
+            }
+        },
+        {
+            "custom_model_data": 100003,
+            "name": "skillcape_strength",
+            "model": "skillcape_strength.bbmodel",
+            "origin": true,
+            "clips": {
+                "emote": {
+                    "id": 1,
+                    "end": "hold"
+                }
+            }
+        },
+        {
+            "custom_model_data": 100004,
+            "name": "skillcape_defence",
+            "model": "skillcape_defence.bbmodel",
+            "origin": true,
+            "clips": {
+                "emote": {
+                    "id": 1,
+                    "end": "hold"
+                }
+            }
+        },
+        {
+            "custom_model_data": 100005,
+            "name": "skillcape_ranged",
+            "model": "skillcape_ranged.bbmodel",
+            "origin": true,
+            "clips": {
+                "emote": {
+                    "id": 1,
+                    "end": "hold"
+                }
+            }
+        },
+        {
+            "custom_model_data": 100006,
+            "name": "skillcape_prayer",
+            "model": "skillcape_prayer.bbmodel",
+            "origin": true,
+            "clips": {
+                "emote": {
+                    "id": 1,
+                    "end": "hold"
+                }
+            }
+        },
+        {
+            "custom_model_data": 100007,
+            "name": "skillcape_magic",
+            "model": "skillcape_magic.bbmodel",
+            "origin": true,
+            "clips": {
+                "emote": {
+                    "id": 1,
+                    "end": "hold"
+                }
+            }
+        },
+        {
+            "custom_model_data": 100008,
+            "name": "skillcape_runecrafting",
+            "model": "skillcape_runecrafting.bbmodel",
+            "origin": true,
+            "clips": {
+                "emote": {
+                    "id": 1,
+                    "end": "hold"
+                }
+            }
+        },
+        {
+            "custom_model_data": 100009,
+            "name": "skillcape_construction",
+            "model": "skillcape_construction.bbmodel",
+            "origin": true,
+            "clips": {
+                "emote": {
+                    "id": 1,
+                    "end": "hold"
+                }
+            }
+        },
+        {
+            "custom_model_data": 100010,
+            "name": "skillcape_hitpoints",
+            "model": "skillcape_hitpoints.bbmodel",
+            "origin": true,
+            "clips": {
+                "emote": {
+                    "id": 1,
+                    "end": "hold"
+                }
+            }
+        },
+        {
+            "custom_model_data": 100011,
+            "name": "skillcape_agility",
+            "model": "skillcape_agility.bbmodel",
+            "origin": true,
+            "clips": {
+                "emote": {
+                    "id": 1,
+                    "end": "hold"
+                }
+            }
+        },
+        {
+            "custom_model_data": 100012,
+            "name": "skillcape_herblore",
+            "model": "skillcape_herblore.bbmodel",
+            "origin": true,
+            "clips": {
+                "emote": {
+                    "id": 1,
+                    "end": "hold"
+                }
+            }
+        },
+        {
+            "custom_model_data": 100013,
+            "name": "skillcape_thieving",
+            "model": "skillcape_thieving.bbmodel",
+            "origin": true,
+            "clips": {
+                "emote": {
+                    "id": 1,
+                    "end": "hold"
+                }
+            }
+        },
+        {
+            "custom_model_data": 100014,
+            "name": "skillcape_crafting",
+            "model": "skillcape_crafting.bbmodel",
+            "origin": true,
+            "clips": {
+                "emote": {
+                    "id": 1,
+                    "end": "hold"
+                }
+            }
+        },
+        {
+            "custom_model_data": 100015,
+            "name": "skillcape_fletching",
+            "model": "skillcape_fletching.bbmodel",
+            "origin": true,
+            "clips": {
+                "emote": {
+                    "id": 1,
+                    "end": "hold"
+                }
+            }
+        },
+        {
+            "custom_model_data": 100016,
+            "name": "skillcape_slayer",
+            "model": "skillcape_slayer.bbmodel",
+            "origin": true,
+            "clips": {
+                "emote": {
+                    "id": 1,
+                    "end": "hold"
+                }
+            }
+        },
+        {
+            "custom_model_data": 100017,
+            "name": "skillcape_hunter",
+            "model": "skillcape_hunter.bbmodel",
+            "origin": true,
+            "clips": {
+                "emote": {
+                    "id": 1,
+                    "end": "hold"
+                }
+            }
+        },
+        {
+            "custom_model_data": 100018,
+            "name": "skillcape_mining",
+            "model": "skillcape_mining.bbmodel",
+            "origin": true,
+            "clips": {
+                "emote": {
+                    "id": 1,
+                    "end": "hold"
+                }
+            }
+        },
+        {
+            "custom_model_data": 100019,
+            "name": "skillcape_smithing",
+            "model": "skillcape_smithing.bbmodel",
+            "origin": true,
+            "clips": {
+                "emote": {
+                    "id": 1,
+                    "end": "hold"
+                }
+            }
+        },
+        {
+            "custom_model_data": 100020,
+            "name": "skillcape_fishing",
+            "model": "skillcape_fishing.bbmodel",
+            "origin": true,
+            "clips": {
+                "emote": {
+                    "id": 1,
+                    "end": "hold"
+                }
+            }
+        },
+        {
+            "custom_model_data": 100021,
+            "name": "skillcape_cooking",
+            "model": "skillcape_cooking.bbmodel",
+            "origin": true,
+            "clips": {
+                "emote": {
+                    "id": 1,
+                    "end": "hold"
+                }
+            }
+        },
+        {
+            "custom_model_data": 100022,
+            "name": "skillcape_firemaking",
+            "model": "skillcape_firemaking.bbmodel",
+            "origin": true,
+            "clips": {
+                "emote": {
+                    "id": 1,
+                    "end": "hold"
+                }
+            }
+        },
+        {
+            "custom_model_data": 100023,
+            "name": "skillcape_woodcutting",
+            "model": "skillcape_woodcutting.bbmodel",
+            "origin": true,
+            "clips": {
+                "emote": {
+                    "id": 1,
+                    "end": "hold"
+                }
+            }
+        },
+        {
+            "custom_model_data": 100024,
+            "name": "skillcape_farming",
+            "model": "skillcape_farming.bbmodel",
+            "origin": true,
+            "clips": {
+                "emote": {
+                    "id": 1,
+                    "end": "hold"
+                }
+            }
+        },
+        {
+            "custom_model_data": 100025,
+            "name": "aberrant_spectre",
+            "model": "aberrant_spectre.bbmodel",
+            "scale": 3.03,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "defend": 3,
+                "magic": 4
+            }
+        },
+        {
+            "custom_model_data": 100026,
+            "name": "abyssal_demon",
+            "model": "abyssal_demon.bbmodel",
+            "scale": 3.06,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "periodic_idle": {
+                    "id": 3,
+                    "end": "once"
+                },
+                "melee": 4,
+                "defend": 5
+            }
+        },
+        {
+            "custom_model_data": 100027,
+            "name": "abyssal_guardian",
+            "model": "abyssal_guardian.bbmodel",
+            "scale": 2.94,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4,
+                "ranged": 5
+            }
+        },
+        {
+            "custom_model_data": 100028,
+            "name": "abyssal_leech",
+            "model": "abyssal_leech.bbmodel",
+            "scale": 3.12,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100029,
+            "name": "abyssal_walker",
+            "model": "abyssal_walker.bbmodel",
+            "scale": 2.97,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100030,
+            "name": "angry_barbarian_spirit",
+            "model": "angry_barbarian_spirit.bbmodel",
+            "scale": 2.94,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100031,
+            "name": "ankou",
+            "model": "ankou.bbmodel",
+            "scale": 2.89,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100032,
+            "name": "baby_black_dragon",
+            "model": "baby_black_dragon.bbmodel",
+            "scale": 2.86,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "periodic_idle": {
+                    "id": 3,
+                    "end": "once"
+                },
+                "melee": 4,
+                "defend": 5
+            }
+        },
+        {
+            "custom_model_data": 100033,
+            "name": "baby_blue_dragon",
+            "model": "baby_blue_dragon.bbmodel",
+            "scale": 2.85,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "periodic_idle": {
+                    "id": 3,
+                    "end": "once"
+                },
+                "melee": 4,
+                "defend": 5
+            }
+        },
+        {
+            "custom_model_data": 100034,
+            "name": "baby_green_dragon",
+            "model": "baby_green_dragon.bbmodel",
+            "scale": 2.83,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "periodic_idle": {
+                    "id": 3,
+                    "end": "once"
+                },
+                "melee": 4,
+                "defend": 5
+            }
+        },
+        {
+            "custom_model_data": 100035,
+            "name": "baby_red_dragon",
+            "model": "baby_red_dragon.bbmodel",
+            "scale": 2.86,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "periodic_idle": {
+                    "id": 3,
+                    "end": "once"
+                },
+                "melee": 4,
+                "defend": 5
+            }
+        },
+        {
+            "custom_model_data": 100036,
+            "name": "banshee",
+            "model": "banshee.bbmodel",
+            "scale": 2.86,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4,
+                "screech": 5
+            }
+        },
+        {
+            "custom_model_data": 100037,
+            "name": "bark_snail",
+            "model": "bark_snail.bbmodel",
+            "scale": 2.86,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "defend": 3,
+                "ranged": 4
+            }
+        },
+        {
+            "custom_model_data": 100038,
+            "name": "bat",
+            "model": "bat.bbmodel",
+            "scale": 3.5,
+            "clips": {
+                "walking": 1,
+                "melee": 2,
+                "defend": 3
+            }
+        },
+        {
+            "custom_model_data": 100039,
+            "name": "berserk_barbarian_spirit",
+            "model": "berserk_barbarian_spirit.bbmodel",
+            "scale": 2.94,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100040,
+            "name": "big_wolf_feldip",
+            "model": "big_wolf_feldip.bbmodel",
+            "scale": 2.65,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "periodic_idle": {
+                    "id": 3,
+                    "end": "once"
+                },
+                "melee": 4,
+                "defend": 5
+            }
+        },
+        {
+            "custom_model_data": 100041,
+            "name": "big_wolf_wwm",
+            "model": "big_wolf_wwm.bbmodel",
+            "scale": 2.65,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "periodic_idle": {
+                    "id": 3,
+                    "end": "once"
+                },
+                "melee": 4,
+                "defend": 5
+            }
+        },
+        {
+            "custom_model_data": 100042,
+            "name": "black_demon",
+            "model": "black_demon.bbmodel",
+            "scale": 2.98,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100043,
+            "name": "black_dragon",
+            "model": "black_dragon.bbmodel",
+            "scale": 3.0,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "periodic_idle": {
+                    "id": 3,
+                    "end": "once"
+                },
+                "melee": 4,
+                "defend": 5,
+                "dragonfire": 6
+            }
+        },
+        {
+            "custom_model_data": 100044,
+            "name": "black_unicorn",
+            "model": "black_unicorn.bbmodel",
+            "scale": 2.84,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100045,
+            "name": "bloodveld",
+            "model": "bloodveld.bbmodel",
+            "scale": 2.56,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100046,
+            "name": "bloodworm",
+            "model": "bloodworm.bbmodel",
+            "scale": 2.89,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100047,
+            "name": "bronze_dragon",
+            "model": "bronze_dragon.bbmodel",
+            "scale": 3.0,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "periodic_idle": {
+                    "id": 3,
+                    "end": "once"
+                },
+                "melee": 4,
+                "defend": 5,
+                "dragonfire": 6
+            }
+        },
+        {
+            "custom_model_data": 100048,
+            "name": "brutal_green_dragon",
+            "model": "brutal_green_dragon.bbmodel",
+            "scale": 3.0,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "periodic_idle": {
+                    "id": 3,
+                    "end": "once"
+                },
+                "melee": 4,
+                "defend": 5,
+                "magic": 6,
+                "dragonfire": 7
+            }
+        },
+        {
+            "custom_model_data": 100049,
+            "name": "bryophyta",
+            "model": "bryophyta.bbmodel",
+            "scale": 2.96,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4,
+                "magic": 5
+            }
+        },
+        {
+            "custom_model_data": 100050,
+            "name": "cat",
+            "model": "cat.bbmodel",
+            "scale": 2.88,
+            "clips": {
+                "walking": 1,
+                "idle": 2
+            }
+        },
+        {
+            "custom_model_data": 100051,
+            "name": "chaos_dwarf",
+            "model": "chaos_dwarf.bbmodel",
+            "scale": 3.0,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100052,
+            "name": "count_draynor",
+            "model": "count_draynor.bbmodel",
+            "scale": 2.92,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100053,
+            "name": "crawling_hand",
+            "model": "crawling_hand.bbmodel",
+            "scale": 2.86,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100054,
+            "name": "crypt_rat",
+            "model": "crypt_rat.bbmodel",
+            "scale": 2.83,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100055,
+            "name": "crypt_spider",
+            "model": "crypt_spider.bbmodel",
+            "scale": 2.26,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100056,
+            "name": "cyclops",
+            "model": "cyclops.bbmodel",
+            "scale": 2.88,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100057,
+            "name": "dungeon_rat",
+            "model": "dungeon_rat.bbmodel",
+            "scale": 2.16,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100058,
+            "name": "dungeon_rat_big",
+            "model": "dungeon_rat_big.bbmodel",
+            "scale": 2.16,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100059,
+            "name": "dwarf",
+            "model": "dwarf.bbmodel",
+            "scale": 2.48,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100060,
+            "name": "dwarf_guard",
+            "model": "dwarf_guard.bbmodel",
+            "scale": 3.16,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100061,
+            "name": "enraged_barbarian_spirit",
+            "model": "enraged_barbarian_spirit.bbmodel",
+            "scale": 2.94,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100062,
+            "name": "ferocious_barbarian_spirit",
+            "model": "ferocious_barbarian_spirit.bbmodel",
+            "scale": 2.94,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100063,
+            "name": "fire_giant",
+            "model": "fire_giant.bbmodel",
+            "scale": 2.81,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100064,
+            "name": "ghast_transparent",
+            "model": "ghast_transparent.bbmodel",
+            "scale": 2.67,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100065,
+            "name": "ghost",
+            "model": "ghost.bbmodel",
+            "scale": 2.5,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100066,
+            "name": "giant_bat",
+            "model": "giant_bat.bbmodel",
+            "scale": 1.93,
+            "clips": {
+                "walking": 1,
+                "melee": 2,
+                "defend": 3
+            }
+        },
+        {
+            "custom_model_data": 100067,
+            "name": "giant_crypt_rat",
+            "model": "giant_crypt_rat.bbmodel",
+            "scale": 2.16,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100068,
+            "name": "giant_crypt_spider",
+            "model": "giant_crypt_spider.bbmodel",
+            "scale": 3.0,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100069,
+            "name": "giant_mole",
+            "model": "giant_mole.bbmodel",
+            "scale": 2.79,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "periodic_idle": {
+                    "id": 3,
+                    "end": "once"
+                },
+                "melee": 4,
+                "defend": 5
+            }
+        },
+        {
+            "custom_model_data": 100070,
+            "name": "giant_rat",
+            "model": "giant_rat.bbmodel",
+            "scale": 2.16,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100071,
+            "name": "gnome",
+            "model": "gnome.bbmodel",
+            "scale": 2.48,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "defend": 3,
+                "ranged": 4
+            }
+        },
+        {
+            "custom_model_data": 100072,
+            "name": "gnome_troop",
+            "model": "gnome_troop.bbmodel",
+            "scale": 2.48,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "defend": 3,
+                "ranged": 4
+            }
+        },
+        {
+            "custom_model_data": 100073,
+            "name": "green_dragon",
+            "model": "green_dragon.bbmodel",
+            "scale": 3.0,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "periodic_idle": {
+                    "id": 3,
+                    "end": "once"
+                },
+                "melee": 4,
+                "defend": 5,
+                "dragonfire": 6
+            }
+        },
+        {
+            "custom_model_data": 100074,
+            "name": "growthling",
+            "model": "growthling.bbmodel",
+            "scale": 2.69,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100075,
+            "name": "guard_dog",
+            "model": "guard_dog.bbmodel",
+            "scale": 3.0,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100076,
+            "name": "hellhound",
+            "model": "hellhound.bbmodel",
+            "scale": 2.86,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "periodic_idle": {
+                    "id": 3,
+                    "end": "once"
+                },
+                "melee": 4,
+                "defend": 5
+            }
+        },
+        {
+            "custom_model_data": 100077,
+            "name": "hill_giant",
+            "model": "hill_giant.bbmodel",
+            "scale": 2.53,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100078,
+            "name": "hobgoblin",
+            "model": "hobgoblin.bbmodel",
+            "scale": 2.91,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100079,
+            "name": "ice_giant",
+            "model": "ice_giant.bbmodel",
+            "scale": 2.88,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100080,
+            "name": "iron_dragon",
+            "model": "iron_dragon.bbmodel",
+            "scale": 3.0,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "periodic_idle": {
+                    "id": 3,
+                    "end": "once"
+                },
+                "melee": 4,
+                "defend": 5,
+                "dragonfire": 6
+            }
+        },
+        {
+            "custom_model_data": 100081,
+            "name": "jogre",
+            "model": "jogre.bbmodel",
+            "scale": 2.98,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100082,
+            "name": "king_scorpion",
+            "model": "king_scorpion.bbmodel",
+            "scale": 1.88,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100083,
+            "name": "magic_axe",
+            "model": "magic_axe.bbmodel",
+            "scale": 1.5,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100084,
+            "name": "minotaur",
+            "model": "minotaur.bbmodel",
+            "scale": 2.81,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "periodic_idle": {
+                    "id": 3,
+                    "end": "once"
+                },
+                "melee": 4,
+                "defend": 5
+            }
+        },
+        {
+            "custom_model_data": 100085,
+            "name": "monkey",
+            "model": "monkey.bbmodel",
+            "scale": 3.07,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100086,
+            "name": "mounted_terrorbird_gnome",
+            "model": "mounted_terrorbird_gnome.bbmodel",
+            "scale": 2.55,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100087,
+            "name": "myre_snail",
+            "model": "myre_snail.bbmodel",
+            "scale": 2.86,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "defend": 3,
+                "ranged": 4
+            }
+        },
+        {
+            "custom_model_data": 100088,
+            "name": "myre_snail_pointed",
+            "model": "myre_snail_pointed.bbmodel",
+            "scale": 2.86,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "defend": 3,
+                "ranged": 4
+            }
+        },
+        {
+            "custom_model_data": 100089,
+            "name": "nechryael",
+            "model": "nechryael.bbmodel",
+            "scale": 2.81,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100090,
+            "name": "newtroost",
+            "model": "newtroost.bbmodel",
+            "scale": 3.04,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100091,
+            "name": "obor",
+            "model": "obor.bbmodel",
+            "scale": 2.96,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4,
+                "ranged": 5
+            }
+        },
+        {
+            "custom_model_data": 100092,
+            "name": "ochre_snail",
+            "model": "ochre_snail.bbmodel",
+            "scale": 2.86,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "defend": 3,
+                "ranged": 4
+            }
+        },
+        {
+            "custom_model_data": 100093,
+            "name": "ochre_snail_pointed",
+            "model": "ochre_snail_pointed.bbmodel",
+            "scale": 2.86,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "defend": 3,
+                "ranged": 4
+            }
+        },
+        {
+            "custom_model_data": 100094,
+            "name": "ogre_chieftain",
+            "model": "ogre_chieftain.bbmodel",
+            "scale": 2.93,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100095,
+            "name": "ogress_shaman",
+            "model": "ogress_shaman.bbmodel",
+            "scale": 2.89,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "defend": 3,
+                "magic": 4
+            }
+        },
+        {
+            "custom_model_data": 100096,
+            "name": "ogress_warrior",
+            "model": "ogress_warrior.bbmodel",
+            "scale": 2.89,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100097,
+            "name": "penguin",
+            "model": "penguin.bbmodel",
+            "scale": 3.12,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100098,
+            "name": "pit_scorpion",
+            "model": "pit_scorpion.bbmodel",
+            "scale": 3.68,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100099,
+            "name": "poison_scorpion",
+            "model": "poison_scorpion.bbmodel",
+            "scale": 2.83,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100100,
+            "name": "rat",
+            "model": "rat.bbmodel",
+            "scale": 2.83,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100101,
+            "name": "scarecrow",
+            "model": "scarecrow.bbmodel",
+            "scale": 3.23,
+            "clips": {
+                "walking": 1,
+                "idle": 2
+            }
+        },
+        {
+            "custom_model_data": 100102,
+            "name": "scorpion",
+            "model": "scorpion.bbmodel",
+            "scale": 3.53,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100103,
+            "name": "shade",
+            "model": "shade.bbmodel",
+            "scale": 2.5,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100104,
+            "name": "skeleton",
+            "model": "skeleton.bbmodel",
+            "scale": 2.69,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100105,
+            "name": "skeleton_brute",
+            "model": "skeleton_brute.bbmodel",
+            "scale": 2.89,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100106,
+            "name": "skeleton_heavy",
+            "model": "skeleton_heavy.bbmodel",
+            "scale": 2.89,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100107,
+            "name": "skeleton_hero",
+            "model": "skeleton_hero.bbmodel",
+            "scale": 2.89,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100108,
+            "name": "skeleton_thug",
+            "model": "skeleton_thug.bbmodel",
+            "scale": 2.89,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100109,
+            "name": "skeleton_warlord",
+            "model": "skeleton_warlord.bbmodel",
+            "scale": 2.88,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100110,
+            "name": "snake",
+            "model": "snake.bbmodel",
+            "scale": 2.14,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100111,
+            "name": "spider",
+            "model": "spider.bbmodel",
+            "scale": 2.26,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100112,
+            "name": "spidine",
+            "model": "spidine.bbmodel",
+            "scale": 3.0,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100113,
+            "name": "steel_dragon",
+            "model": "steel_dragon.bbmodel",
+            "scale": 3.0,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "periodic_idle": {
+                    "id": 3,
+                    "end": "once"
+                },
+                "melee": 4,
+                "defend": 5,
+                "dragonfire": 6
+            }
+        },
+        {
+            "custom_model_data": 100114,
+            "name": "temple_guardian",
+            "model": "temple_guardian.bbmodel",
+            "scale": 2.86,
+            "clips": {
+                "walking": 1,
+                "idle": 2
+            }
+        },
+        {
+            "custom_model_data": 100115,
+            "name": "terrorbird",
+            "model": "terrorbird.bbmodel",
+            "scale": 2.52,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100116,
+            "name": "tree_spirit",
+            "model": "tree_spirit.bbmodel",
+            "scale": 2.96,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100117,
+            "name": "unicow",
+            "model": "unicow.bbmodel",
+            "scale": 2.5,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        },
+        {
+            "custom_model_data": 100118,
+            "name": "waterfiend",
+            "model": "waterfiend.bbmodel",
+            "scale": 2.94,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "defend": 3,
+                "ranged": 4,
+                "magic": 5
+            }
+        },
+        {
+            "custom_model_data": 100119,
+            "name": "white_wolf",
+            "model": "white_wolf.bbmodel",
+            "scale": 2.86,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "periodic_idle": {
+                    "id": 3,
+                    "end": "once"
+                },
+                "melee": 4,
+                "defend": 5
+            }
+        },
+        {
+            "custom_model_data": 100120,
+            "name": "witch_experiment_bear",
+            "model": "witch_experiment_bear.bbmodel",
+            "scale": 2.83,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "periodic_idle": {
+                    "id": 3,
+                    "end": "once"
+                },
+                "melee": 4,
+                "defend": 5
+            }
+        },
+        {
+            "custom_model_data": 100121,
+            "name": "witch_experiment_wolf",
+            "model": "witch_experiment_wolf.bbmodel",
+            "scale": 2.86,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "periodic_idle": {
+                    "id": 3,
+                    "end": "once"
+                },
+                "melee": 4,
+                "defend": 5
+            }
+        },
+        {
+            "custom_model_data": 100122,
+            "name": "wolf",
+            "model": "wolf.bbmodel",
+            "scale": 2.86,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "periodic_idle": {
+                    "id": 3,
+                    "end": "once"
+                },
+                "melee": 4,
+                "defend": 5
+            }
+        },
+        {
+            "custom_model_data": 100123,
+            "name": "zombie",
+            "model": "zombie.bbmodel",
+            "scale": 3.05,
+            "clips": {
+                "walking": 1,
+                "idle": 2,
+                "melee": 3,
+                "defend": 4
+            }
+        }
     ]
 }
