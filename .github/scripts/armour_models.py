@@ -43,7 +43,7 @@ import armour_looks as looks
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 MODELS = os.path.join(ROOT, "armour", "models")
 TEXTURES = os.path.join(ROOT, "assets", "minecraft", "textures", "entity", "equipment")
-W = 2048
+W = 4096
 RECORD = 10
 TABLE_ROWS = 4
 # the alpha of every data texel: under the 0.1 any shader cuts out at
@@ -306,7 +306,9 @@ class Shelf:
 
     def __init__(self, top, width=W):
         self.x, self.y, self.h = 0, top, 0
-        self.width = width
+        # a piece's right edge is a texture position too, one past its last texel, and positions stop at
+        # 4095 (12 bits): on a 4096-wide sheet a piece ending at the last column couldn't say where it ends
+        self.width = min(width, 4095)
         self.bottom = top
 
     def place(self, w, h):

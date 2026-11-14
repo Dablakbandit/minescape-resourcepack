@@ -28,9 +28,14 @@ TORSO_NONE = 0
 # An item's tile, 0 to 511 (the dye's nine bits); its custom model data is 10000 + it.
 TILES = 512
 CUSTOM_MODEL_DATA = 10000
-# Tiles across a sheet; each tile is one armour texture at the pack's 256x128.
-COLUMNS = 8
+# A look: one armour texture at the pack's 256x128 (Minecraft's 64x32 layout, four texels a pixel).
 TILE = (256, 128)
+# On a sheet a look keeps only its body half, the rows from SHEET_TOP: the top half is the head's and hat's,
+# which no armour piece here draws (chest, legs and boots, gloves and amulets all sit below it). Tiles across
+# a sheet: a 4096-wide sheet, whose texture positions (12 bits each way) still reach every texel.
+SHEET_TOP = 64
+SHEET_TILE = (256, 64)
+COLUMNS = 16
 PIECES = ("chest", "legs", "boots")
 SHAPES = {"chest": ("none", "fauld", "jerkin", "tunic"), "legs": ("legs", "skirt", "robe", "skirt_over_legs"),
           "boots": ("none",)}

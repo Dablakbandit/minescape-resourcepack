@@ -8,17 +8,18 @@ A mob is an item on an armour stand's head. Its model's cubes become one item mo
 into -16 to 32 and grown back by its head display; every face gets its own copy of its texels, from whichever of the
 model's textures it reads, in one S x S sprite (256, 512 or 1024; the atlas may put it anywhere):
 
-  from the top          the faces, packed edge to edge; each carries in the low 3 bits of the red, green and blue
-                        of its four corner texels (top left, top right, bottom right, bottom left; 9 bits each, the
-                        first corner's lowest) its number (12 bits), the sprite's size (2: 256, 512, 1024) and its
-                        own top left in the sprite (10 bits across, 10 down), which a vertex reads from its quad's
-                        corners to find the sprite
-  the bottom row        header: magic at x 0 and x S - 1, then where the clips and keyframes start, the bone count
-  up from the header    records, row-major from the row above it: faces (12 texels), clips (2), keyframes (5 a bone
+  from the top          the faces, packed edge to edge, each at least 4 x 4 texels; the 2 x 2 block in from each of a
+                        face's corners carries in the low 3 bits of its red, green and blue (9 bits a texel: the corner
+                        texel's lowest, then the one beside it, the one under or over it, the one across) the face's
+                        number (12 bits), the sprite's size (2: 256, 512, 1024) and that corner texel's own place in
+                        the sprite (10 bits across, 10 down), so one vertex finds the sprite from its own uv
+  the bottom row        header: magic at x 0 and x S - 1, then where the clips and keyframes start, the bone count, the
+                        head display's scale (in 4096ths)
+  up from the header    records, row-major from the row above it: faces (20 texels), clips (2), keyframes (5 a bone
                         a frame), alpha 254
 
-A face record: bone; its uv rect in the sprite (u0 v0 u1 v1); where the model rests at each rect corner (min-min,
-max-min, max-max, min-max). A keyframe: the bone's model-space transform there, a rotation (quaternion), an offset
+A face record: bone and whether its corners wind against its outward normal; its uv rect in the sprite (u0 v0 u1 v1);
+where the model rests at each rect corner (min-min, max-min, max-max, min-max); where 26.3's tilted model draws each. A keyframe: the bone's model-space transform there, a rotation (quaternion), an offset
 and a uniform scale: posed = scale * rotate(q, rest) + offset. A clip: its first frame, its frames, how it ends
 (0 hold the last frame, 1 loop, 2 back to rest) and how many ticks the clip before it fades into it over. A looping
 clip plays on the game's clock (its phase the game time mod its length), any other from the tick the dye says.
@@ -28,16 +29,28 @@ plus the keyframe's (Z then Y then X, right-handed), moves by the keyframe's pos
 inside its parent; Blockbench 5.2.2's own poses of the mithril dragon match these to 0.001 units. A face hidden
 inside another cube of its own bone is left out, with its texels (the two never move apart).
 
-Every face's uv is inset an eighth of a texel from its edges (INSET), which nothing else in the atlas has: a vertex that
-can't see its quad's corners (no subgroup shuffles) still knows it is a mob's, to drop the dye's tint.
+Every face's uv is inset an eighth of a texel from its edges (INSET), which nothing else in the atlas has: the side of
+its texel a vertex's uv sits says which corner of its face it is, and that it is a mob's.
+
+How a model is turned where it is drawn: where the stitch can share a quad's corners (subgroup shuffles), from two of
+its face's edges. 26.3 can't (its OpenGL backend turns shaders back into GLSL 330, which takes no shuffles), so from
+26.3 on (TILTED_OVERLAY) every model is drawn with each cube tilted by TILT, and a vertex takes the turn from its face's
+normal, which Minecraft snaps to the nearest axis and the tilt keeps level, and the world's up, at the head display's
+scale; the stitch then puts it where the untilted model, posed, has it. That holds for a mob as MineScape stands one: an
+upright, full-size armour stand turned only about the vertical.
 
 Each model is checked first (check()) against what the conversion and old Minecraft versions can take, every
 problem listed by cube, bone and animation name, and the build stops on any.
 
+A prop ("origin": true, such as a skillcape emote's) keeps its model's origin over the stand instead of its middle, and
+is drawn a block a 16 of its units (it takes no scale): it reaches at most 60 units from its origin and stands at most
+117 tall.
+
 A mob may take its model's textures from other PNGs ("textures": {"<texture name in the model>": "<png in
 mobs/textures/>"}), so one model and its animations can be several mobs in different colours.
 
-Written (git-ignored): assets/ms/textures/item/mobs/<name>.png, assets/ms/models/mobs/animated/<name>.json, and
+Written (git-ignored): assets/ms/textures/item/mobs/<name>.png, assets/ms/models/mobs/animated/<name>.json and the
+tilted copy in mobs_26_3/ (an overlay build_shaders.py lists in pack.mcmeta), and
 run/mobs.json, which the release publishes for the plugin: each mob's custom model data, its clips (id and ticks
 played) and a hitbox fitted to the model, in blocks about the stand's feet.
 """
@@ -62,7 +75,7 @@ FIRST_NUMBER = 100001
 
 MARK = 254
 MAGIC = (0x4D, 0x42, 0x33)
-FACE_TEXELS = 12
+FACE_TEXELS = 20
 KEY_TEXELS = 5
 HOLD, LOOP, ONCE = 0, 1, 2
 SIZES = (256, 512, 1024)
@@ -78,6 +91,17 @@ INSET = 0.125
 # the cube angles every Minecraft version takes (from 1.21.6 any angle, but not before)
 CUBE_ANGLES = (-45.0, -22.5, 0.0, 22.5, 45.0)
 MAX_FRAMES = 255
+# a face's texels are at least this many across and down, so the 2 x 2 blocks at its four corners never overlap
+MIN_FACE = 4
+# 26.3 draws a mob's model with every cube turned by this (x y z degrees, as Minecraft applies them: z, then y, then
+# x): each of its axes 54.7 degrees from upright and 15 degrees round from the diagonals, so every face's normal, which
+# Minecraft snaps to the nearest axis, snaps to a level one (by 0.13 at least) and a vertex's normal tells how the
+# model is turned; the mobs stitch puts every vertex back where the untilted model has it
+TILT = (-26.5650, 24.0956, 39.2316)
+TILTED_OVERLAY = "mobs_26_3"
+TILTED = os.path.join(ROOT, TILTED_OVERLAY, "assets", "ms", "models", "mobs", "animated")
+# the overlays this writes, for build_shaders.py to list: directory, first pack format, last (None: the newest)
+OVERLAYS = [(TILTED_OVERLAY, 97, None)]
 MAX_CLIPS = 30
 
 
@@ -134,26 +158,31 @@ class Sprite:
         self.keys = []     # per frame: per bone (3x3 rotation*scale, offset)
         self.bones = bones
         self.bottom = 0    # the lowest row a face uses, which the records must stay under
+        self.display_scale = 1.0
 
     def visible(self, x, y, rgba):
         self.img.putpixel((x, y), rgba)
         self.bottom = max(self.bottom, y + 1)
 
-    def face(self, bone, rect, corners):
-        """A face whose texels are already in place: its number, the sprite's size and where the face is in it go
-        into its corners' low bits (CORNER_BITS), so a vertex finds the sprite from its own face wherever the
-        atlas put it."""
+    def face(self, bone, rect, corners, tilted, flip):
+        """A face whose texels are already in place. The 2 x 2 block of texels in from each of its corners carries, in
+        the low 3 bits of red, green and blue (9 bits a texel: the corner's own lowest, then the one beside it, the one
+        under or over it, the one across), its number (12 bits), the sprite's size (2) and that corner texel's own
+        place in the sprite (10 across, 10 down): one vertex finds the sprite from its own uv, wherever the atlas put
+        it. tilted: its corners as 26.3's tilted model has them; flip: its corners wind against its outward normal."""
         index = len(self.faces)
         assert index < 4096, "a sprite's faces are numbered in 12 bits"
         u0, v0, u1, v1 = rect
-        assert u1 - u0 >= 2 and v1 - v0 >= 2, "a face needs four distinct corner texels"
-        word = index | SIZES.index(self.size) << 12 | u0 << 14 | v0 << 24
-        for k, (x, y) in enumerate(((u0, v0), (u1 - 1, v0), (u1 - 1, v1 - 1), (u0, v1 - 1))):
-            r, g, b, a = self.img.getpixel((x, y))
-            bits = (word >> (9 * k)) & 511
-            # opaque, to carry the number (a clear texel of the model's own is drawn as black)
-            self.img.putpixel((x, y), ((r & ~7) | (bits & 7), (g & ~7) | ((bits >> 3) & 7), (b & ~7) | (bits >> 6), 255))
-        self.faces.append((bone, rect, corners))
+        assert u1 - u0 >= MIN_FACE and v1 - v0 >= MIN_FACE, "a face's corner blocks would overlap"
+        code = SIZES.index(self.size)
+        for (x, y), (dx, dy) in (((u0, v0), (1, 1)), ((u1 - 1, v0), (-1, 1)), ((u1 - 1, v1 - 1), (-1, -1)), ((u0, v1 - 1), (1, -1))):
+            word = index | code << 12 | x << 14 | y << 24
+            for k, (ox, oy) in enumerate(((0, 0), (dx, 0), (0, dy), (dx, dy))):
+                r, g, b, a = self.img.getpixel((x + ox, y + oy))
+                bits = (word >> (9 * k)) & 511
+                # opaque, to carry the number (a clear texel of the model's own is drawn as black)
+                self.img.putpixel((x + ox, y + oy), ((r & ~7) | (bits & 7), (g & ~7) | ((bits >> 3) & 7), (b & ~7) | (bits >> 6), 255))
+        self.faces.append((bone, rect, corners, tilted, flip))
         return index
 
     def clip(self, frames, end, blend=BLEND):
@@ -179,8 +208,8 @@ class Sprite:
     def write(self):
         put = self._put
         k = 0
-        for bone, (u0, v0, u1, v1), corners in self.faces:
-            put(k, (bone, 0, 0))
+        for bone, (u0, v0, u1, v1), corners, tilted, flip in self.faces:
+            put(k, (bone, 1 if flip else 0, 0))
             put(k + 1, (u0 >> 8, u0 & 255, v0 >> 8))
             put(k + 2, (v0 & 255, u1 >> 8, u1 & 255))
             put(k + 3, (v1 >> 8, v1 & 255, 0))
@@ -188,6 +217,10 @@ class Sprite:
                 x, y, z = (self._position(a) for a in c)
                 put(k + 4 + 2 * i, (x >> 8, x & 255, y >> 8))
                 put(k + 5 + 2 * i, (y & 255, z >> 8, z & 255))
+            for i, c in enumerate(tilted):
+                x, y, z = (self._position(a) for a in c)
+                put(k + 12 + 2 * i, (x >> 8, x & 255, y >> 8))
+                put(k + 13 + 2 * i, (y & 255, z >> 8, z & 255))
             k += FACE_TEXELS
         clips_at = k
         for c, (first, frames, end, blend) in enumerate(self.clips):
@@ -214,6 +247,9 @@ class Sprite:
         self.img.putpixel((1, h), (clips_at >> 16, (clips_at >> 8) & 255, clips_at & 255, MARK))
         self.img.putpixel((2, h), (keys_at >> 16, (keys_at >> 8) & 255, keys_at & 255, MARK))
         self.img.putpixel((3, h), (self.bones, 0, 0, MARK))
+        # the head display's scale (in 4096ths), for a vertex that can't measure its face as drawn
+        se = int(round(self.display_scale * 4096))
+        self.img.putpixel((4, h), (se >> 16, (se >> 8) & 255, se & 255, MARK))
         self.img.putpixel((self.size - 1, h), (*MAGIC, MARK))
         return self.img
 
@@ -301,6 +337,9 @@ def euler_zyx(deg):
     ry = np.array([[math.cos(y), 0, math.sin(y)], [0, 1, 0], [-math.sin(y), 0, math.cos(y)]])
     rz = np.array([[math.cos(z), -math.sin(z), 0], [math.sin(z), math.cos(z), 0], [0, 0, 1]])
     return rz @ ry @ rx
+
+
+TILT_M = None
 
 
 def affine(m, t):
@@ -396,6 +435,11 @@ def check(d, mob):
             continue
         if round(float(a.get("length", 0)) * 20) > MAX_FRAMES - 1:
             errors.append("animation %s is %.2f s long; at most %.2f s" % (a["name"], float(a["length"]), (MAX_FRAMES - 1) / 20))
+        clip = mob["clips"][a["name"]]
+        end = (clip.get("end") if isinstance(clip, dict) else None) or a.get("loop")
+        if end != "loop" and round(float(a.get("length", 0)) * 20) >= 240:
+            # a played clip's start is the game time mod 240 ticks: by 240 ticks in it would start again
+            errors.append("animation %s is %.2f s long and doesn't loop; at most 11.95 s" % (a["name"], float(a["length"])))
         for an in a.get("animators", {}).values():
             if an.get("type") != "bone":
                 if an.get("keyframes"):
@@ -466,11 +510,18 @@ def build(mob):
     assert len(bones) < 256
     index = {u: i for i, u in enumerate(bones)}
 
-    # the cubes fitted into Java's -16 to 32, ground (y 0) kept level
+    # the cubes fitted into Java's -16 to 32, ground (y 0) kept level: a mob's middle over the stand, as big as it
+    # fits; a prop's ("origin": true) own origin over the stand, which its display grows back to a block a 16 units
     lo = np.min([e["from"] for e in d["elements"]] + [e["to"] for e in d["elements"]], axis=0)
     hi = np.max([e["from"] for e in d["elements"]] + [e["to"] for e in d["elements"]], axis=0)
-    f = 47.0 / float(max(hi - lo))
-    shift = np.array([8 - f * (lo[0] + hi[0]) / 2, -15.5 - f * lo[1], 8 - f * (lo[2] + hi[2]) / 2])
+    anchored = bool(mob.get("origin", False))
+    if anchored:
+        reach = max(abs(float(v)) for v in (lo[0], hi[0], lo[2], hi[2]))
+        f = min(24.0 / max(reach, 1e-6), 47.0 / float(hi[1] - lo[1]))
+        shift = np.array([8.0, -15.5 - f * lo[1], 8.0])
+    else:
+        f = 47.0 / float(max(hi - lo))
+        shift = np.array([8 - f * (lo[0] + hi[0]) / 2, -15.5 - f * lo[1], 8 - f * (lo[2] + hi[2]) / 2])
     A = affine(np.eye(3) * f, shift)
     A_inv = np.linalg.inv(A)
 
@@ -536,7 +587,7 @@ def build(mob):
 
     # each face's own copy of its texels (at least 2 x 2, for its four corners to carry its number), edge to edge
     # on shelves, tallest first, in the smallest sprite they and the records fit
-    sizes = [(max(2, abs(u1 - u0)), max(2, abs(v1 - v0))) for _, _, _, (u0, v0, u1, v1), _ in faces]
+    sizes = [(max(MIN_FACE, abs(u1 - u0)), max(MIN_FACE, abs(v1 - v0))) for _, _, _, (u0, v0, u1, v1), _ in faces]
     lengths = {}
     for _, anim, end in clips:
         lengths[anim] = max(1, round(float(animations[anim]["length"]) * 20)) + (0 if end == LOOP else 1)
@@ -579,7 +630,13 @@ def build(mob):
             m = euler_zyx(r)
             turn = lambda p, m=m, o=origin: m @ (p - o) + o
         corners = rect_corners(face, java(e["from"]), java(e["to"]), (nu0, nv0, nu1, nv1), rotation, turn)
-        sprite.face(index[owner[uid]], (px, py, px + w, py + h), corners)
+        middle = (java(e["from"]) + java(e["to"])) / 2
+        tilted = rect_corners(face, java(e["from"]), java(e["to"]), (nu0, nv0, nu1, nv1), rotation,
+                              lambda p, o=middle: TILT_M @ (p - o) + o)
+        outward = (euler_zyx(r) if any(abs(a) > 1e-6 for a in r) else np.eye(3)) @ np.array(normals[face], float)
+        c = [np.array(v) for v in corners]
+        flip = float(np.cross(c[1] - c[0], c[3] - c[0]) @ outward) < 0
+        sprite.face(index[owner[uid]], (px, py, px + w, py + h), corners, tilted, flip)
         s = 16 / size
         # each edge an eighth of a texel in, towards the face's middle: the mob's mark (INSET)
         iu0, iu1 = (nu0 + INSET, nu1 - INSET) if nu0 < nu1 else (nu0 - INSET, nu1 + INSET)
@@ -618,15 +675,37 @@ def build(mob):
                 local = affine(np.eye(3), pivot + pos) @ affine(euler_zyx(rot) @ np.diag(scl), np.zeros(3)) @ affine(np.eye(3), -pivot)
                 world[uid] = (world[parent[uid]] @ local) if parent[uid] else local
             frames.append([((A @ world[uid] @ A_inv)[:3, :3], (A @ world[uid] @ A_inv)[:3, 3]) for uid in bones])
+            # a keyframe's offset is kept to within 64 Java units of where the bone rests (the sprite's encoding)
+            for uid, (_, offset) in zip(bones, frames[-1]):
+                if np.max(np.abs(offset)) >= 63.9:
+                    raise ModelError("%s: animation %s at %.2f s takes bone %s %.0f units from where it rests; at most %.0f here"
+                                     % (name, anim, t, groups[uid]["name"], np.max(np.abs(offset)) / f, 63.9 / f))
         assert sprite.clip(frames, end) == cid
 
+    tilted_elements = []
+    for el, uid in zip(model_elements, by_element):
+        e = elements[uid]
+        middle = (java(e["from"]) + java(e["to"])) / 2
+        t = dict(el)
+        t["rotation"] = {"origin": [round(float(v), 4) for v in middle], "x": TILT[0], "y": TILT[1], "z": TILT[2]}
+        tilted_elements.append(t)
     box_lo = np.min([e["from"] for e in model_elements] + [e["to"] for e in model_elements], axis=0)
     box_hi = np.max([e["from"] for e in model_elements] + [e["to"] for e in model_elements], axis=0)
+    ground = float(java([0, 0, 0])[1])
+    if anchored:
+        # sixteen of the model's units a block: f Java units each, HEAD_ITEM blocks a Java unit at display scale 1
+        assert "scale" not in mob, "%s: a prop (origin) is drawn a block a 16 units; it takes no scale" % name
+        scale = 1.0 / (f * HEAD_ITEM * 16)
+        if scale > 4:
+            raise ModelError("%s: reaches %.1f units from its origin and stands %.1f tall; a prop reaches at most %.0f and stands at most %.0f"
+                             % (name, reach, float(hi[1] - lo[1]), 24 * 4 * HEAD_ITEM * 16, 47 * 4 * HEAD_ITEM * 16))
+        scale = round(scale, 4)
+    else:
+        scale = float(mob.get("scale", 1))
+    assert 0 < scale <= 4, "%s: a display scale is at most 4" % name
+    sprite.display_scale = scale
     os.makedirs(TEXTURES, exist_ok=True)
     sprite.write().save(os.path.join(TEXTURES, name + ".png"))
-    ground = float(java([0, 0, 0])[1])
-    scale = float(mob.get("scale", 1))
-    assert 0 < scale <= 4, "%s: a display scale is at most 4" % name
     model = {"textures": {"skin": "ms:item/mobs/" + name, "particle": "ms:item/mobs/" + name},
              "elements": model_elements,
              # on the stand's head, facing its front (the model faces +z), feet on the ground; anywhere else fitted
@@ -636,6 +715,9 @@ def build(mob):
     os.makedirs(MODELS, exist_ok=True)
     with open(os.path.join(MODELS, name + ".json"), "w", encoding="utf-8", newline="\n") as fh:
         json.dump(model, fh, separators=(",", ":"))
+    os.makedirs(TILTED, exist_ok=True)
+    with open(os.path.join(TILTED, name + ".json"), "w", encoding="utf-8", newline="\n") as fh:
+        json.dump(dict(model, elements=tilted_elements), fh, separators=(",", ":"))
     # a hitbox about the stand's feet, in blocks, which the plugin turns with the mob: the model's height, and most
     # of its width and length at rest (players click its body more than the tips of its wings and tail)
     block = HEAD_ITEM * scale
@@ -654,6 +736,8 @@ def build(mob):
 
 
 def main():
+    global TILT_M
+    TILT_M = euler_zyx(TILT)
     published, failed = {}, []
     for mob in definitions():
         try:
