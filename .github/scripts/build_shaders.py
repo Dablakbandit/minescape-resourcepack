@@ -1080,7 +1080,9 @@ def main():
     # OptiFine's armour rules, as each range of versions matches custom model data (build_armour.py)
     sys.path.insert(0, os.path.dirname(__file__))
     import armour_looks
-    for directory, first, final in [m[:3] for m in armour_looks.CIT_MATCH] + armour_looks.MODEL_OVERLAYS:
+    # and the animated mobs' tilted models (build_mobs.py)
+    import build_mobs
+    for directory, first, final in [m[:3] for m in armour_looks.CIT_MATCH] + armour_looks.MODEL_OVERLAYS + build_mobs.OVERLAYS:
         if directory:
             final = final or last
             entries.append({"formats": {"min_inclusive": first, "max_inclusive": final},
