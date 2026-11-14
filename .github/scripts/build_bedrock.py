@@ -761,16 +761,21 @@ def vanilla_jar():
 _VANILLA_ASSETS = {}
 
 
+VANILLA_PARTS = ("assets/minecraft/models/", "assets/minecraft/textures/", "assets/minecraft/blockstates/")
+
+
 def vanilla_assets():
-    """The client jar's assets/minecraft models and textures, extracted once into cache/bedrock/ (which CI caches)."""
+    """The client jar's assets/minecraft models, textures and blockstates, extracted once into cache/bedrock/ (which
+    CI caches; a cache from before blockstates were taken is extracted again)."""
     if VANILLA not in _VANILLA_ASSETS:
         done = os.path.join(VANILLA, "extracted")
-        if not os.path.exists(done):
+        stamp = "%s %s" % (JAVA_VERSION, ",".join(VANILLA_PARTS))
+        if not os.path.exists(done) or open(done, encoding="utf-8").read() != stamp:
             with zipfile.ZipFile(vanilla_jar()) as jar:
                 for name in jar.namelist():
-                    if name.startswith(("assets/minecraft/models/", "assets/minecraft/textures/")) and not name.endswith("/"):
+                    if name.startswith(VANILLA_PARTS) and not name.endswith("/"):
                         write_bytes(os.path.join(VANILLA, *name.split("/")), jar.read(name))
-            write_bytes(done, JAVA_VERSION.encode())
+            write_bytes(done, stamp.encode())
         _VANILLA_ASSETS[VANILLA] = os.path.join(VANILLA, "assets")
     return _VANILLA_ASSETS[VANILLA]
 
@@ -1575,6 +1580,50 @@ def vanilla_textures():
             write_bytes(os.path.join(PACK, *target.split("/")) + ".png", png_bytes(fit_texture(picture)))
             written += 1
     written += grass_side(textures)
+    written += entity_layouts(textures)
+    return written
+
+
+ENTITY_UV = os.path.join(SCRIPTS, "bedrock_entity_uv.json")
+BED_COLOURS = ["white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray", "light_gray", "cyan",
+               "purple", "blue", "brown", "green", "red", "black"]
+
+
+def entity_layouts(textures):
+    """Chests and beds, whose Bedrock textures lay the same faces out differently (a double chest is one 128 x 64
+    texture on Bedrock, Java's left and right halves): the Java pack's, laid out by bedrock_entity_uv.json
+    (gen_entity_uv.py), at the pack's own size. Every bed colour shares the red bed's layout; Bedrock calls light gray
+    silver."""
+    try:
+        table = read_json(ENTITY_UV)["textures"]
+    except (OSError, ValueError) as e:
+        warn("no entity layout table (%s): chests and beds keep Bedrock's textures" % e)
+        return 0
+    jobs = [(target, target, layout["sources"]) for target, layout in table.items() if not target.startswith("bed/")]
+    jobs += [("bed/" + ("silver" if c == "light_gray" else c), "bed/red", ["bed/" + c]) for c in BED_COLOURS]
+    written = 0
+    for target, layout_name, names in jobs:
+        layout = table[layout_name]
+        paths = [os.path.join(textures, "entity", *n.split("/")) + ".png" for n in names]
+        if not all(os.path.exists(p) for p in paths):
+            continue  # the pack leaves it vanilla
+        sources = [np.asarray(Image.open(p).convert("RGBA")) for p in paths]
+        size = layout["size"]
+        vanilla_width = size[0] // len(sources)   # each Java source is one vanilla width (a double chest's two halves)
+        scale = sources[0].shape[1] // vanilla_width
+        if scale < 1 or any(s.shape[1] != sources[0].shape[1] for s in sources):
+            warn("entity texture %s isn't a whole multiple of vanilla's size: left as Bedrock's" % target)
+            continue
+        out = np.zeros((size[1] * scale, size[0] * scale, 4), np.uint8)
+        turned = {}
+        for y, x0, n, s, flip, k, dx, dy in layout["runs"]:
+            if (s, flip, k) not in turned:
+                turned[(s, flip, k)] = np.rot90(sources[s][:, ::-1] if flip else sources[s], k)
+            piece = turned[(s, flip, k)][(y + dy) * scale:(y + dy + 1) * scale, (x0 + dx) * scale:(x0 + dx + n) * scale]
+            out[y * scale:(y + 1) * scale, x0 * scale:x0 * scale + piece.shape[1]] = piece
+        write_bytes(os.path.join(PACK, "textures", "entity", *target.split("/")) + ".png",
+                    png_bytes(fit_texture(Image.fromarray(out))))
+        written += 1
     return written
 
 
@@ -1624,8 +1673,16 @@ def grass_side(textures):
 
 BLOCKSTATES = os.path.join(ASSETS, "minecraft", "blockstates")
 BLOCK_TEXTURE_DIR = "textures/ms/b"
-# blockstates left to Bedrock: its fire is its own
-BLOCK_SKIP = {"fire"}
+# blockstates left to Bedrock: its fire is its own; item frames aren't blocks in Java (an entity, which the frame
+# entities draw); a custom block isn't a ladder to the Bedrock client, which then couldn't climb it
+BLOCK_SKIP = {"fire", "item_frame", "glow_item_frame", "ladder"}
+# blocks Java players walk through: a custom block in their place mustn't be solid
+WALK_THROUGH = {"oxeye_daisy", "dandelion", "poppy", "blue_orchid", "allium", "azure_bluet", "red_tulip", "orange_tulip",
+                "white_tulip", "pink_tulip", "cornflower", "lily_of_the_valley", "wither_rose", "grass", "fern", "dead_bush",
+                "carrots", "potatoes", "wheat", "beetroots", "sweet_berry_bush", "tall_grass", "large_fern", "sunflower",
+                "lilac", "rose_bush", "peony", "melon_stem", "pumpkin_stem", "sugar_cane", "nether_wart",
+                "brown_mushroom", "red_mushroom", "lily_pad", "end_rod", "redstone_wire", "tripwire", "vine",
+                "glow_lichen", "cobweb"}
 FULL = {"origin": [-8, 0, -8], "size": [16, 16, 16]}
 NO_BOX = {"origin": [0, 0, 0], "size": [0, 0, 0]}
 EMPTY_GEOMETRY = "minecraft:geometry.full_block"   # drawn with the clear texture: a block Java shows nothing of
@@ -1634,14 +1691,41 @@ EMPTY_GEOMETRY = "minecraft:geometry.full_block"   # drawn with the clear textur
 WATERLOGGABLE = ("_fence", "_slab", "_stairs", "_wall", "_coral", "_coral_fan", "_wall_fan")
 
 
+JAVA_BLOCKS = os.path.join(SCRIPTS, "bedrock_java_blocks.json")
+_JAVA_BLOCKS = []
+
+
+def java_blocks():
+    """Every Java block's properties as Geyser's Java version has them (gen_java_blocks.py), or None."""
+    if not _JAVA_BLOCKS:
+        try:
+            _JAVA_BLOCKS.append(read_json(JAVA_BLOCKS)["blocks"])
+        except (OSError, ValueError) as e:
+            warn("no Java block table (%s): states filled in by guess (waterlogged)" % e)
+            _JAVA_BLOCKS.append(None)
+    return _JAVA_BLOCKS[0]
+
+
 def full_states(block, overrides):
-    """Geyser matches whole Java states: a blockstate file's keys with the properties it leaves out (waterlogged)
-    filled in both ways, each key's properties in Minecraft's order (alphabetical)."""
+    """Geyser matches whole Java states, and refuses the whole mappings file over a state it doesn't know: a blockstate
+    file's keys with every property they leave out (a fence gate's powered, waterlogged) filled in all its ways, each
+    key's properties in Minecraft's order (alphabetical). None if the block or a property is unknown to Geyser's
+    Java version (renamed since 1.18.2)."""
+    table = java_blocks()
+    known = table.get(block) if table is not None else None
+    if table is not None and known is None:
+        return None
     out = {}
     for state, override in overrides.items():
         props = dict(p.split("=", 1) for p in state.split(",") if "=" in p)
         options = [props]
-        if block.endswith(WATERLOGGABLE) and "waterlogged" not in props:
+        if known is not None:
+            if any(k not in known or v not in known[k] for k, v in props.items()):
+                return None
+            for name, values in known.items():
+                if name not in props:
+                    options = [dict(o, **{name: v}) for o in options for v in values]
+        elif block.endswith(WATERLOGGABLE) and "waterlogged" not in props:
             options = [dict(props, waterlogged=w) for w in ("false", "true")]
         for option in options:
             out[",".join("%s=%s" % (k, option[k]) for k in sorted(option))] = override
@@ -1661,9 +1745,31 @@ def block_collision(block, state):
         corner, size = {"east": ([0, -8], [8, 16]), "west": ([-8, -8], [8, 16]), "south": ([-8, 0], [16, 8]),
                         "north": ([-8, -8], [16, 8])}.get(props.get("facing", "north"))
         return [slab, {"origin": [corner[0], 0 if top else 8, corner[1]], "size": [size[0], 8, size[1]]}]
-    if block.endswith(("_pressure_plate", "torch", "_coral", "lily_pad", "end_rod", "beetroots")):
+    if block in WALK_THROUGH or block.endswith(("_pressure_plate", "torch", "_coral", "_coral_fan", "_sapling",
+                                                 "_button", "_sign", "_banner")):
         return NO_BOX
+    if block.endswith("_fence_gate"):
+        return NO_BOX if props.get("open") == "true" else FULL
+    if block.endswith("lantern"):
+        # Java's lantern: a 6 x 9 x 6 box, standing on the floor or hung a pixel below the ceiling
+        return {"origin": [-3, 1 if props.get("hanging") == "true" else 0, -3], "size": [6, 9, 6]}
     return FULL
+
+
+# The light vanilla blocks give (Java's), by block and the state that lights it: a custom block in a lit block's place
+# gives none on Bedrock unless it says so
+BLOCK_LIGHT = {"torch": 14, "wall_torch": 14, "soul_torch": 10, "soul_wall_torch": 10, "lantern": 15,
+               "soul_lantern": 10, "glowstone": 15, "sea_lantern": 15, "jack_o_lantern": 15, "end_rod": 14,
+               "beacon": 15, "shroomlight": 15, "lava_cauldron": 15, "conduit": 15, "magma_block": 3}
+LIT_LIGHT = {"furnace": 13, "smoker": 13, "blast_furnace": 13, "redstone_torch": 7, "redstone_wall_torch": 7,
+             "redstone_lamp": 15, "campfire": 15, "soul_campfire": 10, "redstone_ore": 9, "deepslate_redstone_ore": 9}
+
+
+def block_light(block, state):
+    props = dict(p.split("=", 1) for p in state.split(",") if "=" in p)
+    if block in LIT_LIGHT:
+        return LIT_LIGHT[block] if props.get("lit", "true") == "true" else 0
+    return BLOCK_LIGHT.get(block, 0)
 
 
 BLOCK_SPAN = 29.5   # pixels a block's geometry may span on an axis (Bedrock allows 1 14/16 blocks)
@@ -1738,6 +1844,44 @@ def model_cubes(model, name_texture):
     return fit_block(cubes)
 
 
+def model_faces(model):
+    """A model's shape and what each face shows: its elements' boxes and faces' textures, turns and tints."""
+    out = []
+    for element in model.elements or []:
+        for face, spec in sorted((element.get("faces") or {}).items()):
+            if isinstance(spec, dict):
+                out.append((json.dumps([element.get("from"), element.get("to"), element.get("rotation")], sort_keys=True),
+                            face, model.face_texture(spec), json.dumps(spec.get("uv")), spec.get("rotation", 0),
+                            spec.get("tintindex")))
+    return out
+
+
+def is_cube(model):
+    return len(model.elements or []) == 1 and model.elements[0].get("from") == [0, 0, 0] \
+        and model.elements[0].get("to") == [16, 16, 16] and not model.elements[0].get("rotation")
+
+
+def replaced_model(model_ref):
+    """For a game model the pack has its own json for, whose shape comes from the game's parents (a slab of other
+    textures, block/acacia_fence_gate emptied): the model as the game resolves it, where it looks different from the
+    game's own; else None (the retexture, by texture name, already makes Bedrock's block look the same).
+    Left to the retexture too: biome-tinted faces (grass, leaves: a custom block isn't tinted by biome) and a cube
+    that stays a cube (its textures go by name; Bedrock can't pick a cube's random variants anyway)."""
+    ref = full(model_ref)
+    if not os.path.exists(model_path(ref)):
+        return None
+    mine, theirs = load_model(ref, vanilla=True), load_model(ref, vanilla="jar")
+    if mine is None:
+        return None
+    if theirs is not None and model_faces(mine) == model_faces(theirs):
+        return None
+    if any(face[5] is not None for face in model_faces(mine)):
+        return None
+    if theirs is not None and is_cube(mine) and is_cube(theirs):
+        return None
+    return mine
+
+
 def build_blocks():
     """Vanilla blocks the Java pack draws as other models (tables from slabs, chairs from stairs, cabinets, its own
     torches) as Geyser custom block state overrides: the model as Bedrock block geometry, its textures in the pack's
@@ -1753,20 +1897,34 @@ def build_blocks():
             key = "ms_b_" + hashlib.sha1(ref.encode()).hexdigest()[:10]
             path, frames = texture_info(ref)
             target = "%s/%s" % (BLOCK_TEXTURE_DIR, key[5:])
-            write_bytes(os.path.join(PACK, *target.split("/")) + ".png", png_bytes(fit_texture(first_frame(path, frames))))
+            picture = first_frame(path, frames)
+            write_bytes(os.path.join(PACK, *target.split("/")) + ".png", png_bytes(fit_texture(picture)))
             terrain[key] = {"textures": target}
             instance_of[ref] = key
+            # a see-through texture (slime, honey, ice) blends; alpha_test would drop it all
+            alpha = np.asarray(picture.convert("RGBA"))[..., 3]
+            if ((alpha > 0) & (alpha < 250)).mean() > 0.05:
+                see_through.add(key)
         return instance_of[ref]
 
+    see_through = set()
+
     def materials_for(used):
-        out = {key: {"texture": key, "render_method": "alpha_test", "ambient_occlusion": False} for key in sorted(used)}
+        out = {key: {"texture": key, "render_method": "blend" if key in see_through else "alpha_test",
+                     "ambient_occlusion": False} for key in sorted(used)}
         out["*"] = dict(out[min(used)]) if used else {"texture": "ms_b_clear", "render_method": "alpha_test"}
         return out
 
     def geometry_of(model_ref):
         model = load_model(full(model_ref))
         if model is None or model.kind != "3d":
-            return None, None
+            # the pack's json for a game model that leaves the shape to the game's parent (a slab of other textures,
+            # a block emptied): as the game resolves it, where that looks different from the game's own
+            model = replaced_model(model_ref)
+            if model is None:
+                return None, None
+            if model.kind != "3d":
+                return EMPTY_GEOMETRY, materials_for(set())   # Java draws nothing of it
         used = set()
 
         def named(ref):
@@ -1783,12 +1941,25 @@ def build_blocks():
                                "bones": [{"name": "root", "pivot": [0, 0, 0], "cubes": cubes}]})
         return name, materials_for(used)
 
+    # the pack's blockstates, then the game's for blocks the pack draws through its own models (a furnace, a lantern,
+    # a torch: the pack replaces block/furnace.json, not furnace's blockstate)
+    files = [(f[:-5], os.path.join(BLOCKSTATES, f)) for f in sorted(os.listdir(BLOCKSTATES)) if f.endswith(".json")]
+    own = {block for block, _ in files}
+    game = os.path.join(vanilla_assets(), "minecraft", "blockstates")
+    for f in sorted(os.listdir(game)) if os.path.isdir(game) else []:
+        if f.endswith(".json") and f[:-5] not in own:
+            spec = read_json(os.path.join(game, f))
+            refs = [v["model"] for vs in (spec.get("variants") or {}).values() for v in (vs if isinstance(vs, list) else [vs])]
+            if any(os.path.exists(model_path(full(r))) for r in refs):
+                files.append((f[:-5], os.path.join(game, f)))
+
     states = 0
-    for file in sorted(os.listdir(BLOCKSTATES)):
-        block = file[:-5]
-        if not file.endswith(".json") or block in BLOCK_SKIP:
+    for block, path in files:
+        if block in BLOCK_SKIP:
             continue
-        spec = read_json(os.path.join(BLOCKSTATES, file))
+        spec = read_json(path)
+        if block not in own and "variants" not in spec:
+            continue  # the game's multipart blocks (walls, panes, vines) keep Bedrock's own shape and the retexture
         overrides = {}
         if "variants" in spec:
             for state, variants in spec["variants"].items():
@@ -1801,6 +1972,9 @@ def build_blocks():
                 selection = FULL if isinstance(collision, list) or collision is NO_BOX else collision
                 override = {"geometry": geometry, "material_instances": materials, "collision_box": collision,
                             "selection_box": selection}
+                light = block_light(block, state)
+                if light:
+                    override["light_emission"] = light
                 turn = [int(pick.get("x", 0)) % 360, (360 - int(pick.get("y", 0))) % 360, 0]
                 if any(turn):
                     override["transformation"] = {"rotation": turn}
@@ -1823,7 +1997,8 @@ def build_blocks():
                     if any(values.get(k) != str(v) for k, v in when.items()):
                         continue
                     applies = part["apply"] if isinstance(part["apply"], list) else [part["apply"]]
-                    model = load_model(full(applies[0]["model"]))
+                    # the game's own models where the pack has none (an oak fence's post)
+                    model = load_model(full(applies[0]["model"]), vanilla=True)
                     if model is None or model.kind != "3d":
                         continue
                     turn = int(applies[0].get("y", 0)) % 360
@@ -1839,13 +2014,20 @@ def build_blocks():
                 overrides[state] = {"geometry": name if cubes else EMPTY_GEOMETRY, "material_instances": materials_for(used),
                                     "collision_box": FULL, "selection_box": FULL}
         if overrides:
-            states += len(overrides)
             entry = {"name": "ms_" + block, "only_override_states": True, "included_in_creative_inventory": False}
             if "" in overrides:
                 entry.update(overrides.pop(""))
                 entry["only_override_states"] = False
             if overrides:
                 entry["state_overrides"] = full_states(block, overrides)
+            elif java_blocks() is not None and block not in java_blocks():
+                entry["state_overrides"] = None
+            if "state_overrides" in entry and entry["state_overrides"] is None:
+                # one unknown state and Geyser drops every custom block
+                warn("block %s or one of its states isn't in Geyser's Java version: left to the retexture" % block)
+                continue
+            states += 1 + len(entry.get("state_overrides", {})) if not entry["only_override_states"] \
+                else len(entry["state_overrides"])
             mappings["minecraft:" + block] = entry
     if not mappings:
         return 0, {}
