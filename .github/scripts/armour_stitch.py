@@ -14,13 +14,22 @@ import json, os
 
 import armour_looks
 
-VERTEX = """// MineScape armour looks. An armour sheet is a grid of 256x128 tiles, its top right texel marked
+VERTEX = """// MineScape armour looks. An armour sheet is a grid of 256x64 tiles, each the body half of a look's
+// 256x128 armour texture (the rows below its head and hat, which no piece draws), its top right texel marked
 // (255, 0, 255; green 128 for the leggings'): alpha 1 a sheet, 2 an item's own tile (OptiFine's CIT,
 // its texels all but clear), 3 that tile's overlay (for shader packs only, hidden here). The dye carries
 // the item's tile, nine bits from bit 13; the tables give its sheet tile and its shape: leggings flared
 // at the foot as a plateskirt (1) or robe (2); a chestplate lengthened below the waist.
 %(tables)s
-const vec2 SHEET_TILE = vec2(256.0, 128.0);
+const vec2 SHEET_TILE = vec2(%(tile_w)d.0, %(tile_h)d.0);
+// a whole look, as an item's own tile (OptiFine's CIT) keeps it; a sheet's tile starts this far down it
+const vec2 LOOK_TILE = vec2(%(look_w)d.0, %(look_h)d.0);
+const float SHEET_TOP = %(top)d.0;
+
+// A texture coordinate of Minecraft's armour layout (0 to 1 over its 64x32) on a sheet's tile, counted in tiles
+vec2 on_tile(vec2 uv) {
+    return vec2(uv.x, (uv.y * LOOK_TILE.y - SHEET_TOP) / SHEET_TILE.y);
+}
 // a player model pixel, in blocks
 const float PIXEL = 0.9375 / 16.0;
 // leather's own colour: never dyed
@@ -592,7 +601,7 @@ void worn_only(int layer, int tile, inout StitchVertex v) {
     vec2 sheet = vec2(stitch_texture_size());
     int columns = int(sheet.x) / int(SHEET_TILE.x);
     v.hidden = false;
-    v.uv = (uv + vec2(tile % columns, tile / columns)) * SHEET_TILE / sheet;
+    v.uv = (on_tile(uv) + vec2(tile % columns, tile / columns)) * SHEET_TILE / sheet;
     v.color = vec4(1.0, 1.0, 1.0, v.color.a);
     tint = vec4(0.0);
     rt_info = ivec4(5, 0, 0, 0);
@@ -705,7 +714,8 @@ void stitch_vertex(inout StitchVertex v) {
     vec2 sheet = vec2(stitch_texture_size());
     int columns = int(sheet.x) / int(SHEET_TILE.x);
     vec2 uv = v.uv;
-    v.uv = (v.uv + (own ? vec2(0.0) : vec2(tile % columns, tile / columns))) * SHEET_TILE / sheet;
+    // (an own tile is a whole look; a sheet's is its body half)
+    v.uv = own ? v.uv * LOOK_TILE / sheet : (on_tile(v.uv) + vec2(tile % columns, tile / columns)) * SHEET_TILE / sheet;
     // what's worn over a flat look: the face reads its tile too, by how far it is from the armour's (rt_info
     // kind 4, unused by a sheet's look otherwise), and the fragment draws its texels over the armour's
     if (worn >= 0) {
@@ -1203,7 +1213,7 @@ vec4 stitch_texel(StitchFragment f, vec4 texel) {
     }
     if (rt_info.x == 4) {
         // the worn item's tile, baked in its colour: a texel there is drawn as it is
-        vec4 g = stitch_texel_fetch(ivec2(floor(f.uv * vec2(stitch_texture_size()))) + rt_info.yz * ivec2(256, 128));
+        vec4 g = stitch_texel_fetch(ivec2(floor(f.uv * vec2(stitch_texture_size()))) + rt_info.yz * ivec2(%(tile_w)d, %(tile_h)d));
         if (g.a > 0.5) {
 #ifdef STITCH_HAS_FRAGMENT_DEPTH
             if (rt_info.w != 0) {
@@ -1247,10 +1257,14 @@ def write(root, modelled=None):
     import armour_models
     vertex = VERTEX.replace("%(tables)s", armour_looks.glsl() + armour_models.glsl(modelled or {"chest": set(), "boots": set(), "legs": set()}))
     vertex = vertex.replace("%(undyed)d", str(0xA06540)).replace("%(amulet_out)s", repr(float(armour_models.AMULET_OUT)))
+    vertex = (vertex.replace("%(tile_w)d", str(armour_looks.SHEET_TILE[0])).replace("%(tile_h)d", str(armour_looks.SHEET_TILE[1]))
+              .replace("%(look_w)d", str(armour_looks.TILE[0])).replace("%(look_h)d", str(armour_looks.TILE[1]))
+              .replace("%(top)d", str(armour_looks.SHEET_TOP)))
     with open(os.path.join(out, "armour.vert.glsl"), "w", encoding="utf-8", newline="\n") as f:
         f.write(vertex)
     with open(os.path.join(out, "armour.frag.glsl"), "w", encoding="utf-8", newline="\n") as f:
-        f.write(FRAGMENT.replace("%(max_cubes)d", str(armour_models.most_cubes())).replace("%(header_cubes)d", str(armour_models.HEADER_CUBES)).replace("%(cube)d", str(armour_models.CUBE)).replace("%(amulet_out)s", repr(float(armour_models.AMULET_OUT))))
+        f.write(FRAGMENT.replace("%(max_cubes)d", str(armour_models.most_cubes())).replace("%(header_cubes)d", str(armour_models.HEADER_CUBES)).replace("%(cube)d", str(armour_models.CUBE)).replace("%(amulet_out)s", repr(float(armour_models.AMULET_OUT)))
+                .replace("%(tile_w)d", str(armour_looks.SHEET_TILE[0])).replace("%(tile_h)d", str(armour_looks.SHEET_TILE[1])))
     with open(os.path.join(out, "armour.json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump(DEFINITION, f, indent=2)
         f.write("\n")

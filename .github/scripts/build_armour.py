@@ -185,22 +185,27 @@ def sheet(layer):
     # whose body box they hang on
     extras = [gloves_tile(spec) for spec in looks.gloves_tiles()[0]] if layer == 1 else \
         [amulet_tile(spec) for spec in looks.amulet_tiles()[0]]
-    w, h = looks.TILE
+    # each tile its look's body half (looks.SHEET_TOP on), the half every piece is drawn from
+    w, h = looks.SHEET_TILE
+    top = looks.SHEET_TOP
     rows = -(-(len(order) + len(extras)) // looks.COLUMNS)
     out = np.zeros((h * rows, w * looks.COLUMNS, 4), np.uint8)
     for i, paths in enumerate(order):
         x, y = (i % looks.COLUMNS) * w, (i // looks.COLUMNS) * h
-        out[y:y + h, x:x + w] = tile(layer, paths)
+        out[y:y + h, x:x + w] = tile(layer, paths)[top:top + h]
     for i, px in enumerate(extras, len(order)):
         x, y = (i % looks.COLUMNS) * w, (i // looks.COLUMNS) * h
-        out[y:y + h, x:x + w] = px
+        out[y:y + h, x:x + w] = px[top:top + h]
     out[0, -1] = (255, 0 if layer == 1 else 128, 255, SHEET)
     return Image.fromarray(out), len(order)
 
 
 def cit(layer, image):
-    """The layer's sheet tiles as OptiFine's textures, and each armour item's rules for its tile."""
-    w, h = looks.TILE
+    """The layer's sheet tiles as OptiFine's textures, and each armour item's rules for its tile: each a whole
+    256x128 armour texture again (Minecraft's layout, which OptiFine and the Stitch mod read), its body half
+    from the sheet."""
+    w, h = looks.SHEET_TILE
+    top = looks.SHEET_TOP
     px = np.array(image)
     mark = (255, 0 if layer == 1 else 128, 255)
     order, index = looks.tiles(layer)
@@ -209,7 +214,8 @@ def cit(layer, image):
     import armour_models
     for t in sorted(set(index) - {0}):
         x, y = (t % looks.COLUMNS) * w, (t // looks.COLUMNS) * h
-        own = px[y:y + h, x:x + w].copy()
+        own = np.zeros((looks.TILE[1], looks.TILE[0], 4), np.uint8)
+        own[top:top + h] = px[y:y + h, x:x + w]
         opaque = own[..., 3] > 0
         ghost, overlay = own.copy(), own.copy()
         ghost[..., 3] = np.where(opaque, GHOST, 0)
