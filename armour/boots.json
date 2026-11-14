@@ -1,54 +1,517 @@
 {
-    "_about": "Each leather boots item the plugin has (LEATHER_BOOTS): its custom model data, 10000 + its tile, 1 to 511; the look it wears, a file in armour/boots/ (or plain), dyed this colour where the file is grey; and its inventory icon, an item model whose dyed layer (layer0) is coloured the same. Add one with the next free custom model data, and the same number on the item in the plugin.",
-    "items": [
-        {"custom_model_data": 10001, "name": "chicken_feet", "look": "52_chicken_feet", "colour": "#ffffff", "icon": "ms:rare/holiday/chicken_feet"},
-        {"custom_model_data": 10002, "name": "fancy_boots", "look": "31_fancy_boots", "colour": "#ffffff", "icon": "ms:armor/melee/fancy_boots"},
-        {"custom_model_data": 10003, "name": "fighting_boots", "look": "30_fighting_boots", "colour": "#ffffff", "icon": "ms:armor/melee/fighting_boots"},
-        {"custom_model_data": 10004, "name": "leather_boots", "look": "boots", "colour": "#45422f", "icon": "ms:boots/leather_boots"},
-        {"custom_model_data": 10005, "name": "mime_boots", "look": "boots", "textures": {"boots.png": "boots/42_mime_boots.png"}, "colour": "#ffffff", "icon": "ms:random/mime_boots"},
-        {"custom_model_data": 10006, "name": "santa_costume_boots", "look": "51_santa_costume_boots", "colour": "#ffffff", "icon": "ms:diamond_pickaxe/santa_boots"},
-        {"custom_model_data": 10007, "name": "skeleton_boots", "look": "43_skeleton_boots", "colour": "#ffffff", "icon": "ms:rare/holiday/skeleton_boots"},
-        {"custom_model_data": 10008, "name": "zombie_boots", "look": "44_zombie_boots", "colour": "#ffffff", "icon": "ms:random/zombie_boots"},
-        {"custom_model_data": 10009, "name": "adamant_boots", "look": "64_armour_boots", "colour": "#415341", "icon": "ms:boots/armour_boots"},
-        {"custom_model_data": 10010, "name": "black_boots", "look": "64_armour_boots", "colour": "#1e1c1c", "icon": "ms:boots/armour_boots"},
-        {"custom_model_data": 10011, "name": "bronze_boots", "look": "64_armour_boots", "colour": "#4a3921", "icon": "ms:boots/armour_boots"},
-        {"custom_model_data": 10012, "name": "iron_boots", "look": "64_armour_boots", "colour": "#524c4c", "icon": "ms:boots/armour_boots"},
-        {"custom_model_data": 10013, "name": "mithril_boots", "look": "64_armour_boots", "colour": "#404060", "icon": "ms:boots/armour_boots"},
-        {"custom_model_data": 10014, "name": "rune_boots", "look": "64_armour_boots", "colour": "#465d67", "icon": "ms:boots/armour_boots"},
-        {"custom_model_data": 10015, "name": "steel_boots", "look": "64_armour_boots", "colour": "#7c7373", "icon": "ms:boots/armour_boots"},
-        {"custom_model_data": 10016, "name": "white_boots", "look": "boots", "colour": "#ffffff", "icon": "ms:boots/leather_boots"},
-        {"custom_model_data": 10017, "name": "boots_of_stone", "look": "50_boots_of_stone", "colour": "#ffffff", "icon": "ms:slayer/boots_of_stone"},
-        {"custom_model_data": 10018, "name": "insulated_boots", "look": "41_insulated_boots", "colour": "#ffffff", "icon": "ms:slayer/insulated_boots"},
-        {"custom_model_data": 10019, "name": "climbing_boots", "look": "35_climbing_boots", "colour": "#ffffff", "icon": "ms:quest/d_p/climbing_boots"},
-        {"custom_model_data": 10020, "name": "spiked_boots", "look": "34_spiked_boots", "colour": "#ffffff", "icon": "ms:quest/d_p/spiked_boots"},
-        {"custom_model_data": 10021, "name": "rogue_boots", "look": "33_rogue_boots", "colour": "#ffffff", "icon": "ms:rogues_den/rogues_boots"},
-        {"custom_model_data": 10022, "name": "ham_boots", "look": "boots", "colour": "#9e2065", "icon": "ms:boots/leather_boots"},
-        {"custom_model_data": 10023, "name": "grey_boots", "look": "boots", "colour": "#5c5555", "icon": "ms:boots/leather_boots"},
-        {"custom_model_data": 10024, "name": "purple_boots", "look": "boots", "colour": "#6e0066", "icon": "ms:boots/leather_boots"},
-        {"custom_model_data": 10025, "name": "red_boots", "look": "boots", "colour": "#640400", "icon": "ms:boots/leather_boots"},
-        {"custom_model_data": 10026, "name": "teal_boots", "look": "boots", "colour": "#004043", "icon": "ms:boots/leather_boots"},
-        {"custom_model_data": 10027, "name": "yellow_boots", "look": "boots", "colour": "#b68f00", "icon": "ms:boots/leather_boots"},
-        {"custom_model_data": 10028, "name": "gardening_boots", "look": "62_gardening_boots", "colour": "#4c4532", "icon": "ms:boots/gardening_boots"},
-        {"custom_model_data": 10029, "name": "mystic_boots_dark", "look": "63_mystic_boots", "colour": "#151111", "icon": "ms:boots/mystic_boots"},
-        {"custom_model_data": 10030, "name": "mystic_boots_light", "look": "63_mystic_boots", "colour": "#d8d3d3", "icon": "ms:boots/mystic_boots"},
-        {"custom_model_data": 10031, "name": "mystic_boots_blue", "look": "63_mystic_boots", "colour": "#495c82", "icon": "ms:boots/mystic_boots"},
-        {"custom_model_data": 10032, "name": "mystic_boots_dusk", "look": "63_mystic_boots", "colour": "#36362a", "icon": "ms:boots/mystic_boots"},
-        {"custom_model_data": 10033, "name": "decorative_boots_gold", "look": "decorative_boots", "colour": "#ffffff", "icon": "ms:castlewars/decorative_boots_gold"},
-        {"custom_model_data": 10034, "name": "decorative_boots_red", "look": "decorative_boots", "textures": {"decorative_boots.png": "decorative_boots/38_decorative_boots_red.png", "decorative_boots_details.png": "decorative_boots/38_decorative_boots_red_details.png"}, "colour": "#ffffff", "icon": "ms:castlewars/decorative_boots_red"},
-        {"custom_model_data": 10035, "name": "decorative_boots_white", "look": "decorative_boots", "textures": {"decorative_boots.png": "decorative_boots/39_decorative_boots_white.png", "decorative_boots_details.png": "decorative_boots/39_decorative_boots_white_details.png"}, "colour": "#ffffff", "icon": "ms:castlewars/decorative_boots_white"},
-        {"custom_model_data": 10036, "name": "builders_boots", "look": "60_builder_boots", "colour": "#4c3722", "icon": "ms:boots/builders_boots"},
-        {"custom_model_data": 10037, "name": "splitbark_boots", "look": "bark_boots", "colour": "#ffffff", "icon": "ms:quest/s_o_m/splitbark_boots"},
-        {"custom_model_data": 10038, "name": "swampbark_boots", "look": "bark_boots", "textures": {"bark_boots.png": "bark_boots/46_swampbark_boots.png", "bark_boots_details.png": "bark_boots/46_swampbark_boots_details.png"}, "colour": "#ffffff", "icon": "ms:quest/s_o_m/swampbark_boots"},
-        {"custom_model_data": 10039, "name": "bloodbark_boots", "look": "bark_boots", "textures": {"bark_boots.png": "bark_boots/47_bloodbark_boots.png", "bark_boots_details.png": "bark_boots/47_bloodbark_boots_details.png"}, "colour": "#ffffff", "icon": "ms:quest/s_o_m/bloodbark_boots"},
-        {"custom_model_data": 10040, "name": "zealots_boots", "look": "48_zealots_boots", "colour": "#ffffff", "icon": "ms:quest/s_o_m/zealots_boots"},
-        {"custom_model_data": 10041, "name": "climbing_boots_g", "look": "36_climbing_boots_g", "colour": "#ffffff", "icon": "ms:diamond_hoe/clues/climbing_boots_g"},
-        {"custom_model_data": 10042, "name": "holy_sandals", "look": "40_holy_sandals", "colour": "#ffffff", "icon": "ms:diamond_hoe/clues/holy_sandals"},
-        {"custom_model_data": 10043, "name": "ranger_boots", "look": "32_ranger_boots", "colour": "#ffffff", "icon": "ms:diamond_hoe/clues/ranger_boots"},
-        {"custom_model_data": 10044, "name": "wizard_boots", "look": "49_wizard_boots", "colour": "#ffffff", "icon": "ms:diamond_hoe/clues/wizard_boots"},
-        {"custom_model_data": 10045, "name": "graceful_boots", "look": "59_graceful_boots", "colour": "#908b73", "icon": "ms:boots/graceful_boots"},
-        {"custom_model_data": 10046, "name": "boots_of_lightness", "look": "58_boots_of_lightness", "colour": "#5a5a71", "icon": "ms:boots/boots_of_lightness"},
-        {"custom_model_data": 10047, "name": "snakeskin_boots", "look": "61_snakeskin_boots", "colour": "#40402a", "icon": "ms:boots/snakeskin_boots"},
-        {"custom_model_data": 10048, "name": "bare_feet", "look": "66_bare", "colour": "#ffffff", "icon": "ms:boots/bare_feet"},
-        {"custom_model_data": 10049, "name": "angler_boots", "look": "62_gardening_boots", "colour": "#3c4a12", "icon": "ms:boots/angler_boots"}
-    ]
+  "_about": "Each leather boots item the plugin has (LEATHER_BOOTS): its custom model data, 10000 + its tile, 1 to 511; the look it wears, a file in armour/boots/ (or plain), dyed this colour where the file is grey; and its inventory icon, an item model whose dyed layer (layer0) is coloured the same. Add one with the next free custom model data, and the same number on the item in the plugin.",
+  "items": [
+    {
+      "custom_model_data": 10001,
+      "name": "chicken_feet",
+      "look": "outfit_chicken_boots",
+      "colour": "#ffffff",
+      "icon": "ms:rare/holiday/chicken_feet",
+      "textures": {
+        "outfit_chicken_boots_details.png": "outfit_chicken_boots/chicken_feet_details.png",
+        "outfit_chicken_boots.png": "outfit_chicken_boots/chicken_feet_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10002,
+      "name": "fancy_boots",
+      "look": "31_fancy_boots",
+      "colour": "#ffffff",
+      "icon": "ms:armor/melee/fancy_boots"
+    },
+    {
+      "custom_model_data": 10003,
+      "name": "fighting_boots",
+      "look": "30_fighting_boots",
+      "colour": "#ffffff",
+      "icon": "ms:armor/melee/fighting_boots"
+    },
+    {
+      "custom_model_data": 10004,
+      "name": "leather_boots",
+      "look": "outfit_leather_boots",
+      "colour": "#ffffff",
+      "icon": "ms:boots/leather_boots",
+      "textures": {
+        "outfit_leather_boots_details.png": "outfit_leather_boots/leather_boots_details.png",
+        "outfit_leather_boots.png": "outfit_leather_boots/leather_boots_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10005,
+      "name": "mime_boots",
+      "look": "outfit_leather_boots",
+      "textures": {
+        "outfit_leather_boots_details.png": "outfit_leather_boots/mime_boots_details.png",
+        "outfit_leather_boots.png": "outfit_leather_boots/mime_boots_flat.png"
+      },
+      "colour": "#ffffff",
+      "icon": "ms:random/mime_boots"
+    },
+    {
+      "custom_model_data": 10006,
+      "name": "santa_costume_boots",
+      "look": "51_santa_costume_boots",
+      "colour": "#ffffff",
+      "icon": "ms:diamond_pickaxe/santa_boots"
+    },
+    {
+      "custom_model_data": 10007,
+      "name": "skeleton_boots",
+      "look": "outfit_skeleton_boots",
+      "colour": "#ffffff",
+      "icon": "ms:rare/holiday/skeleton_boots",
+      "textures": {
+        "outfit_skeleton_boots_details.png": "outfit_skeleton_boots/skeleton_boots_details.png",
+        "outfit_skeleton_boots.png": "outfit_skeleton_boots/skeleton_boots_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10008,
+      "name": "zombie_boots",
+      "look": "outfit_zombie_boots",
+      "colour": "#ffffff",
+      "icon": "ms:random/zombie_boots",
+      "textures": {
+        "outfit_zombie_boots_details.png": "outfit_zombie_boots/zombie_boots_details.png",
+        "outfit_zombie_boots.png": "outfit_zombie_boots/zombie_boots_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10009,
+      "name": "adamant_boots",
+      "look": "outfit_metal_boots",
+      "colour": "#ffffff",
+      "icon": "ms:boots/armour_boots",
+      "textures": {
+        "outfit_metal_boots_details.png": "outfit_metal_boots/adamant_boots_details.png",
+        "outfit_metal_boots.png": "outfit_metal_boots/adamant_boots_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10010,
+      "name": "black_boots",
+      "look": "outfit_metal_boots",
+      "colour": "#ffffff",
+      "icon": "ms:boots/armour_boots",
+      "textures": {
+        "outfit_metal_boots_details.png": "outfit_metal_boots/black_boots_details.png",
+        "outfit_metal_boots.png": "outfit_metal_boots/black_boots_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10011,
+      "name": "bronze_boots",
+      "look": "outfit_metal_boots",
+      "colour": "#ffffff",
+      "icon": "ms:boots/armour_boots",
+      "textures": {
+        "outfit_metal_boots_details.png": "outfit_metal_boots/bronze_boots_details.png",
+        "outfit_metal_boots.png": "outfit_metal_boots/bronze_boots_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10012,
+      "name": "iron_boots",
+      "look": "outfit_metal_boots",
+      "colour": "#ffffff",
+      "icon": "ms:boots/armour_boots",
+      "textures": {
+        "outfit_metal_boots_details.png": "outfit_metal_boots/iron_boots_details.png",
+        "outfit_metal_boots.png": "outfit_metal_boots/iron_boots_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10013,
+      "name": "mithril_boots",
+      "look": "outfit_metal_boots",
+      "colour": "#ffffff",
+      "icon": "ms:boots/armour_boots",
+      "textures": {
+        "outfit_metal_boots_details.png": "outfit_metal_boots/mithril_boots_details.png",
+        "outfit_metal_boots.png": "outfit_metal_boots/mithril_boots_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10014,
+      "name": "rune_boots",
+      "look": "outfit_metal_boots",
+      "colour": "#ffffff",
+      "icon": "ms:boots/armour_boots",
+      "textures": {
+        "outfit_metal_boots_details.png": "outfit_metal_boots/rune_boots_details.png",
+        "outfit_metal_boots.png": "outfit_metal_boots/rune_boots_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10015,
+      "name": "steel_boots",
+      "look": "outfit_metal_boots",
+      "colour": "#ffffff",
+      "icon": "ms:boots/armour_boots",
+      "textures": {
+        "outfit_metal_boots_details.png": "outfit_metal_boots/steel_boots_details.png",
+        "outfit_metal_boots.png": "outfit_metal_boots/steel_boots_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10016,
+      "name": "white_boots",
+      "look": "outfit_metal_boots",
+      "colour": "#ffffff",
+      "icon": "ms:boots/leather_boots",
+      "textures": {
+        "outfit_metal_boots_details.png": "outfit_metal_boots/white_boots_details.png",
+        "outfit_metal_boots.png": "outfit_metal_boots/white_boots_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10017,
+      "name": "boots_of_stone",
+      "look": "50_boots_of_stone",
+      "colour": "#ffffff",
+      "icon": "ms:slayer/boots_of_stone"
+    },
+    {
+      "custom_model_data": 10018,
+      "name": "insulated_boots",
+      "look": "41_insulated_boots",
+      "colour": "#ffffff",
+      "icon": "ms:slayer/insulated_boots"
+    },
+    {
+      "custom_model_data": 10019,
+      "name": "climbing_boots",
+      "look": "35_climbing_boots",
+      "colour": "#ffffff",
+      "icon": "ms:quest/d_p/climbing_boots"
+    },
+    {
+      "custom_model_data": 10020,
+      "name": "spiked_boots",
+      "look": "34_spiked_boots",
+      "colour": "#ffffff",
+      "icon": "ms:quest/d_p/spiked_boots"
+    },
+    {
+      "custom_model_data": 10021,
+      "name": "rogue_boots",
+      "look": "outfit_rogue_boots",
+      "colour": "#ffffff",
+      "icon": "ms:rogues_den/rogues_boots",
+      "textures": {
+        "outfit_rogue_boots_details.png": "outfit_rogue_boots/rogue_boots_details.png",
+        "outfit_rogue_boots.png": "outfit_rogue_boots/rogue_boots_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10022,
+      "name": "ham_boots",
+      "look": "outfit_leather_boots",
+      "colour": "#ffffff",
+      "icon": "ms:boots/leather_boots",
+      "textures": {
+        "outfit_leather_boots_details.png": "outfit_leather_boots/ham_boots_details.png",
+        "outfit_leather_boots.png": "outfit_leather_boots/ham_boots_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10023,
+      "name": "grey_boots",
+      "look": "outfit_leather_boots",
+      "colour": "#ffffff",
+      "icon": "ms:boots/leather_boots",
+      "textures": {
+        "outfit_leather_boots_details.png": "outfit_leather_boots/grey_boots_details.png",
+        "outfit_leather_boots.png": "outfit_leather_boots/grey_boots_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10024,
+      "name": "purple_boots",
+      "look": "outfit_leather_boots",
+      "colour": "#ffffff",
+      "icon": "ms:boots/leather_boots",
+      "textures": {
+        "outfit_leather_boots_details.png": "outfit_leather_boots/purple_boots_details.png",
+        "outfit_leather_boots.png": "outfit_leather_boots/purple_boots_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10025,
+      "name": "red_boots",
+      "look": "outfit_leather_boots",
+      "colour": "#ffffff",
+      "icon": "ms:boots/leather_boots",
+      "textures": {
+        "outfit_leather_boots_details.png": "outfit_leather_boots/red_boots_details.png",
+        "outfit_leather_boots.png": "outfit_leather_boots/red_boots_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10026,
+      "name": "teal_boots",
+      "look": "outfit_leather_boots",
+      "colour": "#ffffff",
+      "icon": "ms:boots/leather_boots",
+      "textures": {
+        "outfit_leather_boots_details.png": "outfit_leather_boots/teal_boots_details.png",
+        "outfit_leather_boots.png": "outfit_leather_boots/teal_boots_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10027,
+      "name": "yellow_boots",
+      "look": "outfit_leather_boots",
+      "colour": "#ffffff",
+      "icon": "ms:boots/leather_boots",
+      "textures": {
+        "outfit_leather_boots_details.png": "outfit_leather_boots/yellow_boots_details.png",
+        "outfit_leather_boots.png": "outfit_leather_boots/yellow_boots_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10028,
+      "name": "gardening_boots",
+      "look": "62_gardening_boots",
+      "colour": "#4c4532",
+      "icon": "ms:boots/gardening_boots"
+    },
+    {
+      "custom_model_data": 10029,
+      "name": "mystic_boots_dark",
+      "look": "outfit_mystic_boots",
+      "colour": "#ffffff",
+      "icon": "ms:boots/mystic_boots",
+      "textures": {
+        "outfit_mystic_boots_details.png": "outfit_mystic_boots/mystic_boots_dark_details.png",
+        "outfit_mystic_boots.png": "outfit_mystic_boots/mystic_boots_dark_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10030,
+      "name": "mystic_boots_light",
+      "look": "outfit_mystic_boots",
+      "colour": "#ffffff",
+      "icon": "ms:boots/mystic_boots",
+      "textures": {
+        "outfit_mystic_boots_details.png": "outfit_mystic_boots/mystic_boots_light_details.png",
+        "outfit_mystic_boots.png": "outfit_mystic_boots/mystic_boots_light_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10031,
+      "name": "mystic_boots_blue",
+      "look": "outfit_mystic_boots",
+      "colour": "#ffffff",
+      "icon": "ms:boots/mystic_boots",
+      "textures": {
+        "outfit_mystic_boots_details.png": "outfit_mystic_boots/mystic_boots_blue_details.png",
+        "outfit_mystic_boots.png": "outfit_mystic_boots/mystic_boots_blue_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10032,
+      "name": "mystic_boots_dusk",
+      "look": "outfit_mystic_boots",
+      "colour": "#ffffff",
+      "icon": "ms:boots/mystic_boots",
+      "textures": {
+        "outfit_mystic_boots_details.png": "outfit_mystic_boots/mystic_boots_dusk_details.png",
+        "outfit_mystic_boots.png": "outfit_mystic_boots/mystic_boots_dusk_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10033,
+      "name": "decorative_boots_gold",
+      "look": "outfit_metal_boots",
+      "colour": "#ffffff",
+      "icon": "ms:castlewars/decorative_boots_gold",
+      "textures": {
+        "outfit_metal_boots_details.png": "outfit_metal_boots/decorative_boots_gold_details.png",
+        "outfit_metal_boots.png": "outfit_metal_boots/decorative_boots_gold_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10034,
+      "name": "decorative_boots_red",
+      "look": "outfit_metal_boots",
+      "textures": {
+        "outfit_metal_boots_details.png": "outfit_metal_boots/decorative_boots_red_details.png",
+        "outfit_metal_boots.png": "outfit_metal_boots/decorative_boots_red_flat.png"
+      },
+      "colour": "#ffffff",
+      "icon": "ms:castlewars/decorative_boots_red"
+    },
+    {
+      "custom_model_data": 10035,
+      "name": "decorative_boots_white",
+      "look": "outfit_metal_boots",
+      "textures": {
+        "outfit_metal_boots_details.png": "outfit_metal_boots/decorative_boots_white_details.png",
+        "outfit_metal_boots.png": "outfit_metal_boots/decorative_boots_white_flat.png"
+      },
+      "colour": "#ffffff",
+      "icon": "ms:castlewars/decorative_boots_white"
+    },
+    {
+      "custom_model_data": 10036,
+      "name": "builders_boots",
+      "look": "outfit_builders_boots",
+      "colour": "#ffffff",
+      "icon": "ms:boots/builders_boots",
+      "textures": {
+        "outfit_builders_boots_details.png": "outfit_builders_boots/builders_boots_details.png",
+        "outfit_builders_boots.png": "outfit_builders_boots/builders_boots_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10037,
+      "name": "splitbark_boots",
+      "look": "bark_boots",
+      "colour": "#ffffff",
+      "icon": "ms:quest/s_o_m/splitbark_boots"
+    },
+    {
+      "custom_model_data": 10038,
+      "name": "swampbark_boots",
+      "look": "bark_boots",
+      "textures": {
+        "bark_boots.png": "bark_boots/46_swampbark_boots.png",
+        "bark_boots_details.png": "bark_boots/46_swampbark_boots_details.png"
+      },
+      "colour": "#ffffff",
+      "icon": "ms:quest/s_o_m/swampbark_boots"
+    },
+    {
+      "custom_model_data": 10039,
+      "name": "bloodbark_boots",
+      "look": "bark_boots",
+      "textures": {
+        "bark_boots.png": "bark_boots/47_bloodbark_boots.png",
+        "bark_boots_details.png": "bark_boots/47_bloodbark_boots_details.png"
+      },
+      "colour": "#ffffff",
+      "icon": "ms:quest/s_o_m/bloodbark_boots"
+    },
+    {
+      "custom_model_data": 10040,
+      "name": "zealots_boots",
+      "look": "48_zealots_boots",
+      "colour": "#ffffff",
+      "icon": "ms:quest/s_o_m/zealots_boots"
+    },
+    {
+      "custom_model_data": 10041,
+      "name": "climbing_boots_g",
+      "look": "36_climbing_boots_g",
+      "colour": "#ffffff",
+      "icon": "ms:diamond_hoe/clues/climbing_boots_g"
+    },
+    {
+      "custom_model_data": 10042,
+      "name": "holy_sandals",
+      "look": "40_holy_sandals",
+      "colour": "#ffffff",
+      "icon": "ms:diamond_hoe/clues/holy_sandals"
+    },
+    {
+      "custom_model_data": 10043,
+      "name": "ranger_boots",
+      "look": "32_ranger_boots",
+      "colour": "#ffffff",
+      "icon": "ms:diamond_hoe/clues/ranger_boots"
+    },
+    {
+      "custom_model_data": 10044,
+      "name": "wizard_boots",
+      "look": "outfit_leather_boots",
+      "colour": "#ffffff",
+      "icon": "ms:diamond_hoe/clues/wizard_boots",
+      "textures": {
+        "outfit_leather_boots_details.png": "outfit_leather_boots/wizard_boots_details.png",
+        "outfit_leather_boots.png": "outfit_leather_boots/wizard_boots_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10045,
+      "name": "graceful_boots",
+      "look": "outfit_graceful_boots",
+      "colour": "#ffffff",
+      "icon": "ms:boots/graceful_boots",
+      "textures": {
+        "outfit_graceful_boots_details.png": "outfit_graceful_boots/graceful_boots_details.png",
+        "outfit_graceful_boots.png": "outfit_graceful_boots/graceful_boots_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10046,
+      "name": "boots_of_lightness",
+      "look": "58_boots_of_lightness",
+      "colour": "#5a5a71",
+      "icon": "ms:boots/boots_of_lightness"
+    },
+    {
+      "custom_model_data": 10047,
+      "name": "snakeskin_boots",
+      "look": "outfit_snakeskin_boots",
+      "colour": "#ffffff",
+      "icon": "ms:boots/snakeskin_boots",
+      "textures": {
+        "outfit_snakeskin_boots_details.png": "outfit_snakeskin_boots/snakeskin_boots_details.png",
+        "outfit_snakeskin_boots.png": "outfit_snakeskin_boots/snakeskin_boots_flat.png"
+      }
+    },
+    {
+      "custom_model_data": 10048,
+      "name": "bare_feet",
+      "look": "66_bare",
+      "colour": "#ffffff",
+      "icon": "ms:boots/bare_feet"
+    },
+    {
+      "custom_model_data": 10049,
+      "name": "angler_boots",
+      "look": "outfit_angler_boots",
+      "colour": "#ffffff",
+      "icon": "ms:boots/angler_boots",
+      "textures": {
+        "outfit_angler_boots_details.png": "outfit_angler_boots/angler_boots_details.png",
+        "outfit_angler_boots.png": "outfit_angler_boots/angler_boots_flat.png"
+      }
+    },
+    {
+      "name": "gilded_boots",
+      "custom_model_data": 10050,
+      "colour": "#ffffff",
+      "icon": "ms:boots/armour_boots",
+      "look": "outfit_metal_boots",
+      "textures": {
+        "outfit_metal_boots_details.png": "outfit_metal_boots/gilded_boots_details.png",
+        "outfit_metal_boots.png": "outfit_metal_boots/gilded_boots_flat.png"
+      }
+    },
+    {
+      "name": "dragon_boots",
+      "custom_model_data": 10051,
+      "colour": "#ffffff",
+      "icon": "ms:boots/armour_boots",
+      "look": "outfit_dragon_boots",
+      "textures": {
+        "outfit_dragon_boots_details.png": "outfit_dragon_boots/dragon_boots_details.png",
+        "outfit_dragon_boots.png": "outfit_dragon_boots/dragon_boots_flat.png"
+      }
+    },
+    {
+      "name": "granite_boots",
+      "custom_model_data": 10052,
+      "colour": "#ffffff",
+      "icon": "ms:boots/armour_boots",
+      "look": "outfit_granite_boots",
+      "textures": {
+        "outfit_granite_boots_details.png": "outfit_granite_boots/granite_boots_details.png",
+        "outfit_granite_boots.png": "outfit_granite_boots/granite_boots_flat.png"
+      }
+    }
+  ]
 }
