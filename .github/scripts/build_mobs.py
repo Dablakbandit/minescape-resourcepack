@@ -581,8 +581,14 @@ def build(mob):
                 continue
             src, per = texture_of(fd["texture"])
             u0, v0, u1, v1 = (round(c * per) for c in fd["uv"])
-            if u0 == u1 or v0 == v1:
-                continue
+            # a face whose uv is a point, or under a texel of a small texture (a solid colour), draws the texel
+            # there, as Blockbench does: at least one texel each way, inside the texture
+            if u0 == u1:
+                u0 = min(u0, src.width - 1)
+                u1 = u0 + 1
+            if v0 == v1:
+                v0 = min(v0, src.height - 1)
+                v1 = v0 + 1
             if hidden(uid, face):
                 culled += 1
                 continue
