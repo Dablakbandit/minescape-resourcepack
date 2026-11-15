@@ -715,6 +715,9 @@ def build(mob):
     else:
         scale = float(mob.get("scale", 1))
     assert 0 < scale <= 4, "%s: a display scale is at most 4" % name
+    # how far the model stands above the ground at rest as drawn, in blocks, to bring it down by (measured in game:
+    # a model's bones rarely put its feet exactly at its origin); a translation unit on the head is HEAD_ITEM blocks
+    drop = float(mob.get("drop", 0))
     sprite.display_scale = scale
     os.makedirs(TEXTURES, exist_ok=True)
     sprite.write().save(os.path.join(TEXTURES, name + ".png"))
@@ -722,7 +725,7 @@ def build(mob):
              "elements": model_elements,
              # on the stand's head, facing its front (the model faces +z), feet on the ground; anywhere else fitted
              "display": dict({place: fitted(box_lo, box_hi, *d) for place, d in DISPLAYS.items()},
-                             head={"rotation": [0, 180, 0], "translation": [0, round(GROUND - scale * (ground - 8), 2), 0],
+                             head={"rotation": [0, 180, 0], "translation": [0, round(GROUND - scale * (ground - 8) - drop / HEAD_ITEM, 2), 0],
                                    "scale": [scale] * 3})}
     os.makedirs(MODELS, exist_ok=True)
     with open(os.path.join(MODELS, name + ".json"), "w", encoding="utf-8", newline="\n") as fh:

@@ -1,5 +1,5 @@
 {
-    "_about": "Animated mobs: each an item on an armour stand's head, leather horse armour with this custom model data (from 100001, above every item's), its model a Blockbench model in mobs/models/ whose animations the item shader plays (build_mobs.py bakes them into the model's texture, the mobs stitch plays them). The item's dye names the clip, by the ids here, and when it started. clips are by the model's animation names; end is how a clip ends where the model's own loop setting isn't what the mob wants (loop, once: back to rest, hold: its last frame). scale is the model's size on the stand's head (at most 4). textures swaps the model's textures, by their names in it, for PNGs in mobs/textures/: the same model and animations as another mob in its own colours. The release publishes mobs.json (each mob's custom model data, clip ids, ticks and a hitbox fitted to the model), which the plugin reads: a mob type names its mob here in entity_info's animated.",
+    "_about": "Animated mobs: each an item on an armour stand's head, leather horse armour with this custom model data (from 100001, above every item's), its model a Blockbench model in mobs/models/ whose animations the item shader plays (build_mobs.py bakes them into the model's texture, the mobs stitch plays them). The item's dye names the clip, by the ids here, and when it started. clips are by the model's animation names; end is how a clip ends where the model's own loop setting isn't what the mob wants (loop, once: back to rest, hold: its last frame). scale is the model's size on the stand's head (at most 4); drop lowers it by that many blocks, so its feet meet the ground (measured in game). textures swaps the model's textures, by their names in it, for PNGs in mobs/textures/: the same model and animations as another mob in its own colours. The release publishes mobs.json (each mob's custom model data, clip ids, ticks and a hitbox fitted to the model), which the plugin reads: a mob type names its mob here in entity_info's animated.",
     "_skillcapes": "Skillcape emotes are props played the same way: skillcape_<skill>, <skill> the skill's name in lower case as the plugin has it (skillcape_attack, skillcape_ranged, skillcape_runecrafting, skillcape_construction), \"origin\": true and one clip, emote, which ends holding its last frame. The plugin stands it at the player's feet facing where they face, plays it once and takes it away. The player stands at the model's origin facing +z (a mob's front), their right hand on -x. origin keeps the model's origin over the stand, not its middle, and draws it a block a 16 units (no scale): within 60 units of the origin and 117 tall. A trimmed cape plays its cape's. These props are placeholders after OSRS's emotes, each as long as the cape's emote there (cooking's, smithing's and woodcutting's capped at 11.5 s: a clip that doesn't loop must be under 12 s, since it's timed from the game time mod 240 ticks).",
     "mobs": [
         {
@@ -307,7 +307,8 @@
                 "idle": 2,
                 "defend": 3,
                 "magic": 4
-            }
+            },
+            "drop": 0.152
         },
         {
             "custom_model_data": 100026,
@@ -323,7 +324,8 @@
                 },
                 "melee": 4,
                 "defend": 5
-            }
+            },
+            "drop": 0.14
         },
         {
             "custom_model_data": 100027,
@@ -336,7 +338,8 @@
                 "melee": 3,
                 "defend": 4,
                 "ranged": 5
-            }
+            },
+            "drop": 0.059
         },
         {
             "custom_model_data": 100028,
@@ -348,7 +351,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.117
         },
         {
             "custom_model_data": 100029,
@@ -360,7 +364,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.152
         },
         {
             "custom_model_data": 100030,
@@ -372,7 +377,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.198
         },
         {
             "custom_model_data": 100031,
@@ -384,7 +390,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.152
         },
         {
             "custom_model_data": 100032,
@@ -400,7 +407,8 @@
                 },
                 "melee": 4,
                 "defend": 5
-            }
+            },
+            "drop": 0.14
         },
         {
             "custom_model_data": 100033,
@@ -416,7 +424,8 @@
                 },
                 "melee": 4,
                 "defend": 5
-            }
+            },
+            "drop": 0.14
         },
         {
             "custom_model_data": 100034,
@@ -432,7 +441,8 @@
                 },
                 "melee": 4,
                 "defend": 5
-            }
+            },
+            "drop": 0.14
         },
         {
             "custom_model_data": 100035,
@@ -445,7 +455,8 @@
                 "melee": 3,
                 "defend": 4,
                 "screech": 5
-            }
+            },
+            "drop": 0.035
         },
         {
             "custom_model_data": 100036,
@@ -457,7 +468,8 @@
                 "idle": 2,
                 "defend": 3,
                 "ranged": 4
-            }
+            },
+            "drop": 0.14
         },
         {
             "custom_model_data": 100037,
@@ -468,7 +480,8 @@
                 "walking": 1,
                 "melee": 2,
                 "defend": 3
-            }
+            },
+            "drop": 0.303
         },
         {
             "custom_model_data": 100038,
@@ -480,7 +493,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.175
         },
         {
             "custom_model_data": 100039,
@@ -496,7 +510,8 @@
                 },
                 "melee": 4,
                 "defend": 5
-            }
+            },
+            "drop": 0.14
         },
         {
             "custom_model_data": 100040,
@@ -512,7 +527,8 @@
                 },
                 "melee": 4,
                 "defend": 5
-            }
+            },
+            "drop": 0.14
         },
         {
             "custom_model_data": 100041,
@@ -524,7 +540,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.128
         },
         {
             "custom_model_data": 100042,
@@ -541,7 +558,8 @@
                 "melee": 4,
                 "defend": 5,
                 "dragonfire": 6
-            }
+            },
+            "drop": 0.082
         },
         {
             "custom_model_data": 100043,
@@ -553,7 +571,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.14
         },
         {
             "custom_model_data": 100044,
@@ -577,7 +596,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.093
         },
         {
             "custom_model_data": 100046,
@@ -594,7 +614,8 @@
                 "melee": 4,
                 "defend": 5,
                 "dragonfire": 6
-            }
+            },
+            "drop": 0.093
         },
         {
             "custom_model_data": 100047,
@@ -612,7 +633,8 @@
                 "defend": 5,
                 "magic": 6,
                 "dragonfire": 7
-            }
+            },
+            "drop": 0.105
         },
         {
             "custom_model_data": 100048,
@@ -625,7 +647,8 @@
                 "melee": 3,
                 "defend": 4,
                 "magic": 5
-            }
+            },
+            "drop": 0.128
         },
         {
             "custom_model_data": 100049,
@@ -635,7 +658,8 @@
             "clips": {
                 "walking": 1,
                 "idle": 2
-            }
+            },
+            "drop": 0.128
         },
         {
             "custom_model_data": 100050,
@@ -647,7 +671,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.117
         },
         {
             "custom_model_data": 100051,
@@ -659,7 +684,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.14
         },
         {
             "custom_model_data": 100052,
@@ -671,7 +697,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.152
         },
         {
             "custom_model_data": 100053,
@@ -683,7 +710,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.129
         },
         {
             "custom_model_data": 100054,
@@ -695,7 +723,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.011
         },
         {
             "custom_model_data": 100055,
@@ -707,7 +736,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.081
         },
         {
             "custom_model_data": 100056,
@@ -719,7 +749,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.128
         },
         {
             "custom_model_data": 100057,
@@ -731,7 +762,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.14
         },
         {
             "custom_model_data": 100058,
@@ -743,7 +775,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.221
         },
         {
             "custom_model_data": 100059,
@@ -755,7 +788,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.186
         },
         {
             "custom_model_data": 100060,
@@ -767,7 +801,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.164
         },
         {
             "custom_model_data": 100061,
@@ -779,7 +814,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.128
         },
         {
             "custom_model_data": 100062,
@@ -791,7 +827,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.046
         },
         {
             "custom_model_data": 100063,
@@ -802,7 +839,8 @@
                 "walking": 1,
                 "melee": 2,
                 "defend": 3
-            }
+            },
+            "drop": -0.374
         },
         {
             "custom_model_data": 100064,
@@ -814,7 +852,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.093
         },
         {
             "custom_model_data": 100065,
@@ -826,7 +865,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.128
         },
         {
             "custom_model_data": 100066,
@@ -842,7 +882,8 @@
                 },
                 "melee": 4,
                 "defend": 5
-            }
+            },
+            "drop": 0.093
         },
         {
             "custom_model_data": 100067,
@@ -854,7 +895,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.081
         },
         {
             "custom_model_data": 100068,
@@ -866,7 +908,8 @@
                 "idle": 2,
                 "defend": 3,
                 "ranged": 4
-            }
+            },
+            "drop": 0.152
         },
         {
             "custom_model_data": 100069,
@@ -878,7 +921,8 @@
                 "idle": 2,
                 "defend": 3,
                 "ranged": 4
-            }
+            },
+            "drop": 0.152
         },
         {
             "custom_model_data": 100070,
@@ -895,7 +939,8 @@
                 "melee": 4,
                 "defend": 5,
                 "dragonfire": 6
-            }
+            },
+            "drop": 0.105
         },
         {
             "custom_model_data": 100071,
@@ -907,7 +952,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.117
         },
         {
             "custom_model_data": 100072,
@@ -919,7 +965,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.152
         },
         {
             "custom_model_data": 100073,
@@ -935,7 +982,8 @@
                 },
                 "melee": 4,
                 "defend": 5
-            }
+            },
+            "drop": 0.128
         },
         {
             "custom_model_data": 100074,
@@ -947,7 +995,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.175
         },
         {
             "custom_model_data": 100075,
@@ -959,7 +1008,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.117
         },
         {
             "custom_model_data": 100076,
@@ -971,7 +1021,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.175
         },
         {
             "custom_model_data": 100077,
@@ -988,7 +1039,8 @@
                 "melee": 4,
                 "defend": 5,
                 "dragonfire": 6
-            }
+            },
+            "drop": 0.082
         },
         {
             "custom_model_data": 100078,
@@ -1000,7 +1052,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.152
         },
         {
             "custom_model_data": 100079,
@@ -1012,7 +1065,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.152
         },
         {
             "custom_model_data": 100080,
@@ -1040,7 +1094,8 @@
                 },
                 "melee": 4,
                 "defend": 5
-            }
+            },
+            "drop": 0.116
         },
         {
             "custom_model_data": 100082,
@@ -1052,7 +1107,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.164
         },
         {
             "custom_model_data": 100083,
@@ -1064,7 +1120,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.14
         },
         {
             "custom_model_data": 100084,
@@ -1076,7 +1133,8 @@
                 "idle": 2,
                 "defend": 3,
                 "ranged": 4
-            }
+            },
+            "drop": 0.14
         },
         {
             "custom_model_data": 100085,
@@ -1088,7 +1146,8 @@
                 "idle": 2,
                 "defend": 3,
                 "ranged": 4
-            }
+            },
+            "drop": 0.14
         },
         {
             "custom_model_data": 100086,
@@ -1100,7 +1159,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.105
         },
         {
             "custom_model_data": 100087,
@@ -1112,7 +1172,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.164
         },
         {
             "custom_model_data": 100088,
@@ -1125,7 +1186,8 @@
                 "melee": 3,
                 "defend": 4,
                 "ranged": 5
-            }
+            },
+            "drop": 0.164
         },
         {
             "custom_model_data": 100089,
@@ -1137,7 +1199,8 @@
                 "idle": 2,
                 "defend": 3,
                 "ranged": 4
-            }
+            },
+            "drop": 0.14
         },
         {
             "custom_model_data": 100090,
@@ -1149,7 +1212,8 @@
                 "idle": 2,
                 "defend": 3,
                 "ranged": 4
-            }
+            },
+            "drop": 0.14
         },
         {
             "custom_model_data": 100091,
@@ -1161,7 +1225,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.14
         },
         {
             "custom_model_data": 100092,
@@ -1173,7 +1238,8 @@
                 "idle": 2,
                 "defend": 3,
                 "magic": 4
-            }
+            },
+            "drop": 0.14
         },
         {
             "custom_model_data": 100093,
@@ -1185,7 +1251,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.14
         },
         {
             "custom_model_data": 100094,
@@ -1197,7 +1264,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.152
         },
         {
             "custom_model_data": 100095,
@@ -1209,7 +1277,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.152
         },
         {
             "custom_model_data": 100096,
@@ -1221,7 +1290,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.105
         },
         {
             "custom_model_data": 100097,
@@ -1231,7 +1301,8 @@
             "clips": {
                 "walking": 1,
                 "idle": 2
-            }
+            },
+            "drop": 0.117
         },
         {
             "custom_model_data": 100098,
@@ -1243,7 +1314,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.129
         },
         {
             "custom_model_data": 100099,
@@ -1255,7 +1327,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.058
         },
         {
             "custom_model_data": 100100,
@@ -1267,7 +1340,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.14
         },
         {
             "custom_model_data": 100101,
@@ -1279,7 +1353,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.164
         },
         {
             "custom_model_data": 100102,
@@ -1291,7 +1366,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.164
         },
         {
             "custom_model_data": 100103,
@@ -1303,7 +1379,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.164
         },
         {
             "custom_model_data": 100104,
@@ -1315,7 +1392,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.164
         },
         {
             "custom_model_data": 100105,
@@ -1327,7 +1405,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.164
         },
         {
             "custom_model_data": 100106,
@@ -1339,7 +1418,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.14
         },
         {
             "custom_model_data": 100107,
@@ -1356,7 +1436,8 @@
                 "melee": 4,
                 "defend": 5,
                 "dragonfire": 6
-            }
+            },
+            "drop": 0.093
         },
         {
             "custom_model_data": 100108,
@@ -1366,7 +1447,8 @@
             "clips": {
                 "walking": 1,
                 "idle": 2
-            }
+            },
+            "drop": 0.128
         },
         {
             "custom_model_data": 100109,
@@ -1378,7 +1460,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.14
         },
         {
             "custom_model_data": 100110,
@@ -1390,7 +1473,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.082
         },
         {
             "custom_model_data": 100111,
@@ -1402,7 +1486,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.117
         },
         {
             "custom_model_data": 100112,
@@ -1415,7 +1500,8 @@
                 "defend": 3,
                 "ranged": 4,
                 "magic": 5
-            }
+            },
+            "drop": 0.14
         },
         {
             "custom_model_data": 100113,
@@ -1431,7 +1517,8 @@
                 },
                 "melee": 4,
                 "defend": 5
-            }
+            },
+            "drop": 0.128
         },
         {
             "custom_model_data": 100114,
@@ -1447,7 +1534,8 @@
                 },
                 "melee": 4,
                 "defend": 5
-            }
+            },
+            "drop": 0.14
         },
         {
             "custom_model_data": 100115,
@@ -1463,7 +1551,8 @@
                 },
                 "melee": 4,
                 "defend": 5
-            }
+            },
+            "drop": 0.128
         },
         {
             "custom_model_data": 100116,
@@ -1479,7 +1568,8 @@
                 },
                 "melee": 4,
                 "defend": 5
-            }
+            },
+            "drop": 0.128
         },
         {
             "custom_model_data": 100117,
@@ -1491,7 +1581,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.105
         },
         {
             "custom_model_data": 100118,
@@ -1503,7 +1594,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.152
         },
         {
             "custom_model_data": 100119,
@@ -1515,7 +1607,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.105
         },
         {
             "custom_model_data": 100120,
@@ -1527,7 +1620,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.07
         },
         {
             "custom_model_data": 100121,
@@ -1539,7 +1633,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.07
         },
         {
             "custom_model_data": 100122,
@@ -1551,7 +1646,8 @@
                 "idle": 2,
                 "melee": 3,
                 "defend": 4
-            }
+            },
+            "drop": 0.105
         },
         {
             "custom_model_data": 100123,
@@ -1567,7 +1663,8 @@
                 },
                 "melee": 4,
                 "defend": 5
-            }
+            },
+            "drop": 0.14
         }
     ]
 }
