@@ -98,6 +98,13 @@ jobs:
         if: matrix.set == 'full'
         run: python .github/scripts/font_sizes.py run/fonts.json
 
+      - name: Item frame model reach
+        # How far each item's model reaches from an item frame holding it, for the plugin's culling of
+        # frames behind blocks (scenery models can reach several blocks past their frame). Reads the 1.18.2
+        # item overrides, so before the 1.21.4 item upgrade.
+        if: matrix.set == 'full'
+        run: python .github/scripts/build_frame_bounds.py run/frame_bounds.json
+
       - name: Archive dev
         if: matrix.set == 'full'
         run: .github/scripts/archive.sh "dev.zip"
@@ -162,7 +169,8 @@ jobs:
           if [ "${{ matrix.set }}" = full ]; then
             sha1sum run/fonts.json | cut -d ' ' -f 1 > run/fonts.json.sha1
             sha1sum run/mobs.json | cut -d ' ' -f 1 > run/mobs.json.sha1
-            files+=(run/noted.txt run/fonts.json run/fonts.json.sha1 run/mobs.json run/mobs.json.sha1)
+            sha1sum run/frame_bounds.json | cut -d ' ' -f 1 > run/frame_bounds.json.sha1
+            files+=(run/noted.txt run/fonts.json run/fonts.json.sha1 run/mobs.json run/mobs.json.sha1 run/frame_bounds.json run/frame_bounds.json.sha1)
           fi
           # the full pack's job made the draft as it began; wait for it no more than five minutes
           for i in $(seq 60); do gh release view "$DRAFT" >/dev/null 2>&1 && break; sleep 5; done
@@ -233,7 +241,7 @@ jobs:
       - name: Fetch the zips for the public release
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.public_release == 'true'
         run: |
-          gh release download patreon -p 'patreon*.zip' -p '20*.zip' -p '21*.zip' -p 'fonts.json*' -p 'mobs.json*'
+          gh release download patreon -p 'patreon*.zip' -p '20*.zip' -p '21*.zip' -p 'fonts.json*' -p 'mobs.json*' -p 'frame_bounds.json*'
           for file in $BEDROCK_FILES; do gh release download patreon -p "$file" -p "$file.sha1"; done
 
       - name: Rename files for public release
@@ -260,7 +268,7 @@ jobs:
           gh release create resourcepack --title Resourcepack --notes '' --latest
           bedrock=()
           for file in $BEDROCK_FILES; do bedrock+=("$file" "$file.sha1"); done
-          ls resourcepack*.zip resourcepack*.zip.sha1 fonts.json fonts.json.sha1 mobs.json mobs.json.sha1 "${bedrock[@]}" | xargs -P 8 -I{} gh release upload resourcepack {}
+          ls resourcepack*.zip resourcepack*.zip.sha1 fonts.json fonts.json.sha1 mobs.json mobs.json.sha1 frame_bounds.json frame_bounds.json.sha1 "${bedrock[@]}" | xargs -P 8 -I{} gh release upload resourcepack {}
 
       - name: Update pack on server
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.public_release == 'true'
