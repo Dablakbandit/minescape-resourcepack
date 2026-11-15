@@ -293,6 +293,9 @@ def rect_corners(face, f, t, uv, rotation, transform=None):
     return [tuple(at[(lo_u, lo_v)]), tuple(at[(hi_u, lo_v)]), tuple(at[(hi_u, hi_v)]), tuple(at[(lo_u, hi_v)])]
 
 
+OPPOSITE = {"north": "south", "south": "north", "east": "west", "west": "east", "up": "down", "down": "up"}
+
+
 # ---- how the model shows as an item -----------------------------------------------------------------------------
 
 # Each place an item is drawn, but on the stand's head: its turn (degrees, x y z as Minecraft applies them), how many
@@ -527,6 +530,29 @@ def build(mob):
         shift = np.array([8 - f * (lo[0] + hi[0]) / 2, -15.5 - f * lo[1], 8 - f * (lo[2] + hi[2]) / 2])
     A = affine(np.eye(3) * f, shift)
     A_inv = np.linalg.inv(A)
+    # Every frame plays the bones' own rest rotations too, so the model as drawn can stand elsewhere than its cubes
+    # (a scorpion's root bone turns it round near its tail, which then stood over the stand). Each frame is moved
+    # across by the same amount, so the middle of the model at rest, as drawn, is over the stand; its height stays.
+    centring = np.eye(4)
+    if not anchored:
+        rest = {}
+        for uid in bones:
+            g = groups[uid]
+            pivot = np.array(g.get("origin", [0, 0, 0]), float)
+            local = affine(np.eye(3), pivot) @ affine(euler_zyx(g.get("rotation", [0, 0, 0])), np.zeros(3)) @ affine(np.eye(3), -pivot)
+            rest[uid] = (rest[parent[uid]] @ local) if parent[uid] else local
+        posed = []
+        for uid, e in elements.items():
+            o = np.array(e.get("origin", [0, 0, 0]), float)
+            r = e.get("rotation", [0, 0, 0])
+            turn = euler_zyx(r) if any(abs(a) > 1e-6 for a in r) else np.eye(3)
+            for x in (e["from"][0], e["to"][0]):
+                for y in (e["from"][1], e["to"][1]):
+                    for z in (e["from"][2], e["to"][2]):
+                        p = turn @ (np.array([x, y, z], float) - o) + o
+                        posed.append(f * (rest[owner[uid]] @ np.append(p, 1.0))[:3] + shift)
+        plo, phi = np.min(posed, axis=0), np.max(posed, axis=0)
+        centring = affine(np.eye(3), np.array([8 - (plo[0] + phi[0]) / 2, 0.0, 8 - (plo[2] + phi[2]) / 2]))
 
     def java(p):
         return f * np.array(p, float) + shift
@@ -559,14 +585,14 @@ def build(mob):
         q = turns[other].T @ (p - o) + o
         return all(min(e["from"][i], e["to"][i]) - 1e-4 <= q[i] <= max(e["from"][i], e["to"][i]) + 1e-4 for i in range(3))
 
-    def hidden(uid, face):
+    def hidden(uid, face, inward=False):
         e = elements[uid]
         others = [u for u in elements if u != uid and owner[u] == owner[uid]]
         if not others:
             return False
         o = np.array(e["origin"], float)
         corners = [turns[uid] @ (np.array(c, float) - o) + o for c in face_corners(face, e["from"], e["to"])]
-        out = turns[uid] @ np.array(normals[face], float) * 0.02
+        out = turns[uid] @ np.array(normals[face], float) * (-0.02 if inward else 0.02)
         for a in np.linspace(0.02, 0.98, 7):
             for b in np.linspace(0.02, 0.98, 7):
                 p = (corners[0] * (1 - a) + corners[3] * a) * (1 - b) + (corners[1] * (1 - a) + corners[2] * a) * b + out
@@ -592,11 +618,21 @@ def build(mob):
             if hidden(uid, face):
                 culled += 1
                 continue
-            faces.append((uid, face, fd, (u0, v0, u1, v1), src))
+            faces.append((uid, face, fd, (u0, v0, u1, v1), src, False))
+        # A cube with a face left out, where no other cube of its bone covers the gap, is open, and Blockbench draws
+        # faces from both sides: through the gap its other faces show from inside (a dragon's mouth as it opens).
+        # Minecraft draws a face from its front only, so each of an open cube's faces also gets a copy facing in, on
+        # the same plane with the same texels. (Most left-out faces are against another cube: those stay as they are.)
+        if any((fd.get("texture") is None or not fd.get("uv")) and not hidden(uid, face) for face, fd in e["faces"].items()):
+            for (fuid, face, fd, uv, src, _) in [f for f in faces if f[0] == uid and not f[5]]:
+                if hidden(uid, face, inward=True):
+                    culled += 1
+                    continue
+                faces.append((uid, face, fd, uv, src, True))
 
     # each face's own copy of its texels (at least 2 x 2, for its four corners to carry its number), edge to edge
     # on shelves, tallest first, in the smallest sprite they and the records fit
-    sizes = [(max(MIN_FACE, abs(u1 - u0)), max(MIN_FACE, abs(v1 - v0))) for _, _, _, (u0, v0, u1, v1), _ in faces]
+    sizes = [(max(MIN_FACE, abs(u1 - u0)), max(MIN_FACE, abs(v1 - v0))) for _, _, _, (u0, v0, u1, v1), _, _ in faces]
     lengths = {}
     for _, anim, end in clips:
         lengths[anim] = max(1, round(float(animations[anim]["length"]) * 20)) + (0 if end == LOOP else 1)
@@ -619,7 +655,8 @@ def build(mob):
     sprite = Sprite(size, len(bones))
 
     by_element = {}
-    for i, (uid, face, fd, (u0, v0, u1, v1), src) in enumerate(faces):
+    geometry = {}
+    for i, (uid, face, fd, (u0, v0, u1, v1), src, inward) in enumerate(faces):
         e = elements[uid]
         px, py = place[i]
         w, h = sizes[i]
@@ -641,11 +678,29 @@ def build(mob):
             origin = java(e["origin"])
             m = euler_zyx(r)
             turn = lambda p, m=m, o=origin: m @ (p - o) + o
-        corners = rect_corners(face, java(e["from"]), java(e["to"]), (nu0, nv0, nu1, nv1), rotation, turn)
-        middle = (java(e["from"]) + java(e["to"])) / 2
-        tilted = rect_corners(face, java(e["from"]), java(e["to"]), (nu0, nv0, nu1, nv1), rotation,
-                              lambda p, o=middle: TILT_M @ (p - o) + o)
+        lo_j, hi_j = java(e["from"]), java(e["to"])
+        corners = rect_corners(face, lo_j, hi_j, (nu0, nv0, nu1, nv1), rotation, turn)
         outward = (euler_zyx(r) if any(abs(a) > 1e-6 for a in r) else np.eye(3)) @ np.array(normals[face], float)
+        side = face
+        if inward:
+            # a flat element on the face's plane, facing the other way, its uv laid so each texel stays where it was
+            axis = {"east": 0, "west": 0, "up": 1, "down": 1, "south": 2, "north": 2}[face]
+            plane = (hi_j if face in ("east", "up", "south") else lo_j)[axis]
+            lo_j, hi_j = lo_j.copy(), hi_j.copy()
+            lo_j[axis] = hi_j[axis] = plane
+            side = OPPOSITE[face]
+            want = [np.array(v) for v in corners]
+            for (a0, b0, a1, b1) in ((nu0, nv0, nu1, nv1), (nu1, nv0, nu0, nv1), (nu0, nv1, nu1, nv0), (nu1, nv1, nu0, nv0)):
+                hit = next((rot for rot in (0, 90, 180, 270)
+                            if all(np.allclose(np.array(x), y, atol=1e-6) for x, y in zip(rect_corners(side, lo_j, hi_j, (a0, b0, a1, b1), rot, turn), want))), None)
+                if hit is not None:
+                    nu0, nv0, nu1, nv1, rotation = a0, b0, a1, b1, hit
+                    break
+            else:
+                raise ModelError("%s: no uv lays a face's inside copy on it" % name)
+            outward = -outward
+        middle = (lo_j + hi_j) / 2
+        tilted = rect_corners(side, lo_j, hi_j, (nu0, nv0, nu1, nv1), rotation, lambda p, o=middle: TILT_M @ (p - o) + o)
         c = [np.array(v) for v in corners]
         flip = float(np.cross(c[1] - c[0], c[3] - c[0]) @ outward) < 0
         sprite.face(index[owner[uid]], (px, py, px + w, py + h), corners, tilted, flip)
@@ -656,11 +711,14 @@ def build(mob):
         out = {"uv": [round(c * s, 6) for c in (iu0, iv0, iu1, iv1)], "texture": "#skin", "tintindex": 0}
         if rotation:
             out["rotation"] = rotation
-        by_element.setdefault(uid, {})[face] = out
+        key = (uid, face) if inward else uid
+        geometry[key] = (uid, lo_j, hi_j)
+        by_element.setdefault(key, {})[side] = out
     model_elements = []
-    for uid, fs in by_element.items():
+    for key, fs in by_element.items():
+        uid, lo_j, hi_j = geometry[key]
         e = elements[uid]
-        el = {"from": [round(v, 4) for v in java(e["from"])], "to": [round(v, 4) for v in java(e["to"])], "faces": fs}
+        el = {"from": [round(float(v), 4) for v in lo_j], "to": [round(float(v), 4) for v in hi_j], "faces": fs}
         r = e.get("rotation", [0, 0, 0])
         nz = [(a, v) for a, v in zip("xyz", r) if abs(v) > 1e-6]
         if nz:
@@ -686,7 +744,7 @@ def build(mob):
                 pivot = np.array(g["origin"], float)
                 local = affine(np.eye(3), pivot + pos) @ affine(euler_zyx(rot) @ np.diag(scl), np.zeros(3)) @ affine(np.eye(3), -pivot)
                 world[uid] = (world[parent[uid]] @ local) if parent[uid] else local
-            frames.append([((A @ world[uid] @ A_inv)[:3, :3], (A @ world[uid] @ A_inv)[:3, 3]) for uid in bones])
+            frames.append([((centring @ A @ world[uid] @ A_inv)[:3, :3], (centring @ A @ world[uid] @ A_inv)[:3, 3]) for uid in bones])
             # a keyframe's offset is kept to within 64 Java units of where the bone rests (the sprite's encoding)
             for uid, (_, offset) in zip(bones, frames[-1]):
                 if np.max(np.abs(offset)) >= 63.9:
@@ -695,9 +753,9 @@ def build(mob):
         assert sprite.clip(frames, end) == cid
 
     tilted_elements = []
-    for el, uid in zip(model_elements, by_element):
-        e = elements[uid]
-        middle = (java(e["from"]) + java(e["to"])) / 2
+    for el, key in zip(model_elements, by_element):
+        _, lo_j, hi_j = geometry[key]
+        middle = (lo_j + hi_j) / 2
         t = dict(el)
         t["rotation"] = {"origin": [round(float(v), 4) for v in middle], "x": TILT[0], "y": TILT[1], "z": TILT[2]}
         tilted_elements.append(t)

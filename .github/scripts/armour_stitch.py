@@ -64,7 +64,8 @@ const float VANILLA[3] = float[](0.0, 1.0, 0.5);
 
 void narrow(int layer, vec2 uv, inout StitchVertex v) {
     vec2 p = uv * vec2(64.0, 32.0);
-    if (p.y < 19.5 || p.x > 56.5) {
+    // which way a side comes in is read from its corner: where the renderer can't number them, as drawn
+    if (p.y < 19.5 || p.x > 56.5 || v.corner < 0) {
         return;
     }
     bool maxU = v.corner == 0 || v.corner == 3;
@@ -96,7 +97,7 @@ const float FLARE_IN[4] = float[](0.0, 1.0, 0.75, 0.0);
 
 void hang(int shape, vec2 uv, inout StitchVertex v) {
     vec2 p = uv * vec2(64.0, 32.0);
-    if (p.x > 16.0 || p.y < 31.0) {
+    if (p.x > 16.0 || p.y < 31.0 || v.corner < 0) {
         return;
     }
     bool maxU = v.corner == 0 || v.corner == 3;
@@ -138,6 +139,7 @@ void torso(int shape, vec2 uv, inout StitchVertex v) {
         return;
     }
     if (v.corner < 2) {
+        // the top corners stay, and so does every corner where the renderer can't number them (-1)
         return;
     }
     vec3 side = normalize(cross(up, n)) * stitch_handedness();
