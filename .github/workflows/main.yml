@@ -56,6 +56,13 @@ jobs:
         # the mobs stitch plays; count_icons.py lists them on leather horse armour.
         run: python .github/scripts/build_mobs.py
 
+      - name: Models for clients before 1.21.11
+        # A model whose elements turn in ways older clients reject (any angle, or about x, y and z at once, as
+        # Blockbench writes for 1.21.11) is drawn as the missing model there: each such model as drawn goes to
+        # an overlay for the clients that take it, and in its place the nearest the older ones can load. Before
+        # count_icons.py, whose copies take the model's elements.
+        run: python .github/scripts/legacy_models.py
+
       - name: Cache Minecraft shaders
         # Each release's text shader, read once from its client jar; a new release adds to it.
         uses: actions/cache@v6
@@ -149,6 +156,12 @@ jobs:
         run: |
           sudo chown -R "$(id -u):$(id -g)" .
           python .github/scripts/count_icons.py --items
+
+      - name: Models for clients from 1.21.6, as upgraded
+        # The upgrader moved the block textures item models draw to item/ in the base folder only: the overlay
+        # copies of legacy_models.py take them (and their parents) from there again, or from 26.1 a copy
+        # still naming block/ breaks every model of its item.
+        run: python .github/scripts/legacy_models.py --sync
 
       - name: Check item models' atlases
         # From 26.1 an item model mixing item textures with a missing one breaks its whole item.

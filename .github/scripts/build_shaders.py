@@ -1082,7 +1082,10 @@ def main():
     import armour_looks
     # and the animated mobs' tilted models (build_mobs.py)
     import build_mobs
-    for directory, first, final in [m[:3] for m in armour_looks.CIT_MATCH] + armour_looks.MODEL_OVERLAYS + build_mobs.OVERLAYS:
+    # and the models as drawn, for the clients that take their rotations (legacy_models.py)
+    import legacy_models
+    for directory, first, final in ([m[:3] for m in armour_looks.CIT_MATCH] + armour_looks.MODEL_OVERLAYS + build_mobs.OVERLAYS
+                                    + legacy_models.OVERLAYS):
         if directory:
             final = final or last
             entries.append({"formats": {"min_inclusive": first, "max_inclusive": final},
