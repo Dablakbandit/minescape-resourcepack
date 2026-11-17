@@ -233,10 +233,22 @@ void stitch_vertex(inout StitchVertex v) {
     vec3 e1 = corners[1] - corners[0];
     vec3 e3 = corners[3] - corners[0];
     scale = length(e1) / length(r1);
-    turn = frame(e1, e3) * transpose(frame(r1, r3));
+    // A screen from 1.20 mirrors what it draws (the pose that flips its y turns the vertices before they get here),
+    // and two edges can't tell a mirror from a turn: the frame as drawn then has its third axis the wrong way, every
+    // bone's move off a face's plane went the wrong way, and the model came apart in a menu slot
+    float hand = 1.0;
+#ifdef STITCH_HAS_ORIENTATION
+    hand = stitch_handedness();
+#endif
+    turn = frame(e1, e3) * mat3(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, hand) * transpose(frame(r1, r3));
     here = rest;
     restNormal = transpose(turn) * v.normal;
 #elif defined(STITCH_HAS_ORIENTATION)
+    if (stitch_in_screen()) {
+        // a screen's icon, which no upright stand's turn fits: there a mob is drawn by its model for screens, already
+        // posed and not tilted (build_mobs.py's SCREEN_MODELS), as it is
+        return;
+    }
     // upright, turned about the vertical: the turn that takes the tilted face's rest normal to its drawn one and the
     // model's up to the world's, at the head display's scale; always, to untilt it
     vec3 t[4];

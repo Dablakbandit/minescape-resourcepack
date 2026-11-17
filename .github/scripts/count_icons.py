@@ -544,10 +544,17 @@ def items():
                 "cases": [{"when": "gui", "model": {"type": "minecraft:composite", "models": [icon, count]}}],
                 "fallback": icon}})
         if material == ITEM:
-            # an animated mob's model alone, its dye handed to it as the clip it plays (build_mobs.py)
+            # an animated mob's model alone, its dye handed to it as the clip it plays (build_mobs.py); in a screen
+            # its model for screens where it has one, which is its own but on 26.3 (build_mobs.py's SCREEN_MODELS)
             for number, ref in sorted(mobs.items(), key=lambda e: int(e[0])):
-                entries.append({"threshold": int(number), "model": {"type": "minecraft:model", "model": ref,
-                                                                    "tints": [{"type": "minecraft:dye", "default": -1}]}})
+                tints = [{"type": "minecraft:dye", "default": -1}]
+                model = {"type": "minecraft:model", "model": ref, "tints": tints}
+                screen = ref.replace("ms:mobs/animated/", "ms:mobs/animated_gui/")
+                if os.path.exists(model_path(screen)):
+                    model = {"type": "minecraft:select", "property": "minecraft:display_context",
+                             "cases": [{"when": "gui", "model": {"type": "minecraft:model", "model": screen, "tints": tints}}],
+                             "fallback": model}
+                entries.append({"threshold": int(number), "model": model})
         path = os.path.join(ITEMS, material + ".json")
         if material == ITEM:
             fallback = {"type": "minecraft:model", "model": "minecraft:item/" + ITEM,
