@@ -11,7 +11,8 @@
 // face at rest and as drawn. Where it can't (26.3: its OpenGL backend can't take shuffles), a mob stands upright and
 // only turns about the vertical, so its turn is the one that takes the face's rest normal to the drawn one and the
 // model's up to the world's; 26.3's models are drawn with every cube tilted (build_mobs.py's TILT) so that no face
-// points straight up or down, and each vertex is put back where the untilted model, posed, has it.
+// points straight up or down, and each vertex is put back where the untilted model, posed, has it. A menu slot's draw
+// there isn't upright: its turn is the screen's own, which is known (slotDraw).
 
 const int MARK = 254;
 const ivec3 MAGIC = ivec3(77, 66, 51);
@@ -26,6 +27,13 @@ const float INSET = 0.125;
 const float INSET_SLACK = 0.05;
 // an armour stand draws its head item at 0.625 of a block per 16 units, times the head display's scale
 const float HEAD_ITEM = 0.625 / 16.0;
+// a screen's display turns every mob's icon by this (build_mobs.py's GUI_TURN, 30 then 45 degrees, x then y), and
+// draws it into its slot of the screen's atlas of items flipped upside down (GuiItemAtlas: scale(s, -s, s))
+const mat3 GUI_TURN = mat3(1.0, 0.0, 0.0, 0.0, 0.8660254, 0.5, 0.0, -0.5, 0.8660254)
+    * mat3(0.70710678, 0.0, -0.70710678, 0.0, 1.0, 0.0, 0.70710678, 0.0, 0.70710678);
+const mat3 SLOT_FLIP = mat3(1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0);
+// the biggest gui scale a slot is looked for at (a slot is 16 pixels of the atlas a gui scale)
+const int MOST_GUI_SCALE = 16;
 
 ivec4 texel(ivec2 p) {
     return ivec4(round(stitch_texel_fetch(p) * 255.0));
@@ -159,6 +167,35 @@ void pose(ivec2 origin, int size, int clips, int keys, int bones, int bone, int 
     grow = mix(keyScale(origin, size, k0), keyScale(origin, size, k1), k);
 }
 
+// A menu slot's draw of a mob on 26.3. From 1.21.6 a screen draws an item into its own slot of an atlas of items, an
+// orthographic one: the vertex is at the slot's middle plus s * SLOT_FLIP * (the gui display's translation, turn and
+// scale of the model, about its middle), s the slot's size (16 a gui scale), the slot a whole number of slots in. With
+// the display (build_mobs.py writes its scale and translation into the sprite's header) and this vertex's place at rest,
+// only the slot's size is unknown: the one for which this vertex sits that many slots in, across and down, is it. A draw
+// that isn't a slot's (a mob on a head in the inventory's player preview, turned with the player) fits no size, or its
+// normal isn't the face's turned as a slot turns it, and is left as it is.
+bool slotDraw(vec3 position, vec3 normal, vec3 rest, vec3 restNormal, ivec2 origin, int header, out float pixels) {
+    pixels = 0.0;
+    float g = float(number(texel(origin + ivec2(5, header)))) / 4096.0;
+    vec2 shift = (vec2(number(texel(origin + ivec2(6, header))), number(texel(origin + ivec2(7, header)))) / 65536.0 - 128.0) / 16.0;
+    if (g <= 0.0 || dot(normalize(normal), normalize(SLOT_FLIP * GUI_TURN * restNormal)) < 0.999) {
+        return false;
+    }
+    vec3 a = vec3(shift, 0.0) + GUI_TURN * (g * (rest / 16.0 - 0.5));
+    float best = 1.0;
+    for (int i = 1; i <= MOST_GUI_SCALE; i++) {
+        float s = 16.0 * float(i);
+        vec2 slot = vec2(position.x / s - 0.5 - a.x, position.y / s - 0.5 + a.y);
+        vec2 off = abs(slot - floor(slot + 0.5));
+        float e = max(off.x, off.y);
+        if (e < best) {
+            best = e;
+            pixels = s;
+        }
+    }
+    return best < 0.01;
+}
+
 vec3 rotate(vec4 q, vec3 v) {
     return v + 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v);
 }
@@ -244,13 +281,6 @@ void stitch_vertex(inout StitchVertex v) {
     here = rest;
     restNormal = transpose(turn) * v.normal;
 #elif defined(STITCH_HAS_ORIENTATION)
-    if (stitch_in_screen()) {
-        // a screen's icon, which no upright stand's turn fits: there a mob is drawn by its model for screens, already
-        // posed and not tilted (build_mobs.py's SCREEN_MODELS), as it is
-        return;
-    }
-    // upright, turned about the vertical: the turn that takes the tilted face's rest normal to its drawn one and the
-    // model's up to the world's, at the head display's scale; always, to untilt it
     vec3 t[4];
     vec3 u[4];
     for (int i = 0; i < 4; i++) {
@@ -258,14 +288,28 @@ void stitch_vertex(inout StitchVertex v) {
         u[i] = restAt(origin, size, face, i, false);
     }
     float sgn = (record(origin, size, at).g & 1) != 0 ? -1.0 : 1.0;
-    // Minecraft gives a face the normal of the axis nearest its own, which the tilt keeps level
-    vec3 n = sgn * cross(t[1] - t[0], t[3] - t[0]);
-    vec3 a = abs(n);
-    vec3 snapped = a.x >= a.z && a.x >= a.y ? vec3(sign(n.x), 0.0, 0.0) : a.z >= a.y ? vec3(0.0, 0.0, sign(n.z)) : vec3(0.0, sign(n.y), 0.0);
-    turn = frame(normalize(v.normal), stitch_up()) * transpose(frame(snapped, vec3(0.0, 1.0, 0.0)));
-    scale = HEAD_ITEM * float(number(texel(origin + ivec2(4, header)))) / 4096.0;
-    here = t[k];
     restNormal = sgn * normalize(cross(u[1] - u[0], u[3] - u[0]));
+    if (stitch_in_screen()) {
+        // a screen draws a mob by its model for screens, not tilted (build_mobs.py's SCREEN_MODELS): in a menu slot
+        // posed by the slot's own turn and size; anything else in a screen, or at rest, as it is
+        float pixels;
+        if (!moving || !slotDraw(v.position, v.normal, rest, restNormal, origin, header, pixels)) {
+            return;
+        }
+        turn = SLOT_FLIP * GUI_TURN;
+        scale = pixels * float(number(texel(origin + ivec2(5, header)))) / 4096.0 / 16.0;
+        here = rest;
+    } else {
+        // upright, turned about the vertical: the turn that takes the tilted face's rest normal to its drawn one and
+        // the model's up to the world's, at the head display's scale; always, to untilt it
+        // Minecraft gives a face the normal of the axis nearest its own, which the tilt keeps level
+        vec3 n = sgn * cross(t[1] - t[0], t[3] - t[0]);
+        vec3 a = abs(n);
+        vec3 snapped = a.x >= a.z && a.x >= a.y ? vec3(sign(n.x), 0.0, 0.0) : a.z >= a.y ? vec3(0.0, 0.0, sign(n.z)) : vec3(0.0, sign(n.y), 0.0);
+        turn = frame(normalize(v.normal), stitch_up()) * transpose(frame(snapped, vec3(0.0, 1.0, 0.0)));
+        scale = HEAD_ITEM * float(number(texel(origin + ivec2(4, header)))) / 4096.0;
+        here = t[k];
+    }
 #else
     return;
 #endif

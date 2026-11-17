@@ -51,8 +51,7 @@ mobs/textures/>"}), so one model and its animations can be several mobs in diffe
 
 Written (git-ignored): assets/ms/textures/item/mobs/<name>.png, assets/ms/models/mobs/animated/<name>.json and the
 tilted copy in mobs_26_3/ (an overlay build_shaders.py lists in pack.mcmeta); a mob's model for a screen,
-assets/ms/models/mobs/animated_gui/<name>.json, its own model everywhere but 26.3, where it is the model posed at its
-icon clip's first frame (SCREEN_MODELS); and
+assets/ms/models/mobs/animated_gui/<name>.json, and the texture that keeps a screen redrawing it (SCREEN_MODELS); and
 run/mobs.json, which the release publishes for the plugin: each mob's custom model data, its clips (id and ticks
 played) and a hitbox fitted to the model, in blocks about the stand's feet.
 """
@@ -103,11 +102,14 @@ TILT = (-26.5650, 24.0956, 39.2316)
 TILTED_OVERLAY = "mobs_26_3"
 TILTED = os.path.join(ROOT, TILTED_OVERLAY, "assets", "ms", "models", "mobs", "animated")
 # A screen draws a mob by this model instead (count_icons.py's 1.21.4+ item definition, by display context): its own
-# model, as a parent, but in the 26.3 overlay the model already posed at its icon clip's first frame. 26.3's one-vertex
-# path takes a mob's turn from an upright stand's, which a screen's tilted, flipped and scaled icon isn't, and chopped
-# every icon up; there the stitch leaves a screen's draw as it is: whole and still, where other versions play the clip.
+# model, untilted on 26.3 too (no overlay replaces it), and one face more, of SCREEN_CLOCK. From 1.21.6 a screen draws
+# an item into its atlas of items once and shows that copy from then on, unless one of its textures is animated: this
+# one is, two clear frames, so the screen draws the mob again every frame and its clip plays. On 26.3 the mobs stitch
+# poses a screen's draw of it from the screen's known turn (mobs.vert.glsl's slotDraw).
 SCREEN_MODELS = os.path.join(ROOT, "assets", "ms", "models", "mobs", "animated_gui")
-SCREEN_POSED = os.path.join(ROOT, TILTED_OVERLAY, "assets", "ms", "models", "mobs", "animated_gui")
+SCREEN_CLOCK = "screen_clock"
+# a screen turns a mob's icon by this (the gui display's rotation, x y z degrees); mobs.vert.glsl's GUI_TURN is the same
+GUI_TURN = [30, 45, 0]
 # the overlays this writes, for build_shaders.py to list: directory, first pack format, last (None: the newest)
 OVERLAYS = [(TILTED_OVERLAY, 97, None)]
 MAX_CLIPS = 30
@@ -160,32 +162,6 @@ def split(m):
     return m / s, s
 
 
-def posed_element(el, m, t):
-    """A model element as its bone poses it (m: rotation times scale, t: offset, in Java units): the cube grown about
-    its middle and turned there by its own turn and the bone's together, as one turn about three axes (x y z degrees,
-    applied as TILT's are; only 26.3's models take more than one)."""
-    r, s = split(m)
-    lo, hi = np.array(el["from"], float), np.array(el["to"], float)
-    middle, half = (lo + hi) / 2, (hi - lo) / 2
-    own, origin = np.eye(3), middle
-    if "rotation" in el:
-        angle = [0.0, 0.0, 0.0]
-        angle["xyz".index(el["rotation"]["axis"])] = el["rotation"]["angle"]
-        own, origin = euler_zyx(angle), np.array(el["rotation"]["origin"], float)
-    middle = m @ (own @ (middle - origin) + origin) + t
-    turn = r @ own
-    # turn = rz @ ry @ rx, euler_zyx's order
-    y = -math.asin(max(-1.0, min(1.0, turn[2, 0])))
-    x = math.atan2(turn[2, 1], turn[2, 2])
-    z = math.atan2(turn[1, 0], turn[0, 0])
-    assert np.allclose(euler_zyx([math.degrees(x), math.degrees(y), math.degrees(z)]), turn, atol=1e-6)
-    out = dict(el, **{"from": [round(float(v), 4) for v in middle - s * half],
-                      "to": [round(float(v), 4) for v in middle + s * half]})
-    out["rotation"] = {"origin": [round(float(v), 4) for v in middle],
-                       "x": round(math.degrees(x), 4), "y": round(math.degrees(y), 4), "z": round(math.degrees(z), 4)}
-    return out
-
-
 class Sprite:
     def __init__(self, size, bones):
         self.size = size
@@ -196,6 +172,7 @@ class Sprite:
         self.bones = bones
         self.bottom = 0    # the lowest row a face uses, which the records must stay under
         self.display_scale = 1.0
+        self.gui_display = None  # a screen's display of it (scale, translation x and y in pixels), for the stitch
 
     def visible(self, x, y, rgba):
         self.img.putpixel((x, y), rgba)
@@ -287,6 +264,13 @@ class Sprite:
         # the head display's scale (in 4096ths), for a vertex that can't measure its face as drawn
         se = int(round(self.display_scale * 4096))
         self.img.putpixel((4, h), (se >> 16, (se >> 8) & 255, se & 255, MARK))
+        # a screen's display (on 26.3 the stitch poses a menu slot's draw from it): its scale in 4096ths, its translation
+        # across and up in 65536ths of a pixel from -128
+        if self.gui_display is not None:
+            g, tx, ty = self.gui_display
+            for x, e in ((5, int(round(g * 4096))), (6, int(round((tx + 128) * 65536))), (7, int(round((ty + 128) * 65536)))):
+                assert 0 <= e < 1 << 24, (x, e)
+                self.img.putpixel((x, h), (e >> 16, (e >> 8) & 255, e & 255, MARK))
         self.img.putpixel((self.size - 1, h), (*MAGIC, MARK))
         return self.img
 
@@ -336,7 +320,7 @@ OPPOSITE = {"north": "south", "south": "north", "east": "west", "west": "east", 
 # pixels its whole model fits in, and where its middle goes (pixels). A screen's icon three-quarters on, as the old
 # models' were; side on in an item frame.
 DISPLAYS = {
-    "gui": ([30, 45, 0], 15.0, [0, 0, 0]),
+    "gui": (GUI_TURN, 15.0, [0, 0, 0]),
     "fixed": ([0, 90, 0], 14.0, [0, 0, 0]),
     "ground": ([0, 0, 0], 8.0, [0, 4, 0]),
     "thirdperson_righthand": ([0, 90, 0], 9.0, [0, 3, 1]),
@@ -748,10 +732,9 @@ def build(mob):
         key = (uid, face) if inward else uid
         geometry[key] = (uid, lo_j, hi_j)
         by_element.setdefault(key, {})[side] = out
-    model_elements, element_bones = [], []
+    model_elements = []
     for key, fs in by_element.items():
         uid, lo_j, hi_j = geometry[key]
-        element_bones.append(index[owner[uid]])
         e = elements[uid]
         el = {"from": [round(float(v), 4) for v in lo_j], "to": [round(float(v), 4) for v in hi_j], "faces": fs}
         r = e.get("rotation", [0, 0, 0])
@@ -814,8 +797,6 @@ def build(mob):
     # a model's bones rarely put its feet exactly at its origin); a translation unit on the head is HEAD_ITEM blocks
     drop = float(mob.get("drop", 0))
     sprite.display_scale = scale
-    os.makedirs(TEXTURES, exist_ok=True)
-    sprite.write().save(os.path.join(TEXTURES, name + ".png"))
     # A screen shows a mob playing its idle (else its walking), as the bestiary and the pets menu dye it, never its
     # cubes as built: those stand without the bones' own rest rotations, elsewhere than the mob as drawn (the scorpions
     # by their tails, a rat beside its middle). Its icon is fitted to the box that clip's frames sweep, so it stays
@@ -826,12 +807,15 @@ def build(mob):
         swept = [m @ np.array(c, float) + t for frame in played_frames[icon_clip]
                  for bone, _, corners, _, _ in sprite.faces for m, t in [frame[bone]] for c in corners]
         icon_box = (np.min(swept, axis=0), np.max(swept, axis=0))
+    gui = fitted(*icon_box, *DISPLAYS["gui"])
+    sprite.gui_display = (gui["scale"][0], gui["translation"][0], gui["translation"][1])
+    os.makedirs(TEXTURES, exist_ok=True)
+    sprite.write().save(os.path.join(TEXTURES, name + ".png"))
     model = {"textures": {"skin": "ms:item/mobs/" + name, "particle": "ms:item/mobs/" + name},
              "elements": model_elements,
              # on the stand's head, facing its front (the model faces +z), feet on the ground; anywhere else fitted, a
              # screen's icon to the model as its idle plays it
-             "display": dict({place: fitted(*(icon_box if place == "gui" else (box_lo, box_hi)), *d)
-                              for place, d in DISPLAYS.items()},
+             "display": dict({place: gui if place == "gui" else fitted(box_lo, box_hi, *d) for place, d in DISPLAYS.items()},
                              head={"rotation": [0, 180, 0], "translation": [0, round(GROUND - scale * (ground - 8) - drop / HEAD_ITEM, 2), 0],
                                    "scale": [scale] * 3})}
     os.makedirs(MODELS, exist_ok=True)
@@ -841,26 +825,14 @@ def build(mob):
     with open(os.path.join(TILTED, name + ".json"), "w", encoding="utf-8", newline="\n") as fh:
         json.dump(dict(model, elements=tilted_elements), fh, separators=(",", ":"))
     if icon_clip and not anchored:
-        first = played_frames[icon_clip][0]
-        posed = [posed_element(el, *first[bone]) for el, bone in zip(model_elements, element_bones)]
-        # posed, a cube may reach past Java's -16 to 32: then the copy is shrunk about the middle into it, and its
-        # screen's display grown back by as much, so it shows the same
-        reach = max(abs(v - 8) for el in posed for v in el["from"] + el["to"])
-        gui = dict(model["display"]["gui"])
-        if reach > 24:
-            k = 24 / reach
-            shrink = lambda vs: [round(8 + k * (v - 8), 4) for v in vs]
-            posed = [dict(el, **{"from": shrink(el["from"]), "to": shrink(el["to"]),
-                                 "rotation": dict(el["rotation"], origin=shrink(el["rotation"]["origin"]))}) for el in posed]
-            gui["scale"] = [round(v / k, 4) for v in gui["scale"]]
-            if max(gui["scale"]) > 4:
-                raise ModelError("%s: posed for a screen it reaches %.1f units from the middle, too far to show" % (name, reach))
+        # its own model and one face of the clock, a speck in its middle the screen never shows (the clock is clear)
+        clock = {"from": [8, 8, 8], "to": [8.01, 8.01, 8.01],
+                 "faces": {"north": {"uv": [0, 0, 16, 16], "texture": "#clock"}}}
+        screen = dict(model, textures=dict(model["textures"], clock="ms:item/mobs/" + SCREEN_CLOCK),
+                      elements=model_elements + [clock])
         os.makedirs(SCREEN_MODELS, exist_ok=True)
         with open(os.path.join(SCREEN_MODELS, name + ".json"), "w", encoding="utf-8", newline="\n") as fh:
-            json.dump({"parent": "ms:mobs/animated/" + name}, fh, separators=(",", ":"))
-        os.makedirs(SCREEN_POSED, exist_ok=True)
-        with open(os.path.join(SCREEN_POSED, name + ".json"), "w", encoding="utf-8", newline="\n") as fh:
-            json.dump(dict(model, elements=posed, display=dict(model["display"], gui=gui)), fh, separators=(",", ":"))
+            json.dump(screen, fh, separators=(",", ":"))
     # a hitbox about the stand's feet, in blocks, which the plugin turns with the mob: the model's height, and most
     # of its width and length at rest (players click its body more than the tips of its wings and tail)
     block = HEAD_ITEM * scale
@@ -882,6 +854,11 @@ def main():
     global TILT_M
     TILT_M = euler_zyx(TILT)
     published, failed = {}, []
+    # the screen models' clock: two clear frames, a tick each (SCREEN_MODELS)
+    os.makedirs(TEXTURES, exist_ok=True)
+    Image.new("RGBA", (4, 8), (0, 0, 0, 0)).save(os.path.join(TEXTURES, SCREEN_CLOCK + ".png"))
+    with open(os.path.join(TEXTURES, SCREEN_CLOCK + ".png.mcmeta"), "w", encoding="utf-8", newline="\n") as fh:
+        json.dump({"animation": {"frametime": 1}}, fh)
     for mob in definitions():
         try:
             published[mob["name"]] = build(mob)

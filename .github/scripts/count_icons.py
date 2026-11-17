@@ -545,7 +545,7 @@ def items():
                 "fallback": icon}})
         if material == ITEM:
             # an animated mob's model alone, its dye handed to it as the clip it plays (build_mobs.py); in a screen
-            # its model for screens where it has one, which is its own but on 26.3 (build_mobs.py's SCREEN_MODELS)
+            # its model for screens where it has one (build_mobs.py's SCREEN_MODELS: its own, kept redrawn so it plays)
             for number, ref in sorted(mobs.items(), key=lambda e: int(e[0])):
                 tints = [{"type": "minecraft:dye", "default": -1}]
                 model = {"type": "minecraft:model", "model": ref, "tints": tints}
